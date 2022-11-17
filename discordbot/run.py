@@ -5,6 +5,7 @@ import argparse
 import gc
 import requests
 
+
 def print_shards():
     token = config["bot-token"]
     url = "https://discordapp.com/api/v6/gateway/bot"
@@ -16,29 +17,20 @@ def print_shards():
         print("Status Code: {}".format(r.status_code))
         print(r.text)
 
+
 def main():
     parser = argparse.ArgumentParser(
         description="Embed Discord like a True Titan (Discord Bot portion)"
     )
+    parser.add_argument("-sid", "--shard_id", help="ID of the shard", type=int, default=None)
     parser.add_argument(
-        "-sid",
-        "--shard_id",
-        help="ID of the shard",
-        type=int,
-        default=None
-    )
-    parser.add_argument(
-        "-sc",
-        "--shard_count",
-        help="Number of total shards",
-        type=int,
-        default=None
+        "-sc", "--shard_count", help="Number of total shards", type=int, default=None
     )
     parser.add_argument(
         "-s",
         "--shards",
         help="Prints the reccomended number of shards to spawn",
-        action="store_true"
+        action="store_true",
     )
     args = parser.parse_args()
 
@@ -48,11 +40,12 @@ def main():
 
     print("Starting...")
     te = Titan(
-        shard_ids = [args.shard_id] if args.shard_id is not None else None,
-        shard_count = args.shard_count
+        shard_ids=[args.shard_id] if args.shard_id is not None else None,
+        shard_count=args.shard_count,
     )
     te.run()
     gc.collect()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

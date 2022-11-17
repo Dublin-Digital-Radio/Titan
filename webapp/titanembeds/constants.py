@@ -8,7 +8,7 @@ QUERY_PARAMETERS = [
     {
         "name": "defaultchannel",
         "type": "snowflake",
-        "description": "Instead of having the top channel as the first channel your users see, you may change it. Enable Discord's Developer mode in the Appearances tab of the User Settings and copy the channel ID. Here is a <a href=\"https://support.discordapp.com/hc/en-us/articles/206346498-Where-can-I-find-my-server-ID-\" target=\"_blank\">tutorial</a> on obtaining the channel ID.",
+        "description": 'Instead of having the top channel as the first channel your users see, you may change it. Enable Discord\'s Developer mode in the Appearances tab of the User Settings and copy the channel ID. Here is a <a href="https://support.discordapp.com/hc/en-us/articles/206346498-Where-can-I-find-my-server-ID-" target="_blank">tutorial</a> on obtaining the channel ID.',
         "example": "1234567890",
     },
     {
@@ -30,7 +30,7 @@ QUERY_PARAMETERS = [
     {
         "name": "lang",
         "type": "language",
-        "description": "Are your users multilingual? No worries, Titan can speak multiple languages! Check the about page for a list of all language parameters Titan can support. <br> Wish Titan supported your language? Consider contributing to <a href=\"http://translate.titanembeds.com/\" target=\"_blank\">our CrowdIn project</a>!",
+        "description": 'Are your users multilingual? No worries, Titan can speak multiple languages! Check the about page for a list of all language parameters Titan can support. <br> Wish Titan supported your language? Consider contributing to <a href="http://translate.titanembeds.com/" target="_blank">our CrowdIn project</a>!',
         "example": "nl_NL",
         "input": "text",
     },
@@ -69,7 +69,7 @@ QUERY_PARAMETERS = [
     {
         "name": "scrollbartheme",
         "type": "string",
-        "description": "Sets the scrollbar theme. View the demo of all themes <a href=\"http://manos.malihu.gr/repository/custom-scrollbar/demo/examples/scrollbar_themes_demo.html\" target=\"_blank\">here</a>. Or create your own theme by overriding <a href=\"https://i.imgur.com/SZPL0ag.png\" target=\"_blank\">these classes</a> and following at <a href=\"https://github.com/malihu/malihu-custom-scrollbar-plugin/blob/master/jquery.mCustomScrollbar.css\" target=\"_blank\">these examples</a>!",
+        "description": 'Sets the scrollbar theme. View the demo of all themes <a href="http://manos.malihu.gr/repository/custom-scrollbar/demo/examples/scrollbar_themes_demo.html" target="_blank">here</a>. Or create your own theme by overriding <a href="https://i.imgur.com/SZPL0ag.png" target="_blank">these classes</a> and following at <a href="https://github.com/malihu/malihu-custom-scrollbar-plugin/blob/master/jquery.mCustomScrollbar.css" target="_blank">these examples</a>!',
         "example": "3d-dark",
         "options": [
             {
@@ -317,7 +317,7 @@ LANGUAGES = [
                 "crowdin_profile": "victorfrb",
             },
             {
-                "name": "Brian \"Ztyle\" Aagesen",
+                "name": 'Brian "Ztyle" Aagesen',
                 "crowdin_profile": "b-l",
             },
             {
@@ -471,7 +471,7 @@ LANGUAGES = [
             {
                 "name": "BlackHawk94",
                 "crowdin_profile": "BlackHawk94",
-            }
+            },
         ],
     },
     {
@@ -604,7 +604,7 @@ LANGUAGES = [
         "name": "Српски",
         "translators": [
             {
-                "name": "\"adriatic\" Miguel Dos Reis",
+                "name": '"adriatic" Miguel Dos Reis',
                 "crowdin_profile": "siersod",
             },
             {

@@ -7,9 +7,15 @@ import asyncio
 import sys
 import logging
 import gc
-logging.basicConfig(filename='titanbot.log',level=logging.INFO,format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
-logging.getLogger('TitanBot')
-logging.getLogger('sqlalchemy')
+
+logging.basicConfig(
+    filename="titanbot.log",
+    level=logging.INFO,
+    format="%(asctime)s %(message)s",
+    datefmt="%m/%d/%Y %I:%M:%S %p",
+)
+logging.getLogger("TitanBot")
+logging.getLogger("sqlalchemy")
 
 ###########################
 #   Fetch Last Messages   #
@@ -19,18 +25,19 @@ logging.getLogger('sqlalchemy')
 # each channel.           #
 ###########################
 
+
 class Titan(discord.Client):
     def __init__(self, shard_id=None, shard_count=None):
         super().__init__(shard_id=shard_id, shard_count=shard_count)
         self.aiosession = aiohttp.ClientSession(loop=self.loop)
-        self.http.user_agent += ' TitanEmbeds-Bot'
+        self.http.user_agent += " TitanEmbeds-Bot"
         self.database = DatabaseInterface(self)
         self.command = Commands(self, self.database)
 
     def _cleanup(self):
         try:
             self.loop.run_until_complete(self.logout())
-        except: # Can be ignored
+        except:  # Can be ignored
             pass
         pending = asyncio.Task.all_tasks()
         gathered = asyncio.gather(*pending)
@@ -38,7 +45,7 @@ class Titan(discord.Client):
             gathered.cancel()
             self.loop.run_until_complete(gathered)
             gathered.exception()
-        except: # Can be ignored
+        except:  # Can be ignored
             pass
 
     def run(self):
@@ -54,11 +61,11 @@ class Titan(discord.Client):
             self.loop.close()
 
     async def on_ready(self):
-        print('Titan [DiscordBot] [UTILITY: Fetch last messages]')
-        print('Logged in as the following user:')
+        print("Titan [DiscordBot] [UTILITY: Fetch last messages]")
+        print("Logged in as the following user:")
         print(self.user.name)
         print(self.user.id)
-        print('------')
+        print("------")
 
         try:
             await self.database.connect(config["database-uri"])
@@ -93,7 +100,14 @@ class Titan(discord.Client):
         for channel in all_channels:
             try:
                 if isinstance(channel, discord.channel.TextChannel):
-                    print("Processing channel: ID-{} Name-'{}' ServerID-{} Server-'{}'".format(channel.id, channel.name, channel.guild.id, channel.guild.name))
+                    print(
+                        "Processing channel: ID-{} Name-'{}' ServerID-{} Server-'{}'".format(
+                            channel.id,
+                            channel.name,
+                            channel.guild.id,
+                            channel.guild.name,
+                        )
+                    )
                     await self.database.delete_all_messages_from_channel(channel.id)
                     async for message in channel.history(limit=50, reverse=True):
                         await self.database.push_message(message)
@@ -101,6 +115,7 @@ class Titan(discord.Client):
                 continue
         print("done!")
         await self.logout()
+
 
 def main():
     print("Starting...")
@@ -116,5 +131,6 @@ def main():
     te.run()
     gc.collect()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

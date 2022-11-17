@@ -16,6 +16,7 @@ from .disabled_guilds import DisabledGuilds, list_disabled_guilds
 from .discordbotsorg_transactions import DiscordBotsOrgTransactions
 from .application_settings import ApplicationSettings
 
+
 def set_titan_token(user_id, amt_change, action):
     token_count = get_titan_token(user_id)
     if token_count >= 0:
@@ -32,12 +33,14 @@ def set_titan_token(user_id, amt_change, action):
     db.session.add(token_usr)
     return True
 
+
 def init_application_settings():
     settings = db.session.query(ApplicationSettings).first()
     if not settings:
         settings = ApplicationSettings()
         db.session.add(settings)
         db.session.commit()
+
 
 def get_application_settings():
     return db.session.query(ApplicationSettings).first()

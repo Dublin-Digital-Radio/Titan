@@ -7,9 +7,15 @@ import json
 import gc
 import random
 from asyncio_extras import threadpool
-logging.basicConfig(filename='titanbot.log',level=logging.INFO,format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
-logging.getLogger('TitanBot')
-logging.getLogger('sqlalchemy')
+
+logging.basicConfig(
+    filename="titanbot.log",
+    level=logging.INFO,
+    format="%(asctime)s %(message)s",
+    datefmt="%m/%d/%Y %I:%M:%S %p",
+)
+logging.getLogger("TitanBot")
+logging.getLogger("sqlalchemy")
 
 ###########################
 #   Cleanup DB Messages   #
@@ -17,6 +23,7 @@ logging.getLogger('sqlalchemy')
 # Cleans the database     #
 # messages store          #
 ###########################
+
 
 class TitanCleanupDB:
     def __init__(self):
@@ -28,7 +35,9 @@ class TitanCleanupDB:
         fh = logging.FileHandler("titan_cleanupdb.log")
         fh.setLevel(logging.DEBUG)
         session_id = str(random.randrange(100))
-        formatter = logging.Formatter("%(asctime)s - {0} - %(levelname)s - %(message)s".format(session_id))
+        formatter = logging.Formatter(
+            "%(asctime)s - {0} - %(levelname)s - %(message)s".format(session_id)
+        )
         fh.setFormatter(formatter)
         self.logger.addHandler(fh)
         consoleHandler = logging.StreamHandler()
@@ -39,7 +48,7 @@ class TitanCleanupDB:
     def _cleanup(self):
         try:
             self.loop.run_until_complete(self.logout())
-        except: # Can be ignored
+        except:  # Can be ignored
             pass
         pending = asyncio.Task.all_tasks()
         gathered = asyncio.gather(*pending)
@@ -47,7 +56,7 @@ class TitanCleanupDB:
             gathered.cancel()
             self.loop.run_until_complete(gathered)
             gathered.exception()
-        except: # Can be ignored
+        except:  # Can be ignored
             pass
 
     def run(self):
@@ -63,8 +72,8 @@ class TitanCleanupDB:
             self.loop.close()
 
     async def start_cleanup(self):
-        print('Titan [DiscordBot] [UTILITY: Cleanup database messages]')
-        print('------')
+        print("Titan [DiscordBot] [UTILITY: Cleanup database messages]")
+        print("------")
 
         try:
             self.database.connect(config["database-uri"])
@@ -82,7 +91,9 @@ class TitanCleanupDB:
                 guilds_new.append(guild)
             for guild in guilds_new:
                 count += 1
-                self.logger.info("[{}] snowflake-{} name-{}".format(count, guild.guild_id, guild.name))
+                self.logger.info(
+                    "[{}] snowflake-{} name-{}".format(count, guild.guild_id, guild.name)
+                )
                 try:
                     channelsjson = json.loads(guild.channels)
                 except:
@@ -91,14 +102,34 @@ class TitanCleanupDB:
                 for channel in channelsjson:
                     chanid = channel["id"]
                     active_channels.append(chanid)
-                    keep_these = session.query(Messages.message_id).filter(Messages.channel_id == chanid).order_by(Messages.timestamp.desc()).limit(50)
-                    d = session.query(Messages).filter(Messages.channel_id == chanid, ~Messages.message_id.in_(keep_these)).delete(synchronize_session=False)
+                    keep_these = (
+                        session.query(Messages.message_id)
+                        .filter(Messages.channel_id == chanid)
+                        .order_by(Messages.timestamp.desc())
+                        .limit(50)
+                    )
+                    d = (
+                        session.query(Messages)
+                        .filter(
+                            Messages.channel_id == chanid,
+                            ~Messages.message_id.in_(keep_these),
+                        )
+                        .delete(synchronize_session=False)
+                    )
                     session.commit()
                     self.logger.info("    --{} [{}]".format(channel["name"], d))
-                d = session.query(Messages).filter(Messages.guild_id == guild.guild_id, ~Messages.channel_id.in_(active_channels)).delete(synchronize_session=False)
+                d = (
+                    session.query(Messages)
+                    .filter(
+                        Messages.guild_id == guild.guild_id,
+                        ~Messages.channel_id.in_(active_channels),
+                    )
+                    .delete(synchronize_session=False)
+                )
                 session.commit()
                 self.logger.info("    INACTIVE {}".format(d))
             self.logger.info("done!")
+
 
 def main():
     print("Starting...")
@@ -106,5 +137,6 @@ def main():
     te.run()
     gc.collect()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

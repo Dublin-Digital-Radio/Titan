@@ -1,4 +1,17 @@
-from titanembeds.utils import serializer, socketio, guild_accepts_visitors, get_client_ipaddr, discord_api, check_user_in_guild, get_guild_channels, update_user_status, guild_webhooks_enabled, redis_store, redisqueue, get_forced_role
+from titanembeds.utils import (
+    serializer,
+    socketio,
+    guild_accepts_visitors,
+    get_client_ipaddr,
+    discord_api,
+    check_user_in_guild,
+    get_guild_channels,
+    update_user_status,
+    guild_webhooks_enabled,
+    redis_store,
+    redisqueue,
+    get_forced_role,
+)
 from titanembeds.database import db
 from flask_socketio import Namespace, emit, disconnect, join_room, leave_room
 import functools
@@ -7,6 +20,7 @@ import time
 import json
 import os
 
+
 class Gateway(Namespace):
     def teardown_db_session(self):
         db.session.commit()
@@ -14,7 +28,7 @@ class Gateway(Namespace):
 
     def on_connect(self):
         gateway_identifier = os.environ.get("TITAN_GATEWAY_ID", None)
-        emit('hello', {"gateway_identifier": gateway_identifier})
+        emit("hello", {"gateway_identifier": gateway_identifier})
 
     def on_identify(self, data):
         authorization = data.get("session", None)
@@ -36,21 +50,42 @@ class Gateway(Namespace):
             channels = get_guild_channels(guild_id, force_everyone=True, forced_role=forced_role)
         else:
             channels = get_guild_channels(guild_id, forced_role=forced_role)
-        join_room("GUILD_"+guild_id)
+        join_room("GUILD_" + guild_id)
         for chan in channels:
             if chan["read"]:
-                join_room("CHANNEL_"+chan["channel"]["id"])
+                join_room("CHANNEL_" + chan["channel"]["id"])
         if session.get("unauthenticated", True) and guild_id in session.get("user_keys", {}):
-            join_room("IP_"+get_client_ipaddr())
+            join_room("IP_" + get_client_ipaddr())
         elif not session.get("unauthenticated", True):
-            join_room("USER_"+str(session["user_id"]))
+            join_room("USER_" + str(session["user_id"]))
         visitor_mode = data["visitor_mode"]
         if not visitor_mode:
             if session["unauthenticated"]:
-                emit("embed_user_connect", {"unauthenticated": True, "username": session["username"], "discriminator": session["user_id"]}, room="GUILD_"+guild_id)
+                emit(
+                    "embed_user_connect",
+                    {
+                        "unauthenticated": True,
+                        "username": session["username"],
+                        "discriminator": session["user_id"],
+                    },
+                    room="GUILD_" + guild_id,
+                )
             else:
-                nickname = redisqueue.get_guild_member(guild_id, session["user_id"]).get("nickname")
-                emit("embed_user_connect", {"unauthenticated": False, "id": str(session["user_id"]), "nickname": nickname, "username": session["username"],"discriminator": session["discriminator"], "avatar_url": session["avatar"]}, room="GUILD_"+guild_id)
+                nickname = redisqueue.get_guild_member(guild_id, session["user_id"]).get(
+                    "nickname"
+                )
+                emit(
+                    "embed_user_connect",
+                    {
+                        "unauthenticated": False,
+                        "id": str(session["user_id"]),
+                        "nickname": nickname,
+                        "username": session["username"],
+                        "discriminator": session["discriminator"],
+                        "avatar_url": session["avatar"],
+                    },
+                    room="GUILD_" + guild_id,
+                )
         emit("identified")
         self.teardown_db_session()
 
@@ -65,11 +100,15 @@ class Gateway(Namespace):
             guild_id = session["socket_guild_id"]
             msg = {}
             if session["unauthenticated"]:
-                msg = {"unauthenticated": True, "username": session["username"], "discriminator": session["user_id"]}
+                msg = {
+                    "unauthenticated": True,
+                    "username": session["username"],
+                    "discriminator": session["user_id"],
+                }
             else:
                 msg = {"unauthenticated": False, "id": str(session["user_id"])}
-            emit("embed_user_disconnect", msg, room="GUILD_"+guild_id)
-            if guild_webhooks_enabled(guild_id): # Delete webhooks
+            emit("embed_user_disconnect", msg, room="GUILD_" + guild_id)
+            if guild_webhooks_enabled(guild_id):  # Delete webhooks
                 guild_webhooks = redisqueue.get_guild(guild_id)["webhooks"]
                 name = "[Titan] "
                 username = session["username"]
@@ -128,9 +167,9 @@ class Gateway(Namespace):
             channels = get_guild_channels(guild_id, forced_role=forced_role)
         for chan in channels:
             if chan["read"]:
-                join_room("CHANNEL_"+chan["channel"]["id"])
+                join_room("CHANNEL_" + chan["channel"]["id"])
             else:
-                leave_room("CHANNEL_"+chan["channel"]["id"])
+                leave_room("CHANNEL_" + chan["channel"]["id"])
         emit("channel_list", channels)
         self.teardown_db_session()
 
@@ -142,11 +181,11 @@ class Gateway(Namespace):
         if "user_keys" in session and not session["unauthenticated"]:
             dbMember = redisqueue.get_guild_member(guild_id, session["user_id"])
             usr = {
-                'avatar': session["avatar"],
-                'username': dbMember.get("username"),
-                'nickname': dbMember.get("nickname"),
-                'discriminator': dbMember.get("discriminator"),
-                'user_id': str(session['user_id']),
+                "avatar": session["avatar"],
+                "username": dbMember.get("username"),
+                "nickname": dbMember.get("nickname"),
+                "discriminator": dbMember.get("discriminator"),
+                "user_id": str(session["user_id"]),
             }
             emit("current_user_info", usr)
         self.teardown_db_session()
@@ -167,10 +206,10 @@ class Gateway(Namespace):
             if not role:
                 continue
             member_roles.append(role)
-        member_roles = sorted(member_roles, key=lambda k: k['position'])
+        member_roles = sorted(member_roles, key=lambda k: k["position"])
         for role in member_roles:
             if role["color"] != 0:
-                color = '{0:02x}'.format(role["color"])
+                color = "{0:02x}".format(role["color"])
                 while len(color) < 6:
                     color = "0" + color
         return color
@@ -200,10 +239,14 @@ class Gateway(Namespace):
             usr["nickname"] = member["nick"]
             usr["avatar"] = member["avatar"]
             usr["color"] = self.get_user_color(guild_id, usr["id"])
-            if (usr["avatar"]):
-                usr["avatar_url"] = "https://cdn.discordapp.com/avatars/{}/{}.png".format(usr["id"], usr["avatar"])
+            if usr["avatar"]:
+                usr["avatar_url"] = "https://cdn.discordapp.com/avatars/{}/{}.png".format(
+                    usr["id"], usr["avatar"]
+                )
             usr["roles"] = member["roles"]
-            usr["discordbotsorgvoted"] = bool(redis_store.get("DiscordBotsOrgVoted/" + str(member["id"])))
+            usr["discordbotsorgvoted"] = bool(
+                redis_store.get("DiscordBotsOrgVoted/" + str(member["id"]))
+            )
         else:
             member = redisqueue.get_guild_member_named(guild_id, name)
             if member:
@@ -212,9 +255,13 @@ class Gateway(Namespace):
                 usr["nickname"] = member["nick"]
                 usr["avatar"] = member["avatar"]
                 usr["color"] = self.get_user_color(guild_id, usr["id"])
-                if (usr["avatar"]):
-                    usr["avatar_url"] = "https://cdn.discordapp.com/avatars/{}/{}.png".format(usr["id"], usr["avatar"])
+                if usr["avatar"]:
+                    usr["avatar_url"] = "https://cdn.discordapp.com/avatars/{}/{}.png".format(
+                        usr["id"], usr["avatar"]
+                    )
                 usr["roles"] = member["roles"]
-                usr["discordbotsorgvoted"] = bool(redis_store.get("DiscordBotsOrgVoted/" + str(member["id"])))
+                usr["discordbotsorgvoted"] = bool(
+                    redis_store.get("DiscordBotsOrgVoted/" + str(member["id"]))
+                )
         emit("lookup_user_info", usr)
         self.teardown_db_session()
