@@ -90,3 +90,4 @@ ENV/
 # Project specifc
 config.py
 alembic.ini
+.idea
