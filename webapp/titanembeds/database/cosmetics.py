@@ -1,5 +1,6 @@
-from titanembeds.database import db
 import json
+
+from titanembeds.database import db
 
 
 class Cosmetics(db.Model):

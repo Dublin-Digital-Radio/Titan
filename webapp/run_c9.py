@@ -6,8 +6,9 @@ if __name__ == "__main__":
         subprocess.call("sudo service postgresql start", shell=True)
         subprocess.call("sudo service redis-server start", shell=True)
 
-from run import app, socketio, init_debug
 import os
+
+from run import app, init_debug, socketio
 
 if __name__ == "__main__":
     init_debug()

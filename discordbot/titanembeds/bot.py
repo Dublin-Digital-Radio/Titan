@@ -1,18 +1,19 @@
-from config import config
-from titanembeds.redisqueue import RedisQueue
-from titanembeds.commands import Commands
-from titanembeds.socketio import SocketIOInterface
-from titanembeds.poststats import DiscordBotsOrg, BotsDiscordPw
+import sys
+import json
+import asyncio
+import logging
 from collections import deque
+
+import aiohttp
 
 # from raven import Client as RavenClient
 # import raven
 import discord
-import aiohttp
-import asyncio
-import sys
-import logging
-import json
+from config import config
+from titanembeds.commands import Commands
+from titanembeds.poststats import BotsDiscordPw, DiscordBotsOrg
+from titanembeds.redisqueue import RedisQueue
+from titanembeds.socketio import SocketIOInterface
 
 # try:
 #     raven_client = RavenClient(config["sentry-dsn"])

@@ -1,6 +1,7 @@
-from titanembeds.utils import redis_store
 import json
 import time
+
+from titanembeds.utils import redis_store
 
 
 class RedisQueue:

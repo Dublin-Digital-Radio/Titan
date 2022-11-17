@@ -1,10 +1,12 @@
 #!/usr/bin/env python2
-from titanembeds.app import app, socketio
 import subprocess
+
+from titanembeds.app import app, socketio
 
 
 def init_debug():
     import os
+
     from flask import jsonify, request
 
     os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"  # Testing oauthlib
@@ -15,8 +17,9 @@ def init_debug():
     # Session viewer https://gist.github.com/babldev/502364a3f7c9bafaa6db
     def decode_flask_cookie(secret_key, cookie_str):
         import hashlib
-        from itsdangerous import URLSafeTimedSerializer
+
         from flask.sessions import TaggedJSONSerializer
+        from itsdangerous import URLSafeTimedSerializer
 
         salt = "cookie-session"
         serializer = TaggedJSONSerializer()

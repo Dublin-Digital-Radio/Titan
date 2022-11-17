@@ -1,8 +1,9 @@
-from titanembeds.database import db
-import datetime
 import time
 import random
 import string
+import datetime
+
+from titanembeds.database import db
 
 
 class UnauthenticatedUsers(db.Model):

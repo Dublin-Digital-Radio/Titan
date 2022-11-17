@@ -1,6 +1,7 @@
-from titanembeds.database import db
-import datetime
 import time
+import datetime
+
+from titanembeds.database import db
 
 
 class TokenTransactions(db.Model):

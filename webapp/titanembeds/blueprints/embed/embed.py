@@ -1,31 +1,32 @@
+import copy
+import json
+import random
+from urllib.parse import urlparse
+
+from config import config
 from flask import (
     Blueprint,
-    render_template,
     abort,
-    redirect,
-    url_for,
-    session,
-    request,
     make_response,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
 )
 from flask_babel import gettext
+from titanembeds.database import Guilds, UserCSS, db, list_disabled_guilds
+from titanembeds.oauth import generate_avatar_url, generate_guild_icon_url
 from titanembeds.utils import (
-    serializer,
     check_guild_existance,
-    guild_query_unauth_users_bool,
+    get_online_embed_user_keys,
     guild_accepts_visitors,
+    guild_query_unauth_users_bool,
     guild_unauthcaptcha_enabled,
     is_int,
     redisqueue,
-    get_online_embed_user_keys,
+    serializer,
 )
-from titanembeds.oauth import generate_guild_icon_url, generate_avatar_url
-from titanembeds.database import db, Guilds, UserCSS, list_disabled_guilds
-from config import config
-import random
-import json
-import copy
-from urllib.parse import urlparse
 
 embed = Blueprint("embed", __name__)
 

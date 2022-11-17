@@ -1,9 +1,9 @@
-from titanembeds import Titan
-from config import config
-
-import argparse
 import gc
+import argparse
+
 import requests
+from config import config
+from titanembeds import Titan
 
 
 def print_shards():

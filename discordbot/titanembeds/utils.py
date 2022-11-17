@@ -1,6 +1,7 @@
-import discord
 import time
 from email import utils as emailutils
+
+import discord
 
 
 def format_datetime(datetimeobj):

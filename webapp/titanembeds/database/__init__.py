@@ -2,19 +2,19 @@ from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
-from .guilds import Guilds
-from .unauthenticated_users import UnauthenticatedUsers
-from .unauthenticated_bans import UnauthenticatedBans
-from .authenticated_users import AuthenticatedUsers
-from .cosmetics import Cosmetics, set_badges, get_badges, add_badge, remove_badge
-from .user_css import UserCSS
 from .administrators import Administrators, get_administrators_list
-from .titan_tokens import TitanTokens, get_titan_token
-from .token_transactions import TokenTransactions
-from .patreon import Patreon
+from .application_settings import ApplicationSettings
+from .authenticated_users import AuthenticatedUsers
+from .cosmetics import Cosmetics, add_badge, get_badges, remove_badge, set_badges
 from .disabled_guilds import DisabledGuilds, list_disabled_guilds
 from .discordbotsorg_transactions import DiscordBotsOrgTransactions
-from .application_settings import ApplicationSettings
+from .guilds import Guilds
+from .patreon import Patreon
+from .titan_tokens import TitanTokens, get_titan_token
+from .token_transactions import TokenTransactions
+from .unauthenticated_bans import UnauthenticatedBans
+from .unauthenticated_users import UnauthenticatedUsers
+from .user_css import UserCSS
 
 
 def set_titan_token(user_id, amt_change, action):

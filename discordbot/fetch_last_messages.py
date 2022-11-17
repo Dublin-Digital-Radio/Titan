@@ -1,12 +1,13 @@
-from config import config
-from titanembeds.database import DatabaseInterface
-from titanembeds.commands import Commands
-import discord
-import aiohttp
-import asyncio
-import sys
-import logging
 import gc
+import sys
+import asyncio
+import logging
+
+import aiohttp
+import discord
+from config import config
+from titanembeds.commands import Commands
+from titanembeds.database import DatabaseInterface
 
 logging.basicConfig(
     filename="titanbot.log",

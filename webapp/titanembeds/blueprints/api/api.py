@@ -1,60 +1,62 @@
-from titanembeds.database import (
-    db,
-    Guilds,
-    UnauthenticatedUsers,
-    UnauthenticatedBans,
-    AuthenticatedUsers,
-    get_administrators_list,
-    get_badges,
-    DiscordBotsOrgTransactions,
-)
-from titanembeds.decorators import (
-    valid_session_required,
-    discord_users_only,
-    abort_if_guild_disabled,
-)
-from titanembeds.utils import (
-    serializer,
-    check_guild_existance,
-    guild_accepts_visitors,
-    guild_query_unauth_users_bool,
-    get_client_ipaddr,
-    discord_api,
-    rate_limiter,
-    channel_ratelimit_key,
-    guild_ratelimit_key,
-    user_unauthenticated,
-    checkUserRevoke,
-    checkUserBanned,
-    update_user_status,
-    check_user_in_guild,
-    get_guild_channels,
-    guild_webhooks_enabled,
-    guild_unauthcaptcha_enabled,
-    get_member_roles,
-    get_online_embed_user_keys,
-    redis_store,
-    redisqueue,
-    get_forced_role,
-)
-from titanembeds.oauth import (
-    user_has_permission,
-    generate_avatar_url,
-    check_user_can_administrate_guild,
-)
+import re
+import copy
+import json
+import random
+import datetime
+from urllib.parse import urlparse, urlsplit, parse_qsl
+
+import requests
 import titanembeds.constants as constants
-from flask import Blueprint, abort, jsonify, session, request, url_for
+from config import config
+from flask import Blueprint, abort
 from flask import current_app as app
+from flask import jsonify, request, session, url_for
 from flask_socketio import emit
 from sqlalchemy import and_
-from urllib.parse import urlparse, parse_qsl, urlsplit
-import random
-import json
-import datetime
-import re
-import requests
-from config import config
-import copy
+from titanembeds.database import (
+    AuthenticatedUsers,
+    DiscordBotsOrgTransactions,
+    Guilds,
+    UnauthenticatedBans,
+    UnauthenticatedUsers,
+    db,
+    get_administrators_list,
+    get_badges,
+)
+from titanembeds.decorators import (
+    abort_if_guild_disabled,
+    discord_users_only,
+    valid_session_required,
+)
+from titanembeds.oauth import (
+    check_user_can_administrate_guild,
+    generate_avatar_url,
+    user_has_permission,
+)
+from titanembeds.utils import (
+    channel_ratelimit_key,
+    check_guild_existance,
+    check_user_in_guild,
+    checkUserBanned,
+    checkUserRevoke,
+    discord_api,
+    get_client_ipaddr,
+    get_forced_role,
+    get_guild_channels,
+    get_member_roles,
+    get_online_embed_user_keys,
+    guild_accepts_visitors,
+    guild_query_unauth_users_bool,
+    guild_ratelimit_key,
+    guild_unauthcaptcha_enabled,
+    guild_webhooks_enabled,
+    rate_limiter,
+    redis_store,
+    redisqueue,
+    serializer,
+    update_user_status,
+    user_unauthenticated,
+)
 
 api = Blueprint("api", __name__)
 

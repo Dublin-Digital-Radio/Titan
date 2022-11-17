@@ -1,16 +1,17 @@
-from titanembeds.utils import (
-    get_formatted_message,
-    get_formatted_user,
-    get_formatted_guild,
-)
-from urllib.parse import urlparse
-import asyncio_redis
+import re
+import sys
 import json
-import discord
 import asyncio
 import traceback
-import sys
-import re
+from urllib.parse import urlparse
+
+import asyncio_redis
+import discord
+from titanembeds.utils import (
+    get_formatted_guild,
+    get_formatted_message,
+    get_formatted_user,
+)
 
 
 class RedisQueue:

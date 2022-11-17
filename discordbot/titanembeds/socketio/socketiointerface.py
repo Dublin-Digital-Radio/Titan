@@ -1,18 +1,18 @@
+import discord
 import socketio
 from titanembeds.utils import (
+    get_attachments_list,
+    get_embeds_list,
+    get_formatted_channel,
+    get_formatted_emojis,
+    get_formatted_guild,
+    get_formatted_message,
+    get_formatted_role,
+    get_formatted_user,
     get_message_author,
     get_message_mentions,
     get_roles_list,
-    get_attachments_list,
-    get_embeds_list,
-    get_formatted_message,
-    get_formatted_user,
-    get_formatted_emojis,
-    get_formatted_guild,
-    get_formatted_channel,
-    get_formatted_role,
 )
-import discord
 
 
 class SocketIOInterface:

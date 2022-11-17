@@ -1,12 +1,13 @@
+import gc
+import sys
+import json
+import random
+import asyncio
+import logging
+
+from asyncio_extras import threadpool
 from config import config
 from titanembeds.database import DatabaseInterface, Guilds, Messages
-import asyncio
-import sys
-import logging
-import json
-import gc
-import random
-from asyncio_extras import threadpool
 
 logging.basicConfig(
     filename="titanbot.log",

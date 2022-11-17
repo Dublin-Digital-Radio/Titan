@@ -12,8 +12,8 @@ down_revision = "8e806bcb2228"
 branch_labels = None
 depends_on = None
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 

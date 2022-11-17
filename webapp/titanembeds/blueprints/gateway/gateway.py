@@ -1,24 +1,25 @@
+import os
+import json
+import time
+import functools
+
+from flask import request, session
+from flask_socketio import Namespace, disconnect, emit, join_room, leave_room
+from titanembeds.database import db
 from titanembeds.utils import (
-    serializer,
-    socketio,
-    guild_accepts_visitors,
-    get_client_ipaddr,
-    discord_api,
     check_user_in_guild,
+    discord_api,
+    get_client_ipaddr,
+    get_forced_role,
     get_guild_channels,
-    update_user_status,
+    guild_accepts_visitors,
     guild_webhooks_enabled,
     redis_store,
     redisqueue,
-    get_forced_role,
+    serializer,
+    socketio,
+    update_user_status,
 )
-from titanembeds.database import db
-from flask_socketio import Namespace, emit, disconnect, join_room, leave_room
-import functools
-from flask import request, session
-import time
-import json
-import os
 
 
 class Gateway(Namespace):

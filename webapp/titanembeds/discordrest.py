@@ -1,10 +1,11 @@
-import requests
 import sys
-import time
 import json
+import time
 import urllib
-from titanembeds.utils import redis_store
+
+import requests
 from flask import request
+from titanembeds.utils import redis_store
 
 _DISCORD_API_BASE = "https://discordapp.com/api/v6"
 

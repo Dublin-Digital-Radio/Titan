@@ -15,38 +15,40 @@ except:
 
         monkey.patch_all()
 
-from .database import db
+import os
+import time
+import random
+import datetime
+from datetime import timedelta
+
+import titanembeds.constants as constants
 from flask import (
     Flask,
+    g,
+    jsonify,
+    redirect,
     render_template,
     request,
     session,
     url_for,
-    redirect,
-    jsonify,
-    g,
 )
 from flask_sslify import SSLify
-from titanembeds.utils import (
-    rate_limiter,
-    discord_api,
-    socketio,
-    babel,
-    redis_store,
-    language_code_list,
-)  # , sentry
-from .blueprints import api, user, admin, embed, gateway
-import os
 from titanembeds.database import (
     get_administrators_list,
-    init_application_settings,
     get_application_settings,
+    init_application_settings,
 )
-import titanembeds.constants as constants
-from datetime import timedelta
-import datetime
-import random
-import time
+from titanembeds.utils import (  # , sentry
+    babel,
+    discord_api,
+    language_code_list,
+    rate_limiter,
+    redis_store,
+    socketio,
+)
+
+from .blueprints import admin, api, embed, gateway, user
+from .database import db
 
 app_start_stamp = time.time()
 

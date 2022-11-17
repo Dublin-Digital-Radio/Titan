@@ -1,11 +1,12 @@
-from config import config
 import json
-from requests_oauthlib import OAuth2Session
-from flask import session, abort, url_for, request
-from titanembeds.utils import redis_store, make_user_cache_key
-from flask_socketio import disconnect
 import time
+
+from config import config
+from flask import abort, request, session, url_for
+from flask_socketio import disconnect
 from oauthlib.oauth2.rfc6749.errors import InvalidGrantError
+from requests_oauthlib import OAuth2Session
+from titanembeds.utils import make_user_cache_key, redis_store
 
 authorize_url = "https://discordapp.com/api/oauth2/authorize"
 token_url = "https://discordapp.com/api/oauth2/token"
