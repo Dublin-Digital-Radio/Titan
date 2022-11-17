@@ -6,8 +6,8 @@ import logging
 import aiohttp
 import discord
 from config import config
-from titanembeds.commands import Commands
-from titanembeds.database import DatabaseInterface
+from discordbot.commands import Commands
+from discordbot.database import DatabaseInterface
 
 logging.basicConfig(
     filename="titanbot.log",

@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 
 import asyncio_redis
 import discord
-from titanembeds.utils import (
+from discordbot.utils import (
     get_formatted_guild,
     get_formatted_message,
     get_formatted_user,

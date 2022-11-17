@@ -1,6 +1,6 @@
 import discord
 import socketio
-from titanembeds.utils import (
+from discordbot.utils import (
     get_attachments_list,
     get_embeds_list,
     get_formatted_channel,

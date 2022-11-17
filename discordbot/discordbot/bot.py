@@ -10,10 +10,10 @@ import aiohttp
 # import raven
 import discord
 from config import config
-from titanembeds.commands import Commands
-from titanembeds.poststats import BotsDiscordPw, DiscordBotsOrg
-from titanembeds.redisqueue import RedisQueue
-from titanembeds.socketio import SocketIOInterface
+from discordbot.commands import Commands
+from discordbot.poststats import BotsDiscordPw, DiscordBotsOrg
+from discordbot.redisqueue import RedisQueue
+from discordbot.socketio import SocketIOInterface
 
 # try:
 #     raven_client = RavenClient(config["sentry-dsn"])

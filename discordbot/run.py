@@ -3,7 +3,7 @@ import argparse
 
 import requests
 from config import config
-from titanembeds import Titan
+from discordbot.bot import Titan
 
 
 def print_shards():
