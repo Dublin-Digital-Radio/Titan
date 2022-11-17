@@ -52,7 +52,7 @@ from .database import db
 
 app_start_stamp = time.time()
 
-os.chdir(config["app-location"])
+# os.chdir(config["app-location"])
 app = Flask(__name__, static_folder="static")
 app.config["SQLALCHEMY_DATABASE_URI"] = config["database-uri"]
 app.config[

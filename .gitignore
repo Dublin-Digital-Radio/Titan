@@ -88,6 +88,5 @@ ENV/
 .ropeproject
 
 # Project specifc
-config.py
 alembic.ini
 .idea
