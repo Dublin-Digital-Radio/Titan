@@ -1,4 +1,3 @@
-import time
 from email import utils as emailutils
 
 import discord

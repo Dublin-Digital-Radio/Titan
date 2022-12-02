@@ -1,9 +1,7 @@
 import os
-import json
 import time
-import functools
 
-from flask import request, session
+from flask import session
 from flask_socketio import Namespace, disconnect, emit, join_room, leave_room
 from titanembeds.database import db
 from titanembeds.utils import (

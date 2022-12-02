@@ -1,6 +1,3 @@
-import json
-import time
-
 # from raven.contrib.flask import Sentry
 import random
 import string

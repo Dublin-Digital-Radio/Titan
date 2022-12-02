@@ -16,7 +16,7 @@ from flask import (
 )
 from flask_babel import gettext
 from titanembeds.database import Guilds, UserCSS, db, list_disabled_guilds
-from titanembeds.oauth import generate_avatar_url, generate_guild_icon_url
+from titanembeds.oauth import generate_guild_icon_url
 from titanembeds.utils import (
     check_guild_existance,
     get_online_embed_user_keys,

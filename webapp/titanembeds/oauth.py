@@ -1,5 +1,4 @@
 import json
-import time
 
 from config import config
 from flask import abort, request, session, url_for

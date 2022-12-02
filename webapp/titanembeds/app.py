@@ -15,7 +15,6 @@ except:
 
         monkey.patch_all()
 
-import os
 import time
 import random
 import datetime
@@ -24,13 +23,9 @@ from datetime import timedelta
 import titanembeds.constants as constants
 from flask import (
     Flask,
-    g,
-    jsonify,
-    redirect,
     render_template,
     request,
     session,
-    url_for,
 )
 from flask_sslify import SSLify
 from titanembeds.database import (

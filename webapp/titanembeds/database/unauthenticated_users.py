@@ -1,7 +1,5 @@
-import time
 import random
 import string
-import datetime
 
 from titanembeds.database import db
 
