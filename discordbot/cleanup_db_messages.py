@@ -10,7 +10,8 @@ from config import config
 from titanembeds.database import DatabaseInterface, Guilds, Messages
 
 logging.basicConfig(
-    filename="titanbot.log",
+    # filename="titanbot.log",
+    stream=sys.stdout,
     level=logging.INFO,
     format="%(asctime)s %(message)s",
     datefmt="%m/%d/%Y %I:%M:%S %p",

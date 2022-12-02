@@ -10,7 +10,8 @@ from discordbot.commands import Commands
 from discordbot.database import DatabaseInterface
 
 logging.basicConfig(
-    filename="titanbot.log",
+    stream=sys.stdout,
+    # filename="titanbot.log",
     level=logging.INFO,
     format="%(asctime)s %(message)s",
     datefmt="%m/%d/%Y %I:%M:%S %p",

@@ -24,6 +24,18 @@ intents = discord.Intents.default()
 intents.members = True
 
 
+def setup_logger(shard_ids=None):
+    shard_ids = "-".join(str(x) for x in shard_ids) if shard_ids is not None else ""
+    logging.basicConfig(
+        # filename="titanbot{}.log".format(shard_ids),
+        stream=sys.stdout,
+        level=logging.INFO,
+        format="%(asctime)s %(message)s",
+        datefmt="%m/%d/%Y %I:%M:%S %p",
+    )
+    return logging.getLogger("TitanBot")
+
+
 class Titan(discord.AutoShardedClient):
     def __init__(self, shard_ids=None, shard_count=None):
         super().__init__(
@@ -36,7 +48,7 @@ class Titan(discord.AutoShardedClient):
                 name="Embed your Discord server! Visit https://TitanEmbeds.com/"
             ),
         )
-        self.setup_logger(shard_ids)
+        self.log = setup_logger(shard_ids)
         self.aiosession = aiohttp.ClientSession(loop=self.loop)
         self.http.user_agent += " TitanEmbeds-Bot"
         self.redisqueue = RedisQueue(self, config["redis-uri"])
@@ -46,16 +58,6 @@ class Titan(discord.AutoShardedClient):
         self.delete_list = deque(maxlen=100)  # List of msg ids to prevent duplicate delete
         self.discordBotsOrg = None
         self.botsDiscordPw = None
-
-    def setup_logger(self, shard_ids=None):
-        shard_ids = "-".join(str(x) for x in shard_ids) if shard_ids is not None else ""
-        logging.basicConfig(
-            filename="titanbot{}.log".format(shard_ids),
-            level=logging.INFO,
-            format="%(asctime)s %(message)s",
-            datefmt="%m/%d/%Y %I:%M:%S %p",
-        )
-        logging.getLogger("TitanBot")
 
     def _cleanup(self):
         try:
@@ -76,14 +78,14 @@ class Titan(discord.AutoShardedClient):
         await super().start(config["bot-token"])
 
     async def on_shard_ready(self, shard_id):
-        logging.info("Titan [DiscordBot]")
-        logging.info("Logged in as the following user:")
-        logging.info(self.user.name)
-        logging.info(self.user.id)
-        logging.info("------")
-        logging.info("Shard count: " + str(self.shard_count))
-        logging.info("Shard id: " + str(shard_id))
-        logging.info("------")
+        self.log.info("Titan [DiscordBot]")
+        self.log.info("Logged in as the following user:")
+        self.log.info(self.user.name)
+        self.log.info(self.user.id)
+        self.log.info("------")
+        self.log.info("Shard count: " + str(self.shard_count))
+        self.log.info("Shard id: " + str(shard_id))
+        self.log.info("------")
         self.loop.create_task(self.redisqueue.subscribe())
 
         self.discordBotsOrg = DiscordBotsOrg(
