@@ -5,4 +5,6 @@ It also includes misc. features to moderate guest users, etc. right in your disc
 # Installation
 1. Clone the repo (make sure you have **Python 3.6.8** (or above) installed on your system.)
 2. Clone `config.example.py` and rename it to `config.py`. Edit the file to your standards
+3. set the env vars `TITAN_WEBAPP_SECRET` and `TITAN_BOT_TOKEN`
 3. Start the bot using `python run.py`
+
