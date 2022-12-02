@@ -6,21 +6,20 @@ from titanembeds.database import db
 
 class UnauthenticatedUsers(db.Model):
     __tablename__ = "unauthenticated_users"
-    id = db.Column(db.Integer, primary_key=True, nullable=False)  # Auto increment id
-    guild_id = db.Column(
-        db.BigInteger, nullable=False
-    )  # Guild pretaining to the unauthenticated user
-    username = db.Column(db.String(255), nullable=False)  # The username of the user
-    discriminator = db.Column(
-        db.Integer, nullable=False
-    )  # The discriminator to distinguish unauth users with each other
-    user_key = db.Column(
-        db.Text(), nullable=False
-    )  # The secret key used to identify the user holder
-    ip_address = db.Column(db.String(255), nullable=False)  # The IP Address of the user
-    revoked = db.Column(
-        db.Boolean(), nullable=False
-    )  # If the user's key has been revoked and a new one is required to be generated
+    # Auto increment id
+    id = db.Column(db.Integer, primary_key=True, nullable=False)
+    # Guild pertaining to the unauthenticated user
+    guild_id = db.Column(db.BigInteger, nullable=False)
+    # The username of the user
+    username = db.Column(db.String(255), nullable=False)
+    # The discriminator to distinguish unauth users with each other
+    discriminator = db.Column(db.Integer, nullable=False)
+    # The secret key used to identify the user holder
+    user_key = db.Column(db.Text(), nullable=False)
+    # The IP Address of the user
+    ip_address = db.Column(db.String(255), nullable=False)
+    # If the user's key has been revoked and a new one is required to be generated
+    revoked = db.Column(db.Boolean(), nullable=False)
 
     def __init__(self, guild_id, username, discriminator, ip_address):
         self.guild_id = guild_id

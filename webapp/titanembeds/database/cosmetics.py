@@ -5,20 +5,18 @@ from titanembeds.database import db
 
 class Cosmetics(db.Model):
     __tablename__ = "cosmetics"
-    user_id = db.Column(
-        db.BigInteger, nullable=False, primary_key=True
-    )  # Discord user id of user of cosmetics
-    css = db.Column(db.Boolean(), nullable=False)  # If they can create/edit custom CSS
-    css_limit = db.Column(db.Integer, nullable=False, server_default="0")  # Custom CSS Limit
-    guest_icon = db.Column(
-        db.Boolean(), nullable=False, server_default=db.false()
-    )  # If they can set the guest icon for all guilds
-    send_rich_embed = db.Column(
-        db.Boolean(), nullable=False, server_default=db.false()
-    )  # If they can set the send rich embed for all guilds
-    badges = db.Column(
-        db.String(255), nullable=False, server_default="[]"
-    )  # JSON list of all the badges the user has
+    # Discord user id of user of cosmetics
+    user_id = db.Column(db.BigInteger, nullable=False, primary_key=True)
+    # If they can create/edit custom CSS
+    css = db.Column(db.Boolean(), nullable=False)
+    # Custom CSS Limit
+    css_limit = db.Column(db.Integer, nullable=False, server_default="0")
+    # If they can set the guest icon for all guilds
+    guest_icon = db.Column(db.Boolean(), nullable=False, server_default=db.false())
+    # If they can set the send rich embed for all guilds
+    send_rich_embed = db.Column(db.Boolean(), nullable=False, server_default=db.false())
+    # JSON list of all the badges the user has
+    badges = db.Column(db.String(255), nullable=False, server_default="[]")
 
     def __init__(self, user_id, **kwargs):
         self.user_id = user_id

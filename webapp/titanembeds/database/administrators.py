@@ -3,9 +3,8 @@ from titanembeds.database import db
 
 class Administrators(db.Model):
     __tablename__ = "administrators"
-    user_id = db.Column(
-        db.BigInteger, nullable=False, primary_key=True
-    )  # Discord user id of user of an administrator
+    # Discord user id of user of an administrator
+    user_id = db.Column(db.BigInteger, nullable=False, primary_key=True)
 
 
 def get_administrators_list():

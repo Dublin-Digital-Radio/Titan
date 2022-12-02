@@ -3,9 +3,8 @@ from titanembeds.database import db
 
 class DisabledGuilds(db.Model):
     __tablename__ = "disabled_guilds"  # Auto increment id
-    guild_id = db.Column(
-        db.BigInteger, nullable=False, primary_key=True
-    )  # Server id that is disabled
+    # Server id that is disabled
+    guild_id = db.Column(db.BigInteger, nullable=False, primary_key=True)
 
     def __init__(self, guild_id):
         self.guild_id = guild_id
