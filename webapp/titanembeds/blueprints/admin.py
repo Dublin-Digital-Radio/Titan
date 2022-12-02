@@ -14,10 +14,8 @@ from flask import (
     url_for,
 )
 from flask_socketio import emit
-from sqlalchemy import func
 from titanembeds.database import (
     ApplicationSettings,
-    AuthenticatedUsers,
     Cosmetics,
     DisabledGuilds,
     DiscordBotsOrgTransactions,

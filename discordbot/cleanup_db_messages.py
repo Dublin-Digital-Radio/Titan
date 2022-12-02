@@ -5,7 +5,6 @@ import random
 import asyncio
 import logging
 
-from asyncio_extras import threadpool
 from config import config
 from titanembeds.database import DatabaseInterface, Guilds, Messages
 

@@ -15,7 +15,6 @@ from titanembeds.utils import (
     redis_store,
     redisqueue,
     serializer,
-    socketio,
     update_user_status,
 )
 

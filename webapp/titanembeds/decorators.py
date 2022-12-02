@@ -1,6 +1,6 @@
 from functools import wraps
 
-from flask import abort, jsonify, redirect, request, session, url_for
+from flask import jsonify, redirect, request, session, url_for
 from titanembeds.database import list_disabled_guilds
 
 

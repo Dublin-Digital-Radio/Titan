@@ -20,7 +20,6 @@ from titanembeds.database import (
     UnauthenticatedBans,
     UnauthenticatedUsers,
     db,
-    get_administrators_list,
     get_badges,
 )
 from titanembeds.decorators import (
@@ -29,16 +28,13 @@ from titanembeds.decorators import (
     valid_session_required,
 )
 from titanembeds.oauth import (
-    check_user_can_administrate_guild,
     generate_avatar_url,
-    user_has_permission,
 )
 from titanembeds.utils import (
     channel_ratelimit_key,
     check_guild_existance,
     check_user_in_guild,
     checkUserBanned,
-    checkUserRevoke,
     discord_api,
     get_client_ipaddr,
     get_forced_role,
