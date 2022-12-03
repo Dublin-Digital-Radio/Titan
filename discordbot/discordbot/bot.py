@@ -62,14 +62,18 @@ class Titan(discord.AutoShardedClient):
         try:
             self.loop.run_until_complete(self.logout())
         except:  # Can be ignored
+            self.log.exception("run_until_complete")
             pass
+
         pending = asyncio.Task.all_tasks()
         gathered = asyncio.gather(*pending)
+
         try:
             gathered.cancel()
             self.loop.run_until_complete(gathered)
             gathered.exception()
         except:  # Can be ignored
+            self.log.exception("gather")
             pass
 
     async def start(self):
@@ -100,21 +104,21 @@ class Titan(discord.AutoShardedClient):
         await self.redisqueue.push_message(message)
 
         msg_arr = message.content.split()  # split the message
+        msg_cmd = msg_arr[1].lower()
+
+        # making sure there is actually stuff in the message and have arguments
+        # and check if it is sent in server (not PM)
         if (
-            len(message.content.split()) > 1 and message.guild
-        ):  # making sure there is actually stuff in the message and have arguments and check if it is sent in server (not PM)
-            if msg_arr[0] == "<@{}>".format(self.user.id) or msg_arr[0] == "<@!{}>".format(
-                self.user.id
-            ):  # make sure it is mention
-                msg_cmd = msg_arr[1].lower()  # get command
-                if msg_cmd == "__init__":
-                    return
-                cmd = getattr(self.command, msg_cmd, None)  # check if cmd exist, if not its none
-                if cmd:  # if cmd is not none...
-                    async with message.channel.typing():  # this looks nice
-                        await getattr(self.command, msg_cmd)(
-                            message
-                        )  # actually run cmd, passing in msg obj
+            len(message.content.split()) > 1
+            and message.guild
+            # make sure it is mention
+            and (msg_arr[0] in [f"<@{self.user.id}>", f"<@!{self.user.id}>"])
+            and msg_cmd != "__init__"
+            and getattr(self.command, msg_cmd, None)
+        ):
+            async with message.channel.typing():  # this looks nice
+                # actually run cmd, passing in msg obj
+                await getattr(self.command, msg_cmd)(message)
 
     async def on_message_edit(self, message_before, message_after):
         await self.redisqueue.update_message(message_after)
@@ -209,19 +213,25 @@ class Titan(discord.AutoShardedClient):
     async def on_raw_message_edit(self, payload):
         message_id = payload.message_id
         data = payload.data
-        if not self.in_messages_cache(int(message_id)):
-            channel = self.get_channel(int(data["channel_id"]))
-            me = channel.guild.get_member(self.user.id)
-            if channel.permissions_for(me).read_messages:
-                message = await channel.fetch_message(int(message_id))
-                await self.on_message_edit(None, message)
+        if self.in_messages_cache(int(message_id)):
+            return
+
+        channel = self.get_channel(int(data["channel_id"]))
+        me = channel.guild.get_member(self.user.id)
+        if not channel.permissions_for(me).read_messages:
+            return
+
+        message = await channel.fetch_message(int(message_id))
+        await self.on_message_edit(None, message)
 
     async def on_raw_message_delete(self, payload):
         message_id = payload.message_id
         channel_id = payload.channel_id
-        if not self.in_messages_cache(int(message_id)):
-            await asyncio.sleep(1)
-            await self.process_raw_message_delete(int(message_id), int(channel_id))
+        if self.in_messages_cache(int(message_id)):
+            return
+
+        await asyncio.sleep(1)
+        await self.process_raw_message_delete(int(message_id), int(channel_id))
 
     async def raw_bulk_message_delete(self, payload):
         message_ids = payload.message_ids
@@ -236,6 +246,7 @@ class Titan(discord.AutoShardedClient):
         if msg_id in self.delete_list:
             self.delete_list.remove(msg_id)
             return
+
         channel = self.get_channel(int(channel_id))
         data = {
             "content": "What fun is there in making sense?",
@@ -258,51 +269,60 @@ class Titan(discord.AutoShardedClient):
 
     async def on_raw_reaction_add(self, payload):
         message_id = payload.message_id
-        if not self.in_messages_cache(message_id):
-            channel = self.get_channel(payload.channel_id)
-            me = channel.guild.get_member(self.user.id)
-            if channel.permissions_for(me).read_messages:
-                message = await channel.fetch_message(message_id)
-                if len(message.reactions):
-                    await self.on_reaction_add(message.reactions[0], None)
+        if self.in_messages_cache(message_id):
+            return
+
+        channel = self.get_channel(payload.channel_id)
+        me = channel.guild.get_member(self.user.id)
+        if not channel.permissions_for(me).read_messages:
+            return
+
+        message = await channel.fetch_message(message_id)
+        if len(message.reactions):
+            await self.on_reaction_add(message.reactions[0], None)
 
     async def on_raw_reaction_remove(self, payload):
         message_id = payload.message_id
-        if not self.in_messages_cache(message_id):
-            partial = payload.emoji
-            emoji = self._connection._upgrade_partial_emoji(partial)
-            channel = self.get_channel(payload.channel_id)
-            me = channel.guild.get_member(self.user.id)
-            if channel.permissions_for(me).read_messages:
-                message = await channel.fetch_message(message_id)
-                message._add_reaction(
-                    {"me": payload.user_id == self.user.id}, emoji, payload.user_id
-                )
-                reaction = message._remove_reaction({}, emoji, payload.user_id)
-                await self.on_reaction_remove(reaction, None)
+        if self.in_messages_cache(message_id):
+            return
+
+        partial = payload.emoji
+        emoji = self._connection._upgrade_partial_emoji(partial)
+        channel = self.get_channel(payload.channel_id)
+        me = channel.guild.get_member(self.user.id)
+        if not channel.permissions_for(me).read_messages:
+            return
+
+        message = await channel.fetch_message(message_id)
+        message._add_reaction({"me": payload.user_id == self.user.id}, emoji, payload.user_id)
+        reaction = message._remove_reaction({}, emoji, payload.user_id)
+
+        await self.on_reaction_remove(reaction, None)
 
     async def on_raw_reaction_clear(self, payload):
         message_id = payload.message_id
-        if not self.in_messages_cache(message_id):
-            channel = self.get_channel(payload.channel_id)
-            me = channel.guild.get_member(self.user.id)
-            if channel.permissions_for(me).read_messages:
-                message = await channel.fetch_message(message_id)
-                await self.on_reaction_clear(message, [])
+        if self.in_messages_cache(message_id):
+            return
+
+        channel = self.get_channel(payload.channel_id)
+        me = channel.guild.get_member(self.user.id)
+        if not channel.permissions_for(me).read_messages:
+            return
+
+        message = await channel.fetch_message(message_id)
+        await self.on_reaction_clear(message, [])
 
     async def on_socket_response(self, msg):
-        if "op" in msg and "t" in msg and msg["op"] == 0:
-            if msg["t"] == "WEBHOOKS_UPDATE":
-                guild_id = int(msg["d"]["guild_id"])
-                guild = self.get_guild(guild_id)
-                if guild:
-                    await self.redisqueue.update_guild(guild)
+        if not ("op" in msg and "t" in msg and msg["op"] == 0 and msg["t"] == "WEBHOOKS_UPDATE"):
+            return
+
+        guild_id = int(msg["d"]["guild_id"])
+        guild = self.get_guild(guild_id)
+        if guild:
+            await self.redisqueue.update_guild(guild)
 
     def in_messages_cache(self, msg_id):
-        for msg in self._connection._messages:
-            if msg.id == msg_id:
-                return True
-        return False
+        return any(x.id == msg_id for x in self._connection._messages)
 
     async def auto_post_stats(self):
         while not self.is_closed():
