@@ -27,5 +27,5 @@ class DiscordBotsOrg(DiscordBots):  # https://discordbots.org
     base_url = "https://discordbots.org/api/bots/{}/stats"
 
 
-class BotsDiscordPw:  # https://bots.discord.pw/
+class BotsDiscordPw(DiscordBots):  # https://bots.discord.pw/
     base_url = "https://bots.discord.pw/api/bots/{}/stats"

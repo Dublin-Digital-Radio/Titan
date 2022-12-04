@@ -92,7 +92,7 @@ class RedisQueue:
                     unformatted_item = the_member
                     formatted_item = parsed
                     break
-        return (unformatted_item, formatted_item)
+        return unformatted_item, formatted_item
 
     async def enforce_expiring_key(self, key, ttloverride=None):
         ttl = await self.connection.ttl(key)

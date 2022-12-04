@@ -105,7 +105,7 @@ def cosmetics_post():
         user.badges = json.dumps(badges)
     db.session.add(user)
     db.session.commit()
-    return ("", 204)
+    return "", 204
 
 
 @admin.route("/cosmetics", methods=["DELETE"])
@@ -119,7 +119,7 @@ def cosmetics_delete():
         abort(409)
     db.session.delete(entry)
     db.session.commit()
-    return ("", 204)
+    return "", 204
 
 
 @admin.route("/cosmetics", methods=["PATCH"])
@@ -153,7 +153,7 @@ def cosmetics_patch():
             badges = []
         entry.badges = json.dumps(badges)
     db.session.commit()
-    return ("", 204)
+    return "", 204
 
 
 def prepare_guild_members_list(members, bans):
@@ -174,6 +174,7 @@ def prepare_guild_members_list(members, bans):
             "ban_lifted_by": None,
             "aliases": [],
         }
+
         for banned in bans:
             if banned.ip_address == member.ip_address:
                 if banned.lifter_id is None:
@@ -183,6 +184,7 @@ def prepare_guild_members_list(members, bans):
                 user["banned_reason"] = banned.reason
                 user["ban_lifted_by"] = banned.lifter_id
             continue
+
         if user["ip"] not in ip_pool:
             all_users.append(user)
             ip_pool.append(user["ip"])
@@ -434,7 +436,7 @@ def post_titan_tokens():
         abort(409)
     set_titan_token(user_id, amount, "NEW VIA ADMIN [{}]".format(str(reason)))
     db.session.commit()
-    return ("", 204)
+    return "", 204
 
 
 @admin.route("/tokens", methods=["PATCH"])
@@ -449,7 +451,7 @@ def patch_titan_tokens():
         abort(409)
     set_titan_token(user_id, amount, "MODIFY VIA ADMIN [{}]".format(str(reason)))
     db.session.commit()
-    return ("", 204)
+    return "", 204
 
 
 @admin.route("/disabled_guilds", methods=["GET"])
@@ -467,7 +469,7 @@ def post_disabled_guilds():
     guild = DisabledGuilds(guild_id)
     db.session.add(guild)
     db.session.commit()
-    return ("", 204)
+    return "", 204
 
 
 @admin.route("/disabled_guilds", methods=["DELETE"])
@@ -479,7 +481,7 @@ def delete_disabled_guilds():
     guild = db.session.query(DisabledGuilds).filter(DisabledGuilds.guild_id == guild_id).first()
     db.session.delete(guild)
     db.session.commit()
-    return ("", 204)
+    return "", 204
 
 
 @admin.route("/custom_css", methods=["GET"])
