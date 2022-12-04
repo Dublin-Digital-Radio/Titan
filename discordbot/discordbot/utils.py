@@ -4,22 +4,16 @@ import discord
 
 
 def format_datetime(datetimeobj):
-    return emailutils.format_datetime(
-        datetimeobj
-    )  # https://stackoverflow.com/questions/3453177/convert-python-datetime-to-rfc-2822
+    # https://stackoverflow.com/questions/3453177/convert-python-datetime-to-rfc-2822
+    return emailutils.format_datetime(datetimeobj)
 
 
 def get_formatted_message(message):
     edit_ts = message.edited_at
-    if not edit_ts:
-        edit_ts = None
-    else:
-        edit_ts = format_datetime(edit_ts)
-    msg_type = message.type
-    if isinstance(msg_type, int):
-        msg_type = int(msg_type)
-    else:
-        msg_type = message.type.value
+    edit_ts = None if not edit_ts else format_datetime(edit_ts)
+
+    msg_type = int(message.type) if isinstance(message.type, int) else message.type.value
+
     msg = {
         "id": str(message.id),
         "channel_id": str(message.channel.id),
@@ -29,6 +23,7 @@ def get_formatted_message(message):
         "edited_timestamp": edit_ts,
         "type": msg_type,
     }
+
     if hasattr(message, "mentions"):
         msg["mentions"] = get_message_mentions(message.mentions)
     if hasattr(message, "attachments"):
@@ -48,6 +43,7 @@ def get_formatted_message(message):
                 mention["nickname"] = member.nick
     if hasattr(message, "reactions"):
         msg["reactions"] = get_message_reactions(message.reactions)
+
     return msg
 
 
@@ -70,10 +66,12 @@ def get_formatted_user(user):
         userobj["color"] = None
     # if userobj["avatar_url"][len(userobj["avatar_url"])-15:] != ".jpg":
     #     userobj["avatar_url"] = userobj["avatar_url"][:len(userobj["avatar_url"])-14] + ".jpg"
+
     if user.nick:
         userobj["nick"] = user.nick
     if hasattr(user, "activity") and user.activity:
         userobj["activity"] = {"name": user.activity.name}
+
     roles = sorted(user.roles, key=lambda k: k.position, reverse=True)
     for role in roles:
         userobj["roles"].append(str(role.id))
@@ -83,21 +81,21 @@ def get_formatted_user(user):
                 "name": role.name,
                 "position": role.position,
             }
+
     return userobj
 
 
 def get_message_author(message):
     if not hasattr(message, "author"):
         return {}
-    author = message.author
-    obj = {
-        "username": author.name,
-        "discriminator": author.discriminator,
-        "bot": author.bot,
-        "id": str(author.id),
-        "avatar": author.avatar,
+
+    return {
+        "username": message.author.name,
+        "discriminator": message.author.discriminator,
+        "bot": message.author.bot,
+        "id": str(message.author.id),
+        "avatar": message.author.avatar,
     }
-    return obj
 
 
 def get_formatted_emojis(emojis):
@@ -116,8 +114,11 @@ def get_formatted_emojis(emojis):
     return emotes
 
 
-def get_formatted_guild(guild, webhooks=[]):
-    guil = {
+def get_formatted_guild(guild, webhooks=None):
+    if webhooks is None:
+        webhooks = []
+
+    return {
         "id": str(guild.id),
         "name": guild.name,
         "icon": guild.icon,
@@ -128,19 +129,17 @@ def get_formatted_guild(guild, webhooks=[]):
         "webhooks": get_webhooks_list(webhooks),
         "emojis": get_emojis_list(guild.emojis),
     }
-    return guil
 
 
 def get_formatted_channel(channel):
-    chan = {
+    return {
         "id": str(channel.id),
         "guild_id": str(channel.guild.id),
     }
-    return chan
 
 
 def get_formatted_role(role):
-    rol = {
+    return {
         "id": str(role.id),
         "guild_id": str(role.guild.id),
         "name": role.name,
@@ -149,7 +148,6 @@ def get_formatted_role(role):
         "position": role.position,
         "permissions": role.permissions.value,
     }
-    return rol
 
 
 def get_message_mentions(mentions):
@@ -172,6 +170,7 @@ def get_webhooks_list(guild_webhooks):
     for webhook in guild_webhooks:
         if not webhook.channel or not webhook.guild:
             continue
+
         webhooks.append(
             {
                 "id": str(webhook.id),
@@ -181,6 +180,7 @@ def get_webhooks_list(guild_webhooks):
                 "token": webhook.token,
             }
         )
+
     return webhooks
 
 
@@ -220,52 +220,45 @@ def get_roles_list(guildroles):
 def get_channels_list(guildchannels):
     channels = []
     for channel in guildchannels:
-        if isinstance(channel, discord.channel.TextChannel) or isinstance(
-            channel, discord.channel.CategoryChannel
+        if not (
+            isinstance(channel, discord.channel.TextChannel)
+            or isinstance(channel, discord.channel.CategoryChannel)
         ):
-            overwrites = []
-            isTextChannel = isinstance(channel, discord.channel.TextChannel)
-            for target, overwrite in channel.overwrites.items():
-                if not target:
-                    continue
-                if isinstance(target, discord.Role):
-                    type = "role"
-                else:
-                    type = "member"
-                allow, deny = overwrite.pair()
-                allow = allow.value
-                deny = deny.value
-                overwrites.append(
-                    {
-                        "id": str(target.id),
-                        "type": type,
-                        "allow": allow,
-                        "deny": deny,
-                    }
-                )
-            parent = channel.category
-            if parent:
-                parent = str(parent.id)
-            channels.append(
+            continue
+
+        overwrites = []
+        for target, overwrite in channel.overwrites.items():
+            if not target:
+                continue
+
+            allow, deny = overwrite.pair()
+            overwrites.append(
                 {
-                    "id": str(channel.id),
-                    "name": channel.name,
-                    "topic": channel.topic if isTextChannel else None,
-                    "position": channel.position,
-                    "type": "text" if isTextChannel else "category",
-                    "permission_overwrites": overwrites,
-                    "parent_id": parent,
-                    "nsfw": channel.is_nsfw(),
+                    "id": str(target.id),
+                    "type": "role" if isinstance(target, discord.Role) else "member",
+                    "allow": allow.value,
+                    "deny": deny.value,
                 }
             )
+
+        is_text_channel = isinstance(channel, discord.channel.TextChannel)
+        channels.append(
+            {
+                "id": str(channel.id),
+                "name": channel.name,
+                "topic": channel.topic if is_text_channel else None,
+                "position": channel.position,
+                "type": "text" if is_text_channel else "category",
+                "permission_overwrites": overwrites,
+                "parent_id": str(channel.category.id) if channel.category else None,
+                "nsfw": channel.is_nsfw(),
+            }
+        )
     return channels
 
 
 def list_role_ids(usr_roles):
-    ids = []
-    for role in usr_roles:
-        ids.append(str(role.id))
-    return ids
+    return [str(role.id) for role in usr_roles]
 
 
 def get_attachments_list(attachments):
@@ -287,10 +280,7 @@ def get_attachments_list(attachments):
 
 
 def get_embeds_list(embeds):
-    em = []
-    for e in embeds:
-        em.append(e.to_dict())
-    return em
+    return [e.to_dict() for e in embeds]
 
 
 def get_message_reactions(reactions):
@@ -304,7 +294,9 @@ def get_partial_emoji(emoji):
     emote = {"animated": False, "id": None, "name": str(emoji)}
     if isinstance(emoji, str):
         return emote
+
     emote["animated"] = emoji.animated
     emote["id"] = str(emoji.id)
     emote["name"] = emoji.name
+
     return emote

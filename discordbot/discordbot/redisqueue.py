@@ -7,17 +7,20 @@ from urllib.parse import urlparse
 
 import asyncio_redis
 import discord
-from discordbot.utils import (
-    get_formatted_guild,
-    get_formatted_message,
-    get_formatted_user,
-)
+from discordbot.utils import get_formatted_guild, get_formatted_message, get_formatted_user
+
+
+class UnreadyConnection:
+    def __getattr__(self, item):
+        raise Exception(f"accessing {item} before RedisQueue.connect()")
 
 
 class RedisQueue:
     def __init__(self, bot, redis_uri):
         self.bot = bot
         self.redis_uri = redis_uri
+        self.sub_connection = UnreadyConnection()
+        self.connection = UnreadyConnection()
 
     async def connect(self):
         url_parsed = urlparse(self.redis_uri)
@@ -40,8 +43,10 @@ class RedisQueue:
 
     async def subscribe(self):
         await self.bot.wait_until_ready()
+
         subscriber = await self.sub_connection.start_subscribe()
         await subscriber.subscribe(["discord-api-req"])
+
         while True:
             if not self.bot.is_ready() or self.bot.is_closed():
                 await asyncio.sleep(1)

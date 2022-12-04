@@ -12,6 +12,7 @@ from config import config
 from discordbot.commands import Commands
 from discordbot.poststats import BotsDiscordPw, DiscordBotsOrg
 from discordbot.redisqueue import RedisQueue
+
 from discordbot.socketio import SocketIOInterface
 
 # try:
@@ -24,7 +25,7 @@ intents.members = True
 
 
 def setup_logger(shard_ids=None):
-    shard_ids = "-".join(str(x) for x in shard_ids) if shard_ids is not None else ""
+    # shard_ids = "-".join(str(x) for x in shard_ids) if shard_ids is not None else ""
     logging.basicConfig(
         # filename="titanbot{}.log".format(shard_ids),
         stream=sys.stdout,

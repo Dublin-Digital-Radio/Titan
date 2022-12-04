@@ -165,7 +165,7 @@ class Commands:
 
         async with aiohttp.ClientSession() as aioclient:
             async with aioclient.get(url, params=payload, headers=headers) as resp:
-                if resp.status >= 200 and resp.status < 300:
+                if 200 <= resp.status < 300:
                     users = await resp.json()
         embed_description = ""
 
