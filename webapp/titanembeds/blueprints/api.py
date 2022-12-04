@@ -2,8 +2,7 @@ import re
 import copy
 import json
 import random
-import datetime
-from urllib.parse import urlparse, urlsplit, parse_qsl
+from urllib.parse import urlsplit, parse_qsl
 
 import requests
 import titanembeds.constants as constants
@@ -283,20 +282,24 @@ def get_channel_webhook_url(guild_id, channel_id):
 def delete_webhook_if_too_much(webhook):
     if not webhook:
         return
+
     guild_id = webhook["guild_id"]
-    if guild_webhooks_enabled(guild_id):
-        guild = redisqueue.get_guild(guild_id)
-        guild_webhooks = guild["webhooks"]
-        total_wh_cnt = len(guild_webhooks)
-        titan_wh_cnt = 0
-        for wh in guild_webhooks:
-            if wh["name"].startswith("[Titan] "):
-                titan_wh_cnt = titan_wh_cnt + 1
-        if titan_wh_cnt > 0 and total_wh_cnt >= 8:
-            try:
-                discord_api.delete_webhook(webhook["id"], webhook["token"])
-            except:
-                pass  # not my problem now
+    if not guild_webhooks_enabled(guild_id):
+        return
+
+    guild = redisqueue.get_guild(guild_id)
+    guild_webhooks = guild["webhooks"]
+    total_wh_cnt = len(guild_webhooks)
+    titan_wh_cnt = 0
+
+    for wh in guild_webhooks:
+        if wh["name"].startswith("[Titan] "):
+            titan_wh_cnt = titan_wh_cnt + 1
+    if titan_wh_cnt > 0 and total_wh_cnt >= 8:
+        try:
+            discord_api.delete_webhook(webhook["id"], webhook["token"])
+        except:
+            pass  # not my problem now
 
 
 def get_all_users(guild_id):
@@ -324,12 +327,10 @@ def fetch():
     guild_id = request.args.get("guild_id")
     channel_id = request.args.get("channel_id")
     after_snowflake = request.args.get("after", 0, type=int)
-    if user_unauthenticated():
-        key = session["user_keys"][guild_id]
-    else:
-        key = None
+    key = session["user_keys"][guild_id] if user_unauthenticated() else None
     status = update_user_status(guild_id, session["username"], key)
     messages = {}
+
     if status["banned"] or status["revoked"]:
         status_code = 403
         if user_unauthenticated():
@@ -716,39 +717,42 @@ def create_authenticated_user():
         response = jsonify(error=True)
         response.status_code = 401
         return response
-    else:
-        if not check_guild_existance(guild_id):
-            abort(404)
-        if not check_user_in_guild(guild_id):
-            add_member = discord_api.add_guild_member(
-                guild_id, session["user_id"], session["user_keys"]["access_token"]
-            )
-            if not add_member["success"]:
-                discord_status_code = add_member["content"].get("code", 0)
-                if discord_status_code == 40007:  # user banned from server
-                    status = {"banned": True}
-                    response = jsonify(status=status)
-                    response.status_code = 403
-                else:
-                    response = jsonify(add_member)
-                    response.status_code = 422
-                return response
-        db_user = (
-            db.session.query(AuthenticatedUsers)
-            .filter(
-                and_(
-                    AuthenticatedUsers.guild_id == guild_id,
-                    AuthenticatedUsers.client_id == session["user_id"],
-                )
-            )
-            .first()
+
+    if not check_guild_existance(guild_id):
+        abort(404)
+
+    if not check_user_in_guild(guild_id):
+        add_member = discord_api.add_guild_member(
+            guild_id, session["user_id"], session["user_keys"]["access_token"]
         )
-        if not db_user:
-            db_user = AuthenticatedUsers(guild_id, session["user_id"])
-            db.session.add(db_user)
-            db.session.commit()
-        status = update_user_status(guild_id, session["username"])
-        return jsonify(status=status)
+        if not add_member["success"]:
+            discord_status_code = add_member["content"].get("code", 0)
+            if discord_status_code == 40007:  # user banned from server
+                status = {"banned": True}
+                response = jsonify(status=status)
+                response.status_code = 403
+            else:
+                response = jsonify(add_member)
+                response.status_code = 422
+            return response
+
+    db_user = (
+        db.session.query(AuthenticatedUsers)
+        .filter(
+            and_(
+                AuthenticatedUsers.guild_id == guild_id,
+                AuthenticatedUsers.client_id == session["user_id"],
+            )
+        )
+        .first()
+    )
+    if not db_user:
+        db_user = AuthenticatedUsers(guild_id, session["user_id"])
+        db.session.add(db_user)
+        db.session.commit()
+
+    status = update_user_status(guild_id, session["username"])
+    return jsonify(status=status)
 
 
 @api.route("/user/<guild_id>/<user_id>")
@@ -764,6 +768,7 @@ def user_info(guild_id, user_id):
         "roles": [],
         "badges": [],
     }
+
     member = redisqueue.get_guild_member(guild_id, user_id)
     if member:
         usr["id"] = str(member["id"])
@@ -783,6 +788,7 @@ def user_info(guild_id, user_id):
         usr["badges"] = get_badges(user_id)
         if redis_store.get("DiscordBotsOrgVoted/" + str(member["id"])):
             usr["badges"].append("discordbotsorgvoted")
+
     return jsonify(usr)
 
 
@@ -790,8 +796,7 @@ def user_info(guild_id, user_id):
 @abort_if_guild_disabled()
 @valid_session_required(api=True)
 def list_users(guild_id):
-    all_users = get_all_users(guild_id)
-    return jsonify(all_users)
+    return jsonify(get_all_users(guild_id))
 
 
 @api.route("/webhook/discordbotsorg/vote", methods=["POST"])
@@ -804,6 +809,7 @@ def webhook_discordbotsorg_vote():
         config.get("discordbotsorg-webhook-secret", "")
     ):
         abort(403)
+
     user_id = str(incoming.get("user"))
     vote_type = str(incoming.get("type"))
     params = dict(parse_qsl(urlsplit(incoming.get("query", "")).query))
@@ -815,6 +821,7 @@ def webhook_discordbotsorg_vote():
             referrer = int(params["referrer"])
         except:
             pass
+
     DBLTrans = DiscordBotsOrgTransactions(int(user_id), vote_type, referrer)
     db.session.add(DBLTrans)
     db.session.commit()
@@ -895,8 +902,10 @@ def bot_unban():
     lifter_id = incoming.get("lifter_id", None)
     username = incoming.get("username", None)
     discriminator = incoming.get("discriminator", None)
+
     if not guild_id or not lifter_id or not username:
         return jsonify(error="Missing required parameters."), 400
+
     if discriminator:
         dbuser = (
             db.session.query(UnauthenticatedUsers)
@@ -916,6 +925,7 @@ def bot_unban():
         )
     if not dbuser:
         return jsonify(error="Guest user cannot be found."), 404
+
     dbban = (
         db.session.query(UnauthenticatedBans)
         .filter(UnauthenticatedBans.guild_id == str(guild_id))
@@ -931,6 +941,7 @@ def bot_unban():
             ),
             404,
         )
+
     if dbban.lifter_id is not None:
         return (
             jsonify(
@@ -940,8 +951,10 @@ def bot_unban():
             ),
             409,
         )
+
     dbban.liftBan(int(lifter_id))
     db.session.commit()
+
     return jsonify(
         success="Guest user, **{}#{}**, has successfully been removed from the ban list!".format(
             dbuser.username, dbuser.discriminator
@@ -959,6 +972,7 @@ def bot_revoke():
     discriminator = incoming.get("discriminator", None)
     if not guild_id or not username:
         return jsonify(error="Missing required parameters."), 400
+
     if discriminator:
         dbuser = (
             db.session.query(UnauthenticatedUsers)
@@ -976,6 +990,7 @@ def bot_revoke():
             .order_by(UnauthenticatedUsers.id.desc())
             .first()
         )
+
     if not dbuser:
         return jsonify(error="Guest user cannot be found."), 404
     elif dbuser.revoked:
@@ -987,6 +1002,7 @@ def bot_revoke():
             ),
             409,
         )
+
     dbuser.revoked = True
     db.session.commit()
     return jsonify(

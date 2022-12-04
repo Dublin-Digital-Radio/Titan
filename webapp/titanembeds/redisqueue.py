@@ -12,6 +12,7 @@ class RedisQueue:
         key = "Queue" + key
         data = self._get(key, data_type)
         payload = {"key": key, "resource": resource, "params": params}
+
         loop_count = 0
         while (not data and data != "") and loop_count < 50:
             if loop_count % 25 == 0:
@@ -20,8 +21,10 @@ class RedisQueue:
             data = self._get(key, data_type)
             loop_count += 1
         redis_store.expire(key, 60 * 5)
-        if data == None or data == "":
+
+        if not data:
             return None
+
         if data_type == "set":
             data = list(data)
             data_parsed = []
@@ -29,6 +32,7 @@ class RedisQueue:
                 if d != "":
                     data_parsed.append(json.loads(d))
             return data_parsed
+
         return json.loads(data)
 
     def _get(self, key, data_type):

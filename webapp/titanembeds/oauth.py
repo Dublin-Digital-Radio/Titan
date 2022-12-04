@@ -34,21 +34,18 @@ def make_authenticated_session(token=None, state=None, scope=None):
 
 
 def discordrest_from_user(endpoint):
-    token = session["user_keys"]
-    discord = make_authenticated_session(token=token)
+    discord = make_authenticated_session(token=session["user_keys"])
     try:
-        req = discord.get("https://discordapp.com/api/v6{}".format(endpoint))
+        return discord.get("https://discordapp.com/api/v6{}".format(endpoint))
     except InvalidGrantError as ex:
         abort(401)
-    return req
 
 
 def get_current_authenticated_user():
     req = discordrest_from_user("/users/@me")
     if req.status_code != 200:
         abort(req.status_code)
-    user = req.json()
-    return user
+    return req.json()
 
 
 def user_has_permission(permission, index):
@@ -59,12 +56,14 @@ def get_user_guilds():
     cache = redis_store.get("OAUTH/USERGUILDS/" + str(make_user_cache_key()))
     if cache:
         return cache
+
     req = discordrest_from_user("/users/@me/guilds")
     if req.status_code != 200:
         if hasattr(request, "sid"):
             disconnect()
             return
         abort(req.status_code)
+
     req = json.dumps(req.json())
     redis_store.set("OAUTH/USERGUILDS/" + str(make_user_cache_key()), req, 250)
     return req
@@ -74,6 +73,7 @@ def get_user_managed_servers():
     fetched = get_user_guilds()
     if not fetched:
         return []
+
     guilds = json.loads(fetched)
     filtered = []
     for guild in guilds:

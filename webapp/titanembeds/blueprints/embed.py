@@ -132,7 +132,6 @@ def guild_embed(guild_id):
 
 @embed.route("/signin_complete")
 def signin_complete():
-    sess = ""
     session_copy = copy.deepcopy(dict(session))
     sess = serializer.dumps(session_copy)
     return render_template("signin_complete.html.j2", session=sess)

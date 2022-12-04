@@ -203,15 +203,18 @@ def administrate_guild(guild_id):
     if not guild:
         abort(404)
         return
+
     db_guild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
     if not db_guild:
         db_guild = Guilds(guild["id"])
         db.session.add(db_guild)
         db.session.commit()
+
     session["redirect"] = None
     cosmetics = (
         db.session.query(Cosmetics).filter(Cosmetics.user_id == session["user_id"]).first()
     )
+
     permissions = []
     permissions.append("Manage Embed Settings")
     permissions.append("Ban Members")

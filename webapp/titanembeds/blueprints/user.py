@@ -59,6 +59,7 @@ def callback():
     state = session.get("oauth2_state")
     if not state:
         return redirect(url_for("user.logout", error="state_error"))
+
     if request.values.get("error"):
         return redirect(
             url_for(
@@ -66,6 +67,7 @@ def callback():
                 error="discord_error {}".format(request.values.get("error")),
             )
         )
+
     discord = make_authenticated_session(state=state)
     discord_token = discord.fetch_token(
         token_url,
@@ -89,6 +91,7 @@ def callback():
         redir = session["redirect"]
         session["redirect"] = None
         return redirect(redir)
+
     return redirect(url_for("user.dashboard"))
 
 
@@ -97,10 +100,12 @@ def logout():
     redir = session.get("redirect", None)
     if not redir:
         redir = request.args.get("redirect", None)
+
     session.clear()
     if redir:
         session["redirect"] = redir
         return redirect(session["redirect"])
+
     return redirect(url_for("index"))
 
 
@@ -122,6 +127,7 @@ def dashboard():
         redir = session["redirect"]
         session["redirect"] = None
         return redirect(redir)
+
     cosmetics = (
         db.session.query(Cosmetics).filter(Cosmetics.user_id == session["user_id"]).first()
     )
@@ -133,6 +139,7 @@ def dashboard():
             .order_by(UserCSS.id)
             .all()
         )
+
     premium_css_count = count_user_premium_css()
     return render_template(
         "dashboard.html.j2",
@@ -152,6 +159,7 @@ def new_custom_css_get():
     )
     if not cosmetics or not cosmetics.css:
         abort(403)
+
     premium_css_count = count_user_premium_css()
     return render_template(
         "usercss.html.j2",
@@ -182,6 +190,7 @@ def new_custom_css_post():
         css = css.strip()
     if len(css) == 0:
         css = None
+
     css = UserCSS(name, user_id, variables_enabled, variables, css)
     db.session.add(css)
     db.session.commit()
@@ -196,14 +205,17 @@ def edit_custom_css_get(css_id):
     )
     if not cosmetics or not cosmetics.css:
         abort(403)
+
     css = db.session.query(UserCSS).filter(UserCSS.id == css_id).first()
     if not css:
         abort(404)
     if str(css.user_id) != str(session["user_id"]):
         abort(403)
+
     variables = css.css_variables
     if variables:
         variables = json.loads(variables)
+
     premium_css_count = count_user_premium_css()
     return render_template(
         "usercss.html.j2",
@@ -223,15 +235,18 @@ def edit_custom_css_post(css_id):
     )
     if not cosmetics or not cosmetics.css:
         abort(403)
+
     dbcss = db.session.query(UserCSS).filter(UserCSS.id == css_id).first()
     if not dbcss:
         abort(404)
     if dbcss.user_id != session["user_id"]:
         abort(403)
+
     name = request.form.get("name", None)
     css = request.form.get("css", None)
     variables = request.form.get("variables", None)
     variables_enabled = request.form.get("variables_enabled", False) in ["true", True]
+
     if not name:
         abort(400)
     else:
@@ -239,6 +254,7 @@ def edit_custom_css_post(css_id):
         css = css.strip()
     if len(css) == 0:
         css = None
+
     dbcss.name = name
     dbcss.css = css
     dbcss.css_variables = variables
@@ -255,6 +271,7 @@ def edit_custom_css_delete(css_id):
     )
     if not cosmetics or not cosmetics.css:
         abort(403)
+
     dbcss = db.session.query(UserCSS).filter(UserCSS.id == css_id).first()
     if not dbcss:
         abort(404)
@@ -262,6 +279,7 @@ def edit_custom_css_delete(css_id):
         abort(403)
     db.session.delete(dbcss)
     db.session.commit()
+
     return jsonify({})
 
 
@@ -277,11 +295,13 @@ def administrate_guild(guild_id):
         )
         return redirect(url_for("user.add_bot", guild_id=guild_id))
     session["redirect"] = None
+
     db_guild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
     if not db_guild:
         db_guild = Guilds(guild["id"])
         db.session.add(db_guild)
         db.session.commit()
+
     permissions = []
     if check_user_permission(guild_id, 5):
         permissions.append("Manage Embed Settings")
@@ -289,6 +309,7 @@ def administrate_guild(guild_id):
         permissions.append("Ban Members")
     if check_user_permission(guild_id, 1):
         permissions.append("Kick Members")
+
     cosmetics = (
         db.session.query(Cosmetics).filter(Cosmetics.user_id == session["user_id"]).first()
     )
@@ -501,6 +522,7 @@ def prepare_guild_members_list(members, bans):
                 user["banned_reason"] = banned.reason
                 user["ban_lifted_by"] = banned.lifter_id
             continue
+
         if user["ip"] not in ip_pool:
             all_users.append(user)
             ip_pool.append(user["ip"])
@@ -520,16 +542,20 @@ def ban_unauthenticated_user():
     guild_id = request.form.get("guild_id", None)
     user_id = request.form.get("user_id", None)
     reason = request.form.get("reason", None)
+
     if guild_id in list_disabled_guilds():
         return ("", 423)
+
     if reason is not None:
         reason = reason.strip()
         if reason == "":
             reason = None
+
     if not guild_id or not user_id:
         abort(400)
     if not check_user_permission(guild_id, 2):
         abort(401)
+
     db_user = (
         db.session.query(UnauthenticatedUsers)
         .filter(
@@ -539,6 +565,7 @@ def ban_unauthenticated_user():
         .order_by(UnauthenticatedUsers.id.desc())
         .first()
     )
+
     if db_user is None:
         abort(404)
     db_ban = (
@@ -577,6 +604,7 @@ def unban_unauthenticated_user():
         abort(400)
     if not check_user_permission(guild_id, 2):
         abort(401)
+
     db_user = (
         db.session.query(UnauthenticatedUsers)
         .filter(
@@ -707,6 +735,7 @@ def donate_post():
 def donate_confirm():
     if not request.args.get("success"):
         return redirect(url_for("index"))
+
     payment = paypalrestsdk.Payment.find(request.args.get("paymentId"), api=get_paypal_api())
     if payment.execute({"payer_id": request.args.get("PayerID")}):
         trans_id = str(payment.transactions[0]["related_resources"][0]["sale"]["id"])

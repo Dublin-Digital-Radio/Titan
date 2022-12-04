@@ -36,6 +36,7 @@ def get_client_ipaddr():
         ip = request.headers.getlist("X-Forwarded-For")[0]
     else:
         ip = request.remote_addr
+
     return hashlib.sha512((config["app-secret"] + ip).encode("utf-8")).hexdigest()[:15]
 
 
@@ -90,11 +91,7 @@ def guild_ratelimit_key():
 def check_guild_existance(guild_id):
     if not is_int(guild_id):
         return False
-    guild = redisqueue.get_guild(guild_id)
-    if not guild:
-        return False
-    else:
-        return True
+    return bool(redisqueue.get_guild(guild_id))
 
 
 def guild_accepts_visitors(guild_id):
@@ -108,9 +105,7 @@ def guild_query_unauth_users_bool(guild_id):
 
 
 def user_unauthenticated():
-    if "unauthenticated" in session:
-        return session["unauthenticated"]
-    return True
+    return getattr(session, "unauthenticated", True)
 
 
 def checkUserRevoke(guild_id, user_key=None):
@@ -131,6 +126,7 @@ def checkUserRevoke(guild_id, user_key=None):
             return revoked
         dbUser = redisqueue.get_guild_member(guild_id, session["user_id"])
         revoked = not dbUser
+
     return revoked
 
 
@@ -143,6 +139,7 @@ def checkUserBanned(guild_id, ip_address=None):
                 UnauthenticatedBans.ip_address == ip_address,
             )
         ).all()
+
         if not dbUser:
             banned = False
         else:
@@ -235,18 +232,18 @@ def get_online_embed_user_keys(guild_id="*", user_type=None):
 def check_user_in_guild(guild_id):
     if user_unauthenticated():
         return guild_id in session.get("user_keys", {})
-    else:
-        dbUser = (
-            db.session.query(AuthenticatedUsers)
-            .filter(
-                and_(
-                    AuthenticatedUsers.guild_id == guild_id,
-                    AuthenticatedUsers.client_id == session["user_id"],
-                )
+
+    dbUser = (
+        db.session.query(AuthenticatedUsers)
+        .filter(
+            and_(
+                AuthenticatedUsers.guild_id == guild_id,
+                AuthenticatedUsers.client_id == session["user_id"],
             )
-            .first()
         )
-        return dbUser is not None and not checkUserRevoke(guild_id)
+        .first()
+    )
+    return dbUser is not None and not checkUserRevoke(guild_id)
 
 
 def get_member_roles(guild_id, user_id):
@@ -422,10 +419,8 @@ def get_channel_permission(
 def get_forced_role(guild_id):
     dbguild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
     if not session.get("unauthenticated", True):
-        forced_role = dbguild.autorole_discord
-    else:
-        forced_role = dbguild.autorole_unauth
-    return forced_role
+        return dbguild.autorole_discord
+    return dbguild.autorole_unauth
 
 
 def bot_can_create_webhooks(guild):
@@ -452,8 +447,8 @@ def guild_webhooks_enabled(guild_id):
     dbguild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
     if not dbguild.webhook_messages:
         return False
-    guild = redisqueue.get_guild(guild_id)
-    return bot_can_create_webhooks(guild)
+
+    return bot_can_create_webhooks(redisqueue.get_guild(guild_id))
 
 
 def guild_unauthcaptcha_enabled(guild_id):
@@ -462,17 +457,14 @@ def guild_unauthcaptcha_enabled(guild_id):
 
 
 def language_code_list():
-    codes = []
-    for lang in LANGUAGES:
-        codes.append(lang["code"])
-    return codes
+    return [lang["code"] for lang in LANGUAGES]
 
 
 def is_int(specimen):
     try:
         int(specimen)
         return True
-    except:
+    except ValueError:
         return False
 
 

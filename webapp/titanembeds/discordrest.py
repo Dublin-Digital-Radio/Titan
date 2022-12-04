@@ -78,7 +78,6 @@ class DiscordREST:
                     verb, url_formatted, params=params, data=data, headers=headers
                 )
 
-            remaining = None
             if "X-RateLimit-Remaining" in req.headers:
                 remaining = req.headers["X-RateLimit-Remaining"]
                 if remaining == "0" and req.status_code != 429:
