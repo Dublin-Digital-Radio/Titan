@@ -6,7 +6,8 @@ import logging
 import traceback
 from urllib.parse import urlparse
 
-import asyncio_redis
+import aioredis
+import async_timeout
 import discord
 
 from discordbot.utils import (
@@ -27,7 +28,6 @@ class RedisQueue:
     def __init__(self, bot, redis_uri):
         self.bot = bot
         self.redis_uri = redis_uri
-        self.sub_connection = UnreadyConnection()
         self.connection = UnreadyConnection()
 
     async def connect(self):
@@ -35,35 +35,31 @@ class RedisQueue:
         url_path = 0
         if url_parsed.path and len(url_parsed.path) > 2:
             url_path = int(url_parsed.path[1:])
-        self.sub_connection = await asyncio_redis.Connection.create(
-            host=url_parsed.hostname or "localhost",
-            port=url_parsed.port or 6379,
-            password=url_parsed.password,
-            db=url_path,
-        )
-        self.connection = await asyncio_redis.Pool.create(
-            host=url_parsed.hostname or "localhost",
-            port=url_parsed.port or 6379,
-            password=url_parsed.password,
-            db=url_path,
-            poolsize=10,
-        )
+
+        self.connection = await aioredis.from_url(self.redis_uri)
 
     async def subscribe(self):
         await self.bot.wait_until_ready()
 
-        subscriber = await self.sub_connection.start_subscribe()
-        await subscriber.subscribe(["discord-api-req"])
+        subscriber = self.connection.pubsub()
+        await subscriber.subscribe("discord-api-req")
 
         while True:
             if not self.bot.is_ready() or self.bot.is_closed():
                 await asyncio.sleep(1)
                 continue
-            reply = await subscriber.next_published()
-            request = json.loads(reply.value)
-            resource = request["resource"]
-            self.dispatch(resource, request["key"], request["params"])
-            await asyncio.sleep(0)
+            try:
+                async with async_timeout.timeout(1):
+                    reply = await subscriber.get_message(ignore_subscribe_messages=True)
+                    if reply is None:
+                        continue
+
+                    request = reply["data"].decode()
+                    resource = request["resource"]
+                    self.dispatch(resource, request["key"], request["params"])
+                    await asyncio.sleep(0.01)
+            except asyncio.TimeoutError:
+                pass
 
     def dispatch(self, event, key, params):
         method = "on_" + event
