@@ -21,12 +21,7 @@ import datetime
 from datetime import timedelta
 
 import titanembeds.constants as constants
-from flask import (
-    Flask,
-    render_template,
-    request,
-    session,
-)
+from flask import Flask, render_template, request, session
 from flask_sslify import SSLify
 from titanembeds.database import (
     get_administrators_list,

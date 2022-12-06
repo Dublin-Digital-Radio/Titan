@@ -2,13 +2,18 @@ import re
 import sys
 import json
 import asyncio
+import logging
 import traceback
 from urllib.parse import urlparse
-import logging
 
 import asyncio_redis
 import discord
-from discordbot.utils import get_formatted_guild, get_formatted_message, get_formatted_user
+
+from discordbot.utils import (
+    get_formatted_guild,
+    get_formatted_message,
+    get_formatted_user,
+)
 
 log = logging.getLogger(__name__)
 

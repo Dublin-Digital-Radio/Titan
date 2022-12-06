@@ -3,6 +3,7 @@ import argparse
 
 import requests
 from config import config
+
 from discordbot.bot import Titan
 
 

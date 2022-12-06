@@ -1,5 +1,6 @@
 import discord
 import socketio
+
 from discordbot.utils import (
     get_formatted_channel,
     get_formatted_emojis,

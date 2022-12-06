@@ -2,8 +2,8 @@ import re
 import copy
 import json
 import random
-from urllib.parse import urlsplit, parse_qsl
 import logging
+from urllib.parse import urlsplit, parse_qsl
 
 import requests
 import titanembeds.constants as constants
@@ -27,9 +27,7 @@ from titanembeds.decorators import (
     discord_users_only,
     valid_session_required,
 )
-from titanembeds.oauth import (
-    generate_avatar_url,
-)
+from titanembeds.oauth import generate_avatar_url
 from titanembeds.utils import (
     channel_ratelimit_key,
     check_guild_existance,

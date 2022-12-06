@@ -19,7 +19,6 @@ from titanembeds.utils import (
     update_user_status,
 )
 
-
 log = logging.getLogger(__name__)
 
 

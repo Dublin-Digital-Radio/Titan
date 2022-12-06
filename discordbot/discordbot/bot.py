@@ -9,10 +9,10 @@ import aiohttp
 # import raven
 import discord
 from config import config
+
 from discordbot.commands import Commands
 from discordbot.poststats import BotsDiscordPw, DiscordBotsOrg
 from discordbot.redisqueue import RedisQueue
-
 from discordbot.socketio import SocketIOInterface
 
 # try:
