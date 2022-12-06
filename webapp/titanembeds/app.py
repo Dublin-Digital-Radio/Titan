@@ -1,3 +1,10 @@
+import time
+import sys
+import random
+import datetime
+import logging
+from datetime import timedelta
+
 from config import config
 
 try:
@@ -14,11 +21,6 @@ except:
         from gevent import monkey
 
         monkey.patch_all()
-
-import time
-import random
-import datetime
-from datetime import timedelta
 
 import titanembeds.constants as constants
 from flask import Flask, render_template, request, session
@@ -39,6 +41,14 @@ from titanembeds.utils import (  # , sentry
 
 from .blueprints import admin, api, embed, gateway, user
 from .database import db
+
+logging.basicConfig(
+    # filename="titanbot{}.log".format(shard_ids),
+    stream=sys.stdout,
+    level=logging.INFO,
+    format="%(asctime)s %(name)s %(levelname)s %(message)s",
+    datefmt="%m/%d/%Y %I:%M:%S %p",
+)
 
 app_start_stamp = time.time()
 

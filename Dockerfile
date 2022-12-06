@@ -7,15 +7,12 @@ ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
 
-FROM golang:1.19-bullseye as overmind-build
-
-RUN go install github.com/DarthSim/overmind/v2@latest
-
-
 FROM base as build
 
-ENV VIRTUAL_ENV "/home/titan/venv"
-ENV PATH="$VIRTUAL_ENV/bin":$PATH
+ARG VIRTUAL_ENV="/home/titan/venv"
+ENV VIRTUAL_ENV=$VIRTUAL_ENV
+ARG PATH="$VIRTUAL_ENV/bin":$PATH
+ENV PATH=$PATH
 
 RUN apt update && \
   apt install --no-install-recommends -y \
@@ -29,27 +26,51 @@ RUN pip install -U pip wheel
 
 FROM build as build-discordbot
 
+ARG VIRTUAL_ENV="/home/titan/venv"
+ENV VIRTUAL_ENV=$VIRTUAL_ENV
+ARG PATH="$VIRTUAL_ENV/bin":$PATH
+ENV PATH=$PATH
+
 COPY requirements/requirements.discordbot.txt .
 RUN pip install -r requirements.discordbot.txt
 
 
 FROM build as build-webapp
 
+ARG VIRTUAL_ENV="/home/titan/venv"
+ENV VIRTUAL_ENV=$VIRTUAL_ENV
+ARG PATH="$VIRTUAL_ENV/bin":$PATH
+ENV PATH=$PATH
+
 COPY requirements/requirements.webapp.txt .
 RUN pip install -r requirements.webapp.txt
 
 
-FROM base as run-base
+FROM base as run-discordbot
 
-RUN apt update && \
-  apt install --no-install-recommends -y \
-    tmux && \
-  rm -rf /var/lib/apt/lists/*
+ARG VIRTUAL_ENV="/home/titan/venv"
+ENV VIRTUAL_ENV=$VIRTUAL_ENV
+ARG PATH="$VIRTUAL_ENV/bin":$PATH
+ENV PATH=$PATH
+ENV DATABASE_URL='postgresql://titan:titan@localhost:5432/titan'
+ENV REDIS_URL='redis://localhost'
 
-COPY --from=overmind-build /go/bin/overmind /usr/local/bin/
+COPY --from=build-discordbot /home/titan/venv /home/titan/venv
+COPY discordbot discordbot/
+
+USER titan
+WORKDIR /home/titan/Titan/discordbot
+CMD ["python", "run.py"]
 
 
-FROM run-base as run-webapp
+FROM base as run-webapp
+
+ARG VIRTUAL_ENV="/home/titan/venv"
+ENV VIRTUAL_ENV=$VIRTUAL_ENV
+ARG PATH="$VIRTUAL_ENV/bin":$PATH
+ENV PATH=$PATH
+ENV DATABASE_URL='postgresql://titan:titan@localhost:5432/titan'
+ENV REDIS_URL='redis://localhost'
 
 COPY --from=build-webapp /home/titan/venv /home/titan/venv
 
@@ -57,16 +78,8 @@ COPY webapp webapp/
 
 RUN cd webapp && /home/titan/venv/bin/python bin/tr_compile.py
 
-WORKDIR /home/titan
-COPY Procfile .
-
-#USER titan
-
-CMD ["overmind", "start"]
-
-
-FROM run-base as run-discordbot
-COPY --from=build-discordbot /home/titan/venv /home/titan/venv
-COPY discordbot discordbot/
+USER titan
+WORKDIR /home/titan/Titan/webapp
+CMD ["gunicorn", "--worker-class", "eventlet", "-w", "1", "-b", "0.0.0.0:8080", "titanembeds.app:app"]
 
 

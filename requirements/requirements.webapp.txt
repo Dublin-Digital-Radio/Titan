@@ -17,6 +17,8 @@ kombu==5.2.4
 oauthlib==3.2.2
 patreon==0.5.0
 paypalrestsdk==1.13.1
+psycopg2-binary==2.9.5
+python-dotenv==0.21.0
 raven[flask]==6.10.0
 redis==3.4.1
 requests==2.28.1

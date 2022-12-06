@@ -2,6 +2,7 @@
 import subprocess
 
 from titanembeds.app import app, socketio
+from config import config
 
 
 def init_debug():
@@ -53,5 +54,7 @@ def init_debug():
 
 
 if __name__ == "__main__":
-    init_debug()
-    socketio.run(app, host="0.0.0.0", port=3000, debug=True)
+    if config["debug"]:
+        init_debug()
+
+    socketio.run(app, host="0.0.0.0", port=3000, debug=config["debug"])

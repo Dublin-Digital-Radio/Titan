@@ -30,7 +30,7 @@ def setup_logger(shard_ids=None):
         # filename="titanbot{}.log".format(shard_ids),
         stream=sys.stdout,
         level=logging.INFO,
-        format="%(asctime)s %(message)s",
+        format="%(asctime)s %(name)s %(levelname)s %(message)s",
         datefmt="%m/%d/%Y %I:%M:%S %p",
     )
     return logging.getLogger("TitanBot")

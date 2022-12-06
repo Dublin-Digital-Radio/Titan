@@ -1,6 +1,10 @@
 from os import environ as env
+from dotenv import load_dotenv
+
+load_dotenv()
 
 config = {
+    "debug": env.get("TITAN_WEBAPP_DEBUG", False),
     "app-secret": env["TITAN_APP_SECRET"],
     # app-location": "/home/titan/Titan/webapp/",
     "database-uri": env.get("DATABASE_URL", "postgres://titan:titan@localhost:5432/titan"),
