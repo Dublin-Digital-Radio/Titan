@@ -95,10 +95,12 @@ class TitanCleanupDB:
                 self.logger.info(
                     "[{}] snowflake-{} name-{}".format(count, guild.guild_id, guild.name)
                 )
+
                 try:
                     channelsjson = json.loads(guild.channels)
-                except:
+                except json.JSONDecodeError:
                     continue
+
                 active_channels = []
                 for channel in channelsjson:
                     chanid = channel["id"]

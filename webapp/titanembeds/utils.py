@@ -264,6 +264,7 @@ def get_guild_channels(guild_id, force_everyone=False, forced_role=0):
         member_roles = get_member_roles(guild_id, session["user_id"])
         if guild_id not in member_roles:
             member_roles.append(guild_id)
+
     if forced_role:
         member_roles.append(str(forced_role))
     bot_member_roles = get_member_roles(guild_id, config["client-id"])
@@ -341,9 +342,7 @@ def get_channel_permission(
         return result
     channel_perm = 0
 
-    role_positions = {}
-    for role in guild_roles:
-        role_positions[str(role["id"])] = role["position"]
+    role_positions = {str(role["id"]): role["position"] for role in guild_roles}
     member_roles = sorted(
         member_roles, key=lambda x: role_positions.get(str(x), -1), reverse=True
     )

@@ -4,10 +4,13 @@ import json
 import asyncio
 import traceback
 from urllib.parse import urlparse
+import logging
 
 import asyncio_redis
 import discord
 from discordbot.utils import get_formatted_guild, get_formatted_message, get_formatted_user
+
+log = logging.getLogger(__name__)
 
 
 class UnreadyConnection:
@@ -233,6 +236,7 @@ class RedisQueue:
             try:
                 server_webhooks = await guild.webhooks()
             except:
+                log.exception("Could not get guild webhooks")
                 server_webhooks = []
         else:
             server_webhooks = []

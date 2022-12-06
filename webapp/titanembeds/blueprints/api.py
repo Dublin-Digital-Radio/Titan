@@ -3,6 +3,7 @@ import copy
 import json
 import random
 from urllib.parse import urlsplit, parse_qsl
+import logging
 
 import requests
 import titanembeds.constants as constants
@@ -53,6 +54,7 @@ from titanembeds.utils import (
     user_unauthenticated,
 )
 
+log = logging.getLogger(__name__)
 api = Blueprint("api", __name__)
 
 
@@ -73,7 +75,7 @@ def before_request():
         try:
             data = serializer.loads(authorization)
             session.update(data)
-        except:
+        except json.JSONDecodeError:
             pass
 
 
@@ -299,6 +301,7 @@ def delete_webhook_if_too_much(webhook):
         try:
             discord_api.delete_webhook(webhook["id"], webhook["token"])
         except:
+            log.exception("Could not delete webhook")
             pass  # not my problem now
 
 
@@ -377,7 +380,7 @@ def get_guild_specific_post_limit():
     guild_id = request.form.get("guild_id", None)
     try:
         guild_id = int(guild_id)
-    except:
+    except ValueError:
         guild_id = None
     seconds = 5
     if guild_id:
@@ -390,7 +393,7 @@ def get_guild_specific_post_limit():
 def get_post_content_max_len(guild_id):
     try:
         guild_id = int(guild_id)
-    except:
+    except ValueError:
         guild_id = None
     length = 350
     if guild_id:
@@ -819,7 +822,7 @@ def webhook_discordbotsorg_vote():
     if "referrer" in params:
         try:
             referrer = int(params["referrer"])
-        except:
+        except ValueError:
             pass
 
     DBLTrans = DiscordBotsOrgTransactions(int(user_id), vote_type, referrer)

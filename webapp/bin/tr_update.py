@@ -8,7 +8,7 @@ else:
     pybabel = "pybabel"
 try:
     os.unlink("titanembeds/translations/messages.pot")
-except:
+except (OSError, FileNotFoundError):
     pass
 os.system(
     pybabel

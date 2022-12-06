@@ -1,5 +1,6 @@
 import os
 import time
+import logging
 
 from flask import session
 from flask_socketio import Namespace, disconnect, emit, join_room, leave_room
@@ -19,6 +20,9 @@ from titanembeds.utils import (
 )
 
 
+log = logging.getLogger(__name__)
+
+
 class Gateway(Namespace):
     def teardown_db_session(self):
         db.session.commit()
@@ -35,6 +39,7 @@ class Gateway(Namespace):
                 data = serializer.loads(authorization)
                 session.update(data)
             except:
+                log.exception("exception in authorisation session update")
                 pass
 
         guild_id = data["guild_id"]

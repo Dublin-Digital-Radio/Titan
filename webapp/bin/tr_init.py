@@ -11,7 +11,7 @@ if len(sys.argv) != 2:
     sys.exit(1)
 try:
     os.unlink("titanembeds/translations/messages.pot")
-except:
+except (OSError, FileNotFoundError):
     pass
 os.system(
     pybabel

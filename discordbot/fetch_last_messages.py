@@ -124,8 +124,8 @@ def main():
     try:
         shard_id = sys.argv[3]
         shard_count = sys.argv[4]
-        print("Running on shard {} of total {} shards.".format(shard_id, shard_count))
-    except:
+        print(f"Running on shard {shard_id} of total {shard_count} shards.")
+    except IndexError:
         shard_id = None
         shard_count = None
         print("Running on no sharding support.")
