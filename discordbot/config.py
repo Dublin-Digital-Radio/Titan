@@ -1,10 +1,15 @@
 from os import environ as env
 from dotenv import load_dotenv
+import re
 
 load_dotenv()
 
 config = {
-    "database-uri": env.get("DATABASE_URL", "postgres://titan:titan@localhost:5432/titan"),
+    "database-uri": re.sub(
+        "^postgres:",
+        "postgresql:",
+        env.get("DATABASE_URL", "postgresql://titan:titan@localhost:5432/titan"),
+    ),
     "redis-uri": env.get("REDIS_URL", "redis://"),
     "titan-web-url": "https://titanembeds.com/",
     "bot-token": env["TITAN_BOT_TOKEN"],

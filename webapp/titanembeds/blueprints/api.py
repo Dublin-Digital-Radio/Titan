@@ -455,7 +455,10 @@ def post():
                         username = username[:25]
                     username = username + "#" + str(session["user_id"])
                     avatar = url_for(
-                        "static", filename="img/titanembeds_square.png", _external=True
+                        "static",
+                        filename="img/titanembeds_square.png",
+                        _external=True,
+                        _scheme="https",
                     )
                     dbguild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
                     if dbguild:

@@ -1,6 +1,4 @@
 import json
-import time
-import datetime
 
 import patreon
 import paypalrestsdk
@@ -76,17 +74,21 @@ def callback():
     )
     if not discord_token:
         return redirect(url_for("user.logout", error="discord_user_token_fetch_error"))
+
     session["user_keys"] = discord_token
     session["unauthenticated"] = False
     session.permanent = True
+
     user = get_current_authenticated_user()
     session["user_id"] = int(user["id"])
     session["username"] = user["username"]
     session["discriminator"] = user["discriminator"]
     session["avatar"] = generate_avatar_url(user["id"], user["avatar"], user["discriminator"])
     session["tokens"] = get_titan_token(session["user_id"])
+
     if session["tokens"] == -1:
         session["tokens"] = 0
+
     if session["redirect"]:
         redir = session["redirect"]
         session["redirect"] = None
@@ -291,7 +293,7 @@ def administrate_guild(guild_id):
     guild = redisqueue.get_guild(guild_id)
     if not guild:
         session["redirect"] = url_for(
-            "user.administrate_guild", guild_id=guild_id, _external=True
+            "user.administrate_guild", guild_id=guild_id, _external=True, _scheme="https"
         )
         return redirect(url_for("user.add_bot", guild_id=guild_id))
     session["redirect"] = None
@@ -705,8 +707,10 @@ def donate_post():
     amount = {"total": donation_amount, "currency": "USD"}
     description = "Donate and support TitanEmbeds development."
     redirect_urls = {
-        "return_url": url_for("user.donate_confirm", success="true", _external=True),
-        "cancel_url": url_for("index", _external=True),
+        "return_url": url_for(
+            "user.donate_confirm", success="true", _external=True, _scheme="https"
+        ),
+        "cancel_url": url_for("index", _external=True, _scheme="https"),
     }
     payment = paypalrestsdk.Payment(
         {
@@ -817,7 +821,8 @@ def patreon_callback():
         config["patreon-client-id"], config["patreon-client-secret"]
     )
     tokens = patreon_oauth_client.get_tokens(
-        request.args.get("code"), url_for("user.patreon_callback", _external=True)
+        request.args.get("code"),
+        url_for("user.patreon_callback", _external=True, _scheme="https"),
     )
     if "error" in tokens:
         if "patreon" in session:

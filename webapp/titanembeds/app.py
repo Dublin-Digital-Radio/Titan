@@ -1,9 +1,10 @@
 import time
-import sys
 import random
 import datetime
-import logging
 from datetime import timedelta
+import logging
+
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from config import config
 
@@ -42,22 +43,27 @@ from titanembeds.utils import (  # , sentry
 from .blueprints import admin, api, embed, gateway, user
 from .database import db
 
-logging.basicConfig(
-    # filename="titanbot{}.log".format(shard_ids),
-    stream=sys.stdout,
-    level=logging.INFO,
-    format="%(asctime)s %(name)s %(levelname)s %(message)s",
-    datefmt="%m/%d/%Y %I:%M:%S %p",
-)
+
+class Error(Exception):
+    pass
+
+
+class ConfigError(Error):
+    pass
+
 
 app_start_stamp = time.time()
 
-# os.chdir(config["app-location"])
 app = Flask(__name__, static_folder="static")
+
+if __name__ != "__main__":
+    gunicorn_logger = logging.getLogger("gunicorn.error")
+    app.logger.handlers = gunicorn_logger.handlers
+    app.logger.setLevel(gunicorn_logger.level)
+
 app.config["SQLALCHEMY_DATABASE_URI"] = config["database-uri"]
-app.config[
-    "SQLALCHEMY_TRACK_MODIFICATIONS"
-] = False  # Suppress the warning/no need this on for now.
+# Suppress the warning/no need this on for now.
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["RATELIMIT_HEADERS_ENABLED"] = True
 app.config["SQLALCHEMY_POOL_RECYCLE"] = 100
 app.config["SQLALCHEMY_POOL_SIZE"] = 500
@@ -72,9 +78,17 @@ app.secret_key = config["app-secret"]
 
 # sentry.init_app(app)
 db.init_app(app)
+
 rate_limiter.init_app(app)
-if config.get("enable-ssl", False):
+
+if config["enable-ssl"] and config["https-proxy"]:
+    raise ConfigError("Cannot set both `enable-ssl` and `https-proxy`")
+if config["enable-ssl"]:
     sslify = SSLify(app, permanent=True)
+if config["https-proxy"]:
+    app.wsgi_app = ProxyFix(app.wsgi_app)
+
+
 socketio.init_app(
     app,
     message_queue=config["redis-uri"],

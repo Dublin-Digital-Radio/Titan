@@ -23,7 +23,7 @@ def make_authenticated_session(token=None, state=None, scope=None):
         token=token,
         state=state,
         scope=scope,
-        redirect_uri=url_for("user.callback", _external=True),
+        redirect_uri=url_for("user.callback", _external=True, _scheme="https"),
         auto_refresh_kwargs={
             "client_id": config["client-id"],
             "client_secret": config["client-secret"],

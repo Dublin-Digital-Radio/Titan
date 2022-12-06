@@ -1,21 +1,30 @@
 from os import environ as env
 from dotenv import load_dotenv
+import re
 
 load_dotenv()
 
 config = {
     "debug": env.get("TITAN_WEBAPP_DEBUG", False),
     "app-secret": env["TITAN_APP_SECRET"],
-    # app-location": "/home/titan/Titan/webapp/",
-    "database-uri": env.get("DATABASE_URL", "postgres://titan:titan@localhost:5432/titan"),
+    "database-uri": re.sub(
+        "^postgres:",
+        "postgresql:",
+        env.get("DATABASE_URL", "postgresql://titan:titan@localhost:5432/titan"),
+    ),
     "redis-uri": env.get("REDIS_URL", "redis://"),
     # Create an app over here https://discordapp.com/developers/applications/me
     # and fill these fields out
     "client-id": env["DISCORD_CLIENT_ID"],
     "client-secret": env["DISCORD_CLIENT_SECRET"],
     "bot-token": env["DISCORD_BOT_TOKEN"],
+    # are we running behind a proxy which terminates TLS - cannot be used with `enable-ssl`
+    "https-proxy": env.get("TITAN_HTTPS_PROXY", False),
+    # redirect all http to https - cannot be used with `https-proxy`
+    "enable-ssl": env.get("TITAN_ENABLE_SSL", False),
+    #
     "websockets-mode": env.get("WEBSOCKETS_MODE", "eventlet"),
-    "engineio-logging": False,
+    "engineio-logging": True,
     # https://titanembeds.com/api/webhook/discordbotsorg/vote
     # Secret code used in the authorization header for DBL webhook
     "discordbotsorg-webhook-secret": env.get("DISCORDBOTSORG_WEBHOOK_SECRET"),

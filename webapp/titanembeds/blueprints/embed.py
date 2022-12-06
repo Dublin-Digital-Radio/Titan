@@ -142,7 +142,7 @@ def login_discord():
     return redirect(
         url_for(
             "user.login_authenticated",
-            redirect=url_for("embed.signin_complete", _external=True),
+            redirect=url_for("embed.signin_complete", _external=True, _scheme="https"),
         )
     )
 

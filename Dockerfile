@@ -71,6 +71,7 @@ ARG PATH="$VIRTUAL_ENV/bin":$PATH
 ENV PATH=$PATH
 ENV DATABASE_URL='postgresql://titan:titan@localhost:5432/titan'
 ENV REDIS_URL='redis://localhost'
+ENV TITAN_HTTPS_PROXY='True'
 
 COPY --from=build-webapp /home/titan/venv /home/titan/venv
 
@@ -80,6 +81,6 @@ RUN cd webapp && /home/titan/venv/bin/python bin/tr_compile.py
 
 USER titan
 WORKDIR /home/titan/Titan/webapp
-CMD ["gunicorn", "--worker-class", "eventlet", "-w", "1", "-b", "0.0.0.0:8080", "titanembeds.app:app"]
+CMD ["gunicorn", "--worker-class", "eventlet", "-w", "1", "-b", "0.0.0.0:8080", "--log-level", "info", "titanembeds.app:app"]
 
 
