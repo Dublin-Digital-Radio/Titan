@@ -3,8 +3,6 @@ import asyncio
 import logging
 from collections import deque
 
-import aiohttp
-
 # from raven import Client as RavenClient
 # import raven
 import discord
@@ -30,7 +28,7 @@ def setup_logger(shard_ids=None):
         # filename="titanbot{}.log".format(shard_ids),
         stream=sys.stdout,
         level=logging.INFO,
-        format="%(asctime)s %(name)s %(levelname)s %(message)s",
+        format="%(levelname)s %(name)s %(message)s",
         datefmt="%m/%d/%Y %I:%M:%S %p",
     )
     return logging.getLogger("TitanBot")
@@ -49,7 +47,6 @@ class Titan(discord.AutoShardedClient):
             ),
         )
         self.log = setup_logger(shard_ids)
-        self.aiosession = aiohttp.ClientSession(loop=self.loop)
         self.http.user_agent += " TitanEmbeds-Bot"
         self.redisqueue = RedisQueue(self, config["redis-uri"])
         self.command = Commands(self, config)
@@ -92,12 +89,8 @@ class Titan(discord.AutoShardedClient):
         self.log.info("------")
         self.loop.create_task(self.redisqueue.subscribe())
 
-        self.discordBotsOrg = DiscordBotsOrg(
-            self.user.id, config.get("discord-bots-org-token", None)
-        )
-        self.botsDiscordPw = BotsDiscordPw(
-            self.user.id, config.get("bots-discord-pw-token", None)
-        )
+        self.discordBotsOrg = DiscordBotsOrg(self.user.id, config["discord-bots-org-token"])
+        self.botsDiscordPw = BotsDiscordPw(self.user.id, config["bots-discord-pw-token"])
         self.loop.create_task(self.auto_post_stats())
 
     async def on_message(self, message):

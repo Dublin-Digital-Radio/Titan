@@ -4,7 +4,6 @@ import json
 import asyncio
 import logging
 import traceback
-from urllib.parse import urlparse
 
 import aioredis
 import async_timeout
@@ -31,11 +30,6 @@ class RedisQueue:
         self.connection = UnreadyConnection()
 
     async def connect(self):
-        url_parsed = urlparse(self.redis_uri)
-        url_path = 0
-        if url_parsed.path and len(url_parsed.path) > 2:
-            url_path = int(url_parsed.path[1:])
-
         self.connection = await aioredis.from_url(self.redis_uri)
 
     async def subscribe(self):

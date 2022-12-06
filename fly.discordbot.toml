@@ -1,0 +1,13 @@
+# fly.toml file generated for ddr-discord-bot on 2022-12-06T16:45:28Z
+
+app = "ddr-discord-bot"
+kill_signal = "SIGINT"
+kill_timeout = 5
+processes = []
+
+[env]
+
+[experimental]
+  allowed_public_ports = []
+  auto_rollback = true
+

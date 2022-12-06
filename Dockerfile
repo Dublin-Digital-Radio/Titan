@@ -46,7 +46,7 @@ COPY requirements/requirements.webapp.txt .
 RUN pip install -r requirements.webapp.txt
 
 
-FROM base as run-discordbot
+FROM base as discordbot
 
 ARG VIRTUAL_ENV="/home/titan/venv"
 ENV VIRTUAL_ENV=$VIRTUAL_ENV
@@ -54,6 +54,8 @@ ARG PATH="$VIRTUAL_ENV/bin":$PATH
 ENV PATH=$PATH
 ENV DATABASE_URL='postgresql://titan:titan@localhost:5432/titan'
 ENV REDIS_URL='redis://localhost'
+ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE 1
 
 COPY --from=build-discordbot /home/titan/venv /home/titan/venv
 COPY discordbot discordbot/
@@ -63,7 +65,7 @@ WORKDIR /home/titan/Titan/discordbot
 CMD ["python", "run.py"]
 
 
-FROM base as run-webapp
+FROM base as webapp
 
 ARG VIRTUAL_ENV="/home/titan/venv"
 ENV VIRTUAL_ENV=$VIRTUAL_ENV
@@ -72,6 +74,8 @@ ENV PATH=$PATH
 ENV DATABASE_URL='postgresql://titan:titan@localhost:5432/titan'
 ENV REDIS_URL='redis://localhost'
 ENV TITAN_HTTPS_PROXY='True'
+ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE 1
 
 COPY --from=build-webapp /home/titan/venv /home/titan/venv
 

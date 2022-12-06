@@ -11,7 +11,7 @@ config = {
         env.get("DATABASE_URL", "postgresql://titan:titan@localhost:5432/titan"),
     ),
     "redis-uri": env.get("REDIS_URL", "redis://"),
-    "titan-web-url": "https://titanembeds.com/",
+    "titan-web-url": "https://ddr-titan.fly.dev/",
     "bot-token": env["TITAN_BOT_TOKEN"],
     "titan-web-app-secret": env["TITAN_WEBAPP_SECRET"],
     "discord-bots-org-token": env.get("DISCORDBOTS_POST_STATS_TOKEN"),

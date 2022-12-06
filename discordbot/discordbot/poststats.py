@@ -1,6 +1,9 @@
 from abc import abstractmethod
+import logging
 
 import aiohttp
+
+log = logging.getLogger(__name__)
 
 
 class DiscordBots:
@@ -14,6 +17,10 @@ class DiscordBots:
         pass
 
     async def post(self, count, shard_count, shard_id):
+        if not self.token:
+            log.info(f"{self.__class__} cannot post stats because `token` is not defined")
+            return
+
         headers = {"Authorization": self.token}
         payload = {
             "server_count": count,

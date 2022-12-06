@@ -12,10 +12,10 @@ def print_shards():
     url = "https://discordapp.com/api/v6/gateway/bot"
     headers = {"Authorization": "Bot {}".format(token)}
     r = requests.get(url, headers=headers)
-    if r.status_code >= 200 and r.status_code < 300:
-        print("Suggested number of shards: {}".format(r.json().get("shards", 0)))
+    if 200 <= r.status_code < 300:
+        print(f"Suggested number of shards: {r.json().get('shards', 0)}")
     else:
-        print("Status Code: {}".format(r.status_code))
+        print(f"Status Code: {r.status_code}")
         print(r.text)
 
 
@@ -30,7 +30,7 @@ def main():
     parser.add_argument(
         "-s",
         "--shards",
-        help="Prints the reccomended number of shards to spawn",
+        help="Prints the recommended number of shards to spawn",
         action="store_true",
     )
     args = parser.parse_args()

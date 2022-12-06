@@ -8,3 +8,9 @@ It also includes misc. features to moderate guest users, etc. right in your disc
 3. set the env vars `TITAN_WEBAPP_SECRET` and `TITAN_BOT_TOKEN`
 3. Start the bot using `python run.py`
 
+
+# Create a bot
+
+## Intents
+ - Server members
+ - message content

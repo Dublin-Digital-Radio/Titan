@@ -3,7 +3,6 @@ import sys
 import asyncio
 import logging
 
-import aiohttp
 import discord
 from config import config
 
@@ -32,7 +31,6 @@ logging.getLogger("sqlalchemy")
 class Titan(discord.Client):
     def __init__(self, shard_id=None, shard_count=None):
         super().__init__(shard_id=shard_id, shard_count=shard_count)
-        self.aiosession = aiohttp.ClientSession(loop=self.loop)
         self.http.user_agent += " TitanEmbeds-Bot"
         self.database = DatabaseInterface(self)
         self.command = Commands(self, self.database)
