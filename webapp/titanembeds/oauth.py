@@ -1,4 +1,5 @@
 import json
+import logging
 
 from config import config
 from flask import abort, request, session, url_for
@@ -7,6 +8,10 @@ from oauthlib.oauth2.rfc6749.errors import InvalidGrantError
 from requests_oauthlib import OAuth2Session
 from titanembeds.redisqueue import redis_store
 from titanembeds.utils import make_user_cache_key
+
+log = logging.getLogger(__name__)
+
+BOT_PERMISSIONS = 641195117
 
 authorize_url = "https://discordapp.com/api/oauth2/authorize"
 token_url = "https://discordapp.com/api/oauth2/token"
@@ -37,8 +42,9 @@ def make_authenticated_session(token=None, state=None, scope=None):
 def discordrest_from_user(endpoint):
     discord = make_authenticated_session(token=session["user_keys"])
     try:
-        return discord.get("https://discordapp.com/api/v6{}".format(endpoint))
+        return discord.get(f"https://discordapp.com/api/v6{endpoint}")
     except InvalidGrantError as ex:
+        log.exception("Invalid grant")
         abort(401)
 
 
@@ -46,6 +52,7 @@ def get_current_authenticated_user():
     req = discordrest_from_user("/users/@me")
     if req.status_code != 200:
         abort(req.status_code)
+
     return req.json()
 
 
@@ -86,6 +93,7 @@ def get_user_managed_servers():
             or user_has_permission(permission, 1)
         ):
             filtered.append(guild)
+
     filtered = sorted(filtered, key=lambda guild: guild["name"])
     return filtered
 
@@ -94,20 +102,16 @@ def get_user_managed_servers_safe():
     guilds = get_user_managed_servers()
     if guilds:
         return guilds
+
     return []
 
 
 def get_user_managed_servers_id():
-    guilds = get_user_managed_servers_safe()
-    ids = []
-    for guild in guilds:
-        ids.append(guild["id"])
-    return ids
+    return [guild["id"] for guild in get_user_managed_servers_safe()]
 
 
 def check_user_can_administrate_guild(guild_id):
-    guilds = get_user_managed_servers_id()
-    return guild_id in guilds
+    return guild_id in get_user_managed_servers_id()
 
 
 def check_user_permission(guild_id, id):
@@ -120,23 +124,17 @@ def check_user_permission(guild_id, id):
 
 def generate_avatar_url(id, av, discrim="0000", allow_animate=False):
     if av:
-        if allow_animate and str(av).startswith("a_"):
-            return avatar_base_url + str(id) + "/" + str(av) + ".gif"
-        return avatar_base_url + str(id) + "/" + str(av) + ".png"
-    else:
-        default_av = [0, 1, 2, 3, 4]
-        discrim = int(discrim)
-        return "https://cdn.discordapp.com/embed/avatars/{}.png".format(
-            default_av[int(discrim) % len(default_av)]
-        )
+        suf = "gif" if allow_animate and str(av).startswith("a_") else "png"
+        return f"{avatar_base_url}{id}/{av}.{suf}"
+
+    default_av = [0, 1, 2, 3, 4]
+    avatar_no = default_av[int(discrim) % len(default_av)]
+    return f"https://cdn.discordapp.com/embed/avatars/{avatar_no}.png"
 
 
 def generate_guild_icon_url(id, hash):
-    return guild_icon_url + str(id) + "/" + str(hash) + ".png"
+    return f"{guild_icon_url}{id}/{hash}.png"
 
 
 def generate_bot_invite_url(guild_id):
-    url = "https://discordapp.com/oauth2/authorize?&client_id={}&scope=bot&permissions={}&guild_id={}".format(
-        config["client-id"], "641195117", guild_id
-    )
-    return url
+    return f"https://discordapp.com/oauth2/authorize?&client_id={config['client-id']}&scope=bot&permissions={BOT_PERMISSIONS}&guild_id={guild_id}"

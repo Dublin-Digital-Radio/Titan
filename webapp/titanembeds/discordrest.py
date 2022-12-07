@@ -9,19 +9,17 @@ _DISCORD_API_BASE = "https://discordapp.com/api/v6"
 
 
 def json_or_text(response):
-    text = response.text
     if response.headers["content-type"] == "application/json":
         return response.json()
-    return text
+
+    return response.text
 
 
 class DiscordREST:
     def __init__(self, bot_token):
         self.global_redis_prefix = "discordapiratelimit/"
         self.bot_token = bot_token
-        self.user_agent = (
-            f"TitanEmbeds (https://github.com/TitanEmbeds/Titan) Python/{sys.version_info} requests/{requests.__version__}"
-        )
+        self.user_agent = f"TitanEmbeds (https://github.com/TitanEmbeds/Titan) Python/{sys.version_info} requests/{requests.__version__}"
 
     def init_discordrest(self):
         if not self._bucket_contains("global_limited"):
@@ -48,6 +46,7 @@ class DiscordREST:
         params = None
         if "params" in kwargs:
             params = kwargs["params"]
+
         data = None
         if "data" in kwargs:
             data = kwargs["data"]
@@ -109,6 +108,7 @@ class DiscordREST:
                     "content": json_or_text(req),
                     "code": req.status_code,
                 }
+
         return {
             "success": False,
             "code": req.status_code,
@@ -123,11 +123,13 @@ class DiscordREST:
         _endpoint = f"/channels/{channel_id}/messages"
         payload = {"content": content}
         is_json = False
+
         if file:
             payload = {
                 "payload_json": (None, json.dumps(payload)),
                 "file": (file.filename, file.read(), "application/octet-stream"),
             }
+
         if richembed:
             if richembed.get("type"):
                 del richembed["type"]
@@ -135,8 +137,8 @@ class DiscordREST:
             if not content:
                 del payload["content"]
             is_json = True
-        r = self.request("POST", _endpoint, data=payload, json=is_json)
-        return r
+
+        return self.request("POST", _endpoint, data=payload, json=is_json)
 
     #####################
     # Guild
@@ -146,8 +148,7 @@ class DiscordREST:
         _endpoint = f"/guilds/{guild_id}/members/{user_id}"
         payload = {"access_token": access_token}
         payload.update(kwargs)
-        r = self.request("PUT", _endpoint, data=payload, json=True)
-        return r
+        return self.request("PUT", _endpoint, data=payload, json=True)
 
     def get_guild_embed(self, guild_id):
         _endpoint = f"/guilds/{guild_id}/embed"
@@ -155,14 +156,12 @@ class DiscordREST:
         return r
 
     def get_guild_member(self, guild_id, user_id):
-        _endpoint = f'/guilds/{guild_id}/members/{user_id}'
-        r = self.request("GET", _endpoint)
-        return r
+        _endpoint = f"/guilds/{guild_id}/members/{user_id}"
+        return self.request("GET", _endpoint)
 
     def modify_guild_embed(self, guild_id, **kwargs):
         _endpoint = f"/guilds/{guild_id}/embed"
-        r = self.request("PATCH", _endpoint, data=kwargs, json=True)
-        return r
+        return self.request("PATCH", _endpoint, data=kwargs, json=True)
 
     #####################
     # Widget Handler
@@ -170,6 +169,7 @@ class DiscordREST:
 
     def get_widget(self, guild_id):
         _endpoint = f"{_DISCORD_API_BASE}/servers/{guild_id}/widget.json"
+
         embed = self.get_guild_embed(guild_id)
         if not embed.get("success", True):
             return {"success": False}
@@ -177,8 +177,7 @@ class DiscordREST:
         if not embed["content"]["enabled"]:
             self.modify_guild_embed(guild_id, enabled=True, channel_id=guild_id)
 
-        widget = requests.get(_endpoint).json()
-        return widget
+        return requests.get(_endpoint).json()
 
     #####################
     # Webhook
@@ -186,13 +185,10 @@ class DiscordREST:
 
     def create_webhook(self, channel_id, name, avatar=None):
         _endpoint = f"/channels/{channel_id}/webhooks"
-        payload = {
-            "name": name,
-        }
+        payload = {"name": name}
         if avatar:
             payload["avatar"] = avatar
-        r = self.request("POST", _endpoint, data=payload, json=True)
-        return r
+        return self.request("POST", _endpoint, data=payload, json=True)
 
     def execute_webhook(
         self,
@@ -208,25 +204,27 @@ class DiscordREST:
         _endpoint = f"/webhooks/{webhook_id}/{webhook_token}"
         if wait:
             _endpoint += "?wait=true"
-        is_json = False
+
         payload = {"content": content, "avatar_url": avatar, "username": username}
         if file:
             payload = {
                 "payload_json": (None, json.dumps(payload)),
                 "file": (file.filename, file.read(), "application/octet-stream"),
             }
+
+        is_json = False
         if richembed:
             if richembed.get("type"):
                 del richembed["type"]
+
             payload["embeds"] = [richembed]
             if not content:
                 del payload["content"]
             if not file:
                 is_json = True
-        r = self.request("POST", _endpoint, data=payload, json=is_json)
-        return r
+
+        return self.request("POST", _endpoint, data=payload, json=is_json)
 
     def delete_webhook(self, webhook_id, webhook_token):
-        _endpoint = f'/webhooks/{webhook_id}/{webhook_token}'
-        r = self.request("DELETE", _endpoint)
-        return r
+        _endpoint = f"/webhooks/{webhook_id}/{webhook_token}"
+        return self.request("DELETE", _endpoint)

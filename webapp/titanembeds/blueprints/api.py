@@ -658,10 +658,10 @@ def query_guild():
     guild_id = request.args.get("guild_id")
 
     if not check_guild_existance(guild_id):
-        log.warning('could not find guild %s in redis', guild_id)
+        log.warning("could not find guild %s in redis", guild_id)
         abort(404)
     if not check_user_in_guild(guild_id):
-        log.warning('user not in guild')
+        log.warning("user not in guild")
         abort(403)
 
     return process_query_guild(guild_id)

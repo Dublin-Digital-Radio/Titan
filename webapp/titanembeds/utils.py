@@ -243,7 +243,7 @@ def get_online_embed_user_keys(guild_id="*", user_type=None):
 
 def check_user_in_guild(guild_id):
     if user_unauthenticated():
-        log.info('checking if unauthenticated user in guild')
+        log.info("checking if unauthenticated user in guild")
         return guild_id in session.get("user_keys", {})
 
     db_user = (
@@ -257,10 +257,10 @@ def check_user_in_guild(guild_id):
         .first()
     )
 
-    log.info('checking if authenticated user in guild')
+    log.info("checking if authenticated user in guild")
     log.info(db_user)
     user_revoked = checkUserRevoke(guild_id)
-    log.info('revoked: %s', user_revoked)
+    log.info("revoked: %s", user_revoked)
     return db_user is not None and not user_revoked
 
 
