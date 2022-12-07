@@ -150,7 +150,7 @@ def format_post_content(guild_id, channel_id, message, dbUser):
 
     if not guild_webhooks_enabled(guild_id):
         if session["unauthenticated"]:
-            message = "**[{}#{}]** {}".format(session["username"], session["user_id"], message)
+            message = f"**[{session['username']}#{session['user_id']}]** {message}"
         else:
             username = session["username"]
             if dbUser:
@@ -159,7 +159,7 @@ def format_post_content(guild_id, channel_id, message, dbUser):
             message = "**<{}#{}>** {}".format(
                 username, session["discriminator"], message
             )  # I would like to do a @ mention, but i am worried about notify spam
-    return (message, illegal_post, illegal_reasons)
+    return message, illegal_post, illegal_reasons
 
 
 def format_everyone_mention(channel, content):

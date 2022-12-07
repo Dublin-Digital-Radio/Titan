@@ -79,6 +79,7 @@ def cosmetics_post():
     user_id = request.form.get("user_id", None)
     if not user_id:
         abort(400)
+
     css = request.form.get("css", None)
     css_limit = int(request.form.get("css_limit", 0))
     guest_icon = request.form.get("guest_icon", None)
@@ -87,7 +88,9 @@ def cosmetics_post():
     entry = db.session.query(Cosmetics).filter(Cosmetics.user_id == user_id).first()
     if entry:
         abort(409)
+
     user = Cosmetics(user_id)
+
     if css:
         css = css.lower() == "true"
         user.css = css
@@ -104,8 +107,10 @@ def cosmetics_post():
         if badges == [""]:
             badges = []
         user.badges = json.dumps(badges)
+
     db.session.add(user)
     db.session.commit()
+
     return "", 204
 
 
@@ -115,11 +120,14 @@ def cosmetics_delete():
     user_id = request.form.get("user_id", None)
     if not user_id:
         abort(400)
+
     entry = db.session.query(Cosmetics).filter(Cosmetics.user_id == user_id).first()
     if not entry:
         abort(409)
+
     db.session.delete(entry)
     db.session.commit()
+
     return "", 204
 
 
@@ -129,14 +137,17 @@ def cosmetics_patch():
     user_id = request.form.get("user_id", None)
     if not user_id:
         abort(400)
+
     css = request.form.get("css", None)
     css_limit = request.form.get("css_limit", None)
     guest_icon = request.form.get("guest_icon", None)
     send_rich_embed = request.form.get("send_rich_embed", None)
     badges = request.form.get("badges", None)
+
     entry = db.session.query(Cosmetics).filter(Cosmetics.user_id == user_id).first()
     if not entry:
         abort(409)
+
     if css:
         css = css.lower() == "true"
         entry.css = css
@@ -153,15 +164,17 @@ def cosmetics_patch():
         if badges == [""]:
             badges = []
         entry.badges = json.dumps(badges)
+
     db.session.commit()
+
     return "", 204
 
 
 def prepare_guild_members_list(members, bans):
     all_users = []
     ip_pool = []
-    members = sorted(members, key=lambda k: k.id, reverse=True)
-    for member in members:
+
+    for member in sorted(members, key=lambda k: k.id, reverse=True):
         user = {
             "id": member.id,
             "username": member.username,
@@ -196,6 +209,7 @@ def prepare_guild_members_list(members, bans):
                     if len(usr["aliases"]) < 5 and alias not in usr["aliases"]:
                         usr["aliases"].append(alias)
                     continue
+
     return all_users
 
 
@@ -259,6 +273,7 @@ def administrate_guild(guild_id):
         "file_upload": db_guild.file_upload,
         "send_rich_embed": db_guild.send_rich_embed,
     }
+
     return render_template(
         "administrate_guild.html.j2",
         guild=dbguild_dict,
@@ -282,14 +297,8 @@ def update_administrate_guild(guild_id):
     ]
     db_guild.webhook_messages = request.form.get(
         "webhook_messages", db_guild.webhook_messages
-    ) in [
-        "true",
-        True,
-    ]
-    db_guild.chat_links = request.form.get("chat_links", db_guild.chat_links) in [
-        "true",
-        True,
-    ]
+    ) in ["true", True]
+    db_guild.chat_links = request.form.get("chat_links", db_guild.chat_links) in ["true", True]
     db_guild.bracket_links = request.form.get("bracket_links", db_guild.bracket_links) in [
         "true",
         True,
@@ -305,10 +314,7 @@ def update_administrate_guild(guild_id):
     )
     db_guild.banned_words_enabled = request.form.get(
         "banned_words_enabled", db_guild.banned_words_enabled
-    ) in [
-        "true",
-        True,
-    ]
+    ) in ["true", True]
     db_guild.banned_words_global_included = request.form.get(
         "banned_words_global_included", db_guild.banned_words_global_included
     ) in ["true", True]
@@ -327,13 +333,16 @@ def update_administrate_guild(guild_id):
         True,
     ]
     invite_link = request.form.get("invite_link", db_guild.invite_link)
+
     if invite_link != None and invite_link.strip() == "":
         invite_link = None
+
     db_guild.invite_link = invite_link
     guest_icon = request.form.get("guest_icon", db_guild.guest_icon)
     if guest_icon != None and guest_icon.strip() == "":
         guest_icon = None
     db_guild.guest_icon = guest_icon
+
     banned_word = request.form.get("banned_word", None)
     if banned_word:
         delete_banned_word = request.form.get("delete_banned_word", False) in [
@@ -346,7 +355,9 @@ def update_administrate_guild(guild_id):
         else:
             banned_words.add(banned_word)
         db_guild.banned_words = json.dumps(list(banned_words))
+
     db.session.commit()
+
     emit(
         "guest_icon_change",
         {
@@ -357,6 +368,7 @@ def update_administrate_guild(guild_id):
         room="GUILD_" + guild_id,
         namespace="/gateway",
     )
+
     return jsonify(
         guild_id=db_guild.guild_id,
         unauth_users=db_guild.unauth_users,
@@ -392,6 +404,7 @@ def guilds():
         guilds.append(
             {"guild_id": guild.guild_id, "name": rguild["name"], "icon": rguild["icon"]}
         )
+
     return render_template(
         "admin_guilds.html.j2", servers=guilds, icon_generate=generate_guild_icon_url
     )
@@ -400,15 +413,15 @@ def guilds():
 @admin.route("/tokens", methods=["GET"])
 @is_admin
 def manage_titan_tokens():
-    tokeners = db.session.query(TitanTokens).all()
     donators = []
-    for usr in tokeners:
+    for usr in db.session.query(TitanTokens).all():
         row = {"user_id": usr.user_id, "tokens": usr.tokens, "transactions": []}
         transact = (
             db.session.query(TokenTransactions)
             .filter(TokenTransactions.user_id == usr.user_id)
             .all()
         )
+
         for tr in transact:
             row["transactions"].append(
                 {
@@ -422,6 +435,7 @@ def manage_titan_tokens():
                 }
             )
         donators.append(row)
+
     return render_template("admin_token_transactions.html.j2", donators=donators)
 
 
@@ -431,12 +445,15 @@ def post_titan_tokens():
     user_id = request.form.get("user_id", None)
     amount = request.form.get("amount", None, type=int)
     reason = request.form.get("reason", None)
+
     if not user_id or not amount:
         abort(400)
     if get_titan_token(user_id) != -1:
         abort(409)
-    set_titan_token(user_id, amount, "NEW VIA ADMIN [{}]".format(str(reason)))
+
+    set_titan_token(user_id, amount, f"NEW VIA ADMIN [{str(reason)}]")
     db.session.commit()
+
     return "", 204
 
 
@@ -446,12 +463,15 @@ def patch_titan_tokens():
     user_id = request.form.get("user_id", None)
     amount = request.form.get("amount", None, type=int)
     reason = request.form.get("reason", None)
+
     if not user_id or not amount:
         abort(400)
     if get_titan_token(user_id) == -1:
         abort(409)
-    set_titan_token(user_id, amount, "MODIFY VIA ADMIN [{}]".format(str(reason)))
+
+    set_titan_token(user_id, amount, f"MODIFY VIA ADMIN [{str(reason)}]")
     db.session.commit()
+
     return "", 204
 
 
@@ -467,9 +487,11 @@ def post_disabled_guilds():
     guild_id = request.form.get("guild_id", None)
     if guild_id in list_disabled_guilds():
         abort(409)
+
     guild = DisabledGuilds(guild_id)
     db.session.add(guild)
     db.session.commit()
+
     return "", 204
 
 
@@ -479,9 +501,11 @@ def delete_disabled_guilds():
     guild_id = request.form.get("guild_id", None)
     if guild_id not in list_disabled_guilds():
         abort(409)
+
     guild = db.session.query(DisabledGuilds).filter(DisabledGuilds.guild_id == guild_id).first()
     db.session.delete(guild)
     db.session.commit()
+
     return "", 204
 
 
@@ -498,9 +522,11 @@ def edit_custom_css_get(css_id):
     css = db.session.query(UserCSS).filter(UserCSS.id == css_id).first()
     if not css:
         abort(404)
+
     variables = css.css_variables
     if variables:
         variables = json.loads(variables)
+
     return render_template("usercss.html.j2", new=False, css=css, variables=variables, admin=True)
 
 
@@ -510,26 +536,31 @@ def edit_custom_css_post(css_id):
     dbcss = db.session.query(UserCSS).filter(UserCSS.id == css_id).first()
     if not dbcss:
         abort(404)
+
     name = request.form.get("name", None)
     user_id = request.form.get("user_id", None)
     css = request.form.get("css", None)
     variables = request.form.get("variables", None)
     variables_enabled = request.form.get("variables_enabled", False) in ["true", True]
+
     if not name:
         abort(400)
     else:
         name = name.strip()
         css = css.strip()
+
     if not user_id:
         user_id = dbcss.user_id
     if len(css) == 0:
         css = None
+
     dbcss.name = name
     dbcss.user_id = user_id
     dbcss.css = css
     dbcss.css_variables = variables
     dbcss.css_var_bool = variables_enabled
     db.session.commit()
+
     return jsonify({"id": dbcss.id})
 
 
@@ -539,8 +570,10 @@ def edit_custom_css_delete(css_id):
     dbcss = db.session.query(UserCSS).filter(UserCSS.id == css_id).first()
     if not dbcss:
         abort(404)
+
     db.session.delete(dbcss)
     db.session.commit()
+
     return jsonify({})
 
 
@@ -558,18 +591,23 @@ def new_custom_css_post():
     css = request.form.get("css", None)
     variables = request.form.get("variables", None)
     variables_enabled = request.form.get("variables_enabled", False) in ["true", True]
+
     if not name:
         abort(400)
     else:
         name = name.strip()
         css = css.strip()
+
     if not user_id:
         abort(400)
+
     if len(css) == 0:
         css = None
+
     css = UserCSS(name, user_id, variables_enabled, variables, css)
     db.session.add(css)
     db.session.commit()
+
     return jsonify({"id": css.id})
 
 
@@ -580,8 +618,10 @@ def voting_get():
     timestart = request.args.get("timestart")
     dateend = request.args.get("dateend")
     timeend = request.args.get("timeend")
+
     if not datestart or not timestart or not dateend or not timeend:
         return render_template("admin_voting.html.j2")
+
     start = datetime.datetime.strptime(datestart + " " + timestart, "%d %B, %Y %I:%M%p")
     end = datetime.datetime.strptime(dateend + " " + timeend, "%d %B, %Y %I:%M%p")
     users = (
@@ -593,6 +633,7 @@ def voting_get():
         .order_by(DiscordBotsOrgTransactions.timestamp)
     )
     all_users = []
+
     for u in users:
         all_users.append(
             {
@@ -603,6 +644,7 @@ def voting_get():
                 "referrer": u.referrer,
             }
         )
+
     overall_votes = {}
     for u in all_users:
         uid = u["user_id"]
@@ -611,9 +653,11 @@ def voting_get():
             overall_votes[uid] = 0
         if action == "upvote":
             overall_votes[uid] = overall_votes[uid] + 1
+
     sorted_overall_votes = []
     for uid, votes in sorted(overall_votes.items(), key=operator.itemgetter(1), reverse=True):
         sorted_overall_votes.append(uid)
+
     overall = []
     for uid in sorted_overall_votes:
         gmember = redisqueue.get_user(uid)
@@ -621,6 +665,7 @@ def voting_get():
         if gmember:
             u["discord"] = gmember["username"] + "#" + str(gmember["discriminator"])
         overall.append(u)
+
     referrer = {}
     for u in all_users:
         if not u["referrer"] or u["referrer"] == u["user_id"]:
@@ -629,9 +674,11 @@ def voting_get():
         if refer not in referrer:
             referrer[refer] = 0
         referrer[refer] = referrer[refer] + 1
+
     sorted_referrers = []
     for uid, votes in sorted(referrer.items(), key=operator.itemgetter(1), reverse=True):
         sorted_referrers.append(uid)
+
     referrals = []
     for uid in sorted_referrers:
         gmember = redisqueue.get_user(uid)
@@ -639,6 +686,7 @@ def voting_get():
         if gmember:
             u["discord"] = gmember["username"] + "#" + str(gmember["discriminator"])
         referrals.append(u)
+
     return render_template(
         "admin_voting.html.j2",
         overall=overall,
@@ -664,9 +712,11 @@ def application_settings_post():
     if "donation_goal_progress" in request.form:
         donation_goal_progress = request.form.get("donation_goal_progress")
         settings.donation_goal_progress = int(donation_goal_progress)
+
     if "donation_goal_total" in request.form:
         donation_goal_total = request.form.get("donation_goal_total")
         settings.donation_goal_total = int(donation_goal_total)
+
     if "donation_goal_end" in request.form:
         res = None
         donation_goal_end = request.form.get("donation_goal_end")
@@ -677,7 +727,9 @@ def application_settings_post():
             year = int(donation_goal_end[2])
             res = datetime.date(year, month, day)
         settings.donation_goal_end = res
+
     db.session.commit()
+
     return jsonify(
         {
             "donation_goal_progress": settings.donation_goal_progress,

@@ -28,7 +28,7 @@ var passedCookieTest = true; // If passed cross origin test
 (function () {
     const theme_options = ["DiscordDark", "FireWyvern", "IceWyvern", "MetroEdge", "BetterTitan"]; // All the avaliable theming names
     const badges_options = ["administrator", "partner", "supporter", "discordbotsorgvoted"]; // All badges avaliable
-    
+
     var user_def_css; // Saves the user defined css
     var has_already_been_initially_resized = false; // keep track if the embed initially been resized
     var has_handled_noscroll = false; // Prevent scrolling to bottom of embed at load if false
@@ -86,24 +86,24 @@ var passedCookieTest = true; // If passed cross origin test
             return ((elementTop <= pageBottom) && (elementBottom >= pageTop));
         }
     }
-    
+
     // https://stackoverflow.com/questions/2956966/javascript-telling-setinterval-to-only-fire-x-amount-of-times
     function setIntervalX(callback, delay, repetitions) {
         var x = 0;
         var intervalID = window.setInterval(function () {
-    
+
            callback();
-    
+
            if (++x === repetitions) {
                window.clearInterval(intervalID);
            }
         }, delay);
     }
-    
+
     String.prototype.replaceAll = function(target, replacement) {
         return this.split(target).join(replacement);
     };
-    
+
     function zeroPad(discrim) {
         var str = "" + discrim;
         var pad = "0000";
@@ -148,7 +148,7 @@ var passedCookieTest = true; // If passed cross origin test
         funct.always(ajax_always);
         return funct.promise();
     }
-    
+
     function change_unauthenticated_username(username) {
         var funct = $.ajax({
             method: "POST",
@@ -227,7 +227,7 @@ var passedCookieTest = true; // If passed cross origin test
         funct.always(ajax_always);
         return funct.promise();
     }
-    
+
     function discord_embed() {
         var funct = $.ajax({
             dataType: "json",
@@ -235,7 +235,7 @@ var passedCookieTest = true; // If passed cross origin test
         });
         return funct.promise();
     }
-    
+
     function api_user(user_id) {
         var funct = $.ajax({
             dataType: "json",
@@ -245,7 +245,7 @@ var passedCookieTest = true; // If passed cross origin test
         funct.always(ajax_always);
         return funct.promise();
     }
-    
+
     function list_users() {
         var funct = $.ajax({
             dataType: "json",
@@ -255,7 +255,7 @@ var passedCookieTest = true; // If passed cross origin test
         funct.always(ajax_always);
         return funct.promise();
     }
-    
+
     function server_members() {
         var url = "/api/server_members";
         if (visitor_mode) {
@@ -270,7 +270,7 @@ var passedCookieTest = true; // If passed cross origin test
         funct.always(ajax_always);
         return funct.promise();
     }
-    
+
     function performLocalStorageTest() {
         var test = 'test';
         try {
@@ -283,7 +283,7 @@ var passedCookieTest = true; // If passed cross origin test
             return false;
         }
     }
-    
+
     function enableGateway(event) {
         if (shouldUtilizeGateway) {
             return;
@@ -293,7 +293,7 @@ var passedCookieTest = true; // If passed cross origin test
         shouldUtilizeGateway = true;
         initiate_websockets();
     }
-    
+
     function inIframe() {
         try {
             return window.self !== window.top;
@@ -301,7 +301,7 @@ var passedCookieTest = true; // If passed cross origin test
             return true;
         }
     }
-    
+
     function isSameDomain() {
         try {
             return location.hostname == parent.location.hostname;
@@ -309,13 +309,13 @@ var passedCookieTest = true; // If passed cross origin test
             return false;
         }
     }
-    
+
     $(function() {
         performLocalStorageTest();
         if ($("#user-defined-css").length > 0) {
             user_def_css = $("#user-defined-css").text();
         }
-        
+
         // is not in iframe
         if ((!inIframe() || isSameDomain()) && !is_peak) {
             shouldUtilizeGateway = true;
@@ -327,13 +327,13 @@ var passedCookieTest = true; // If passed cross origin test
                 shouldUtilizeGateway = true;
             }
         }
-        
+
         $("#send-rich-embed-btn").hide();
         $("#upload-file-btn").hide();
         $("#send-msg-btn").hide();
-        
+
         $('select').material_select();
-        
+
         $("#loginmodal").modal({
             dismissible: visitors_enabled, // Modal can be dismissed by clicking outside of the modal
             opacity: .5, // Opacity of modal background
@@ -382,7 +382,7 @@ var passedCookieTest = true; // If passed cross origin test
         $("#usercard").modal({
             opacity: .5,
         });
-        
+
         $("#members-btn").click(function () {
             var sm = server_members();
             sm.done(function (data) {
@@ -393,30 +393,30 @@ var passedCookieTest = true; // If passed cross origin test
                 fill_unauthenticated_users(data.embedmembers.unauthenticated);
             });
         });
-        
+
         $("#nameplate").click(function () {
             $("#userembedmodal").modal("open");
         });
-        
+
         $("#visitor_login_btn").click(function () {
             $("#loginmodal").modal("open");
         });
-        
+
         $("#proceed_nsfw_btn").click(function () {
             var channel_id = $("#proceed_nsfw_btn").attr("channel_id");
             var should_animate = parseInt($("#proceed_nsfw_btn").attr("should_animate"));
             $("#nsfwmodal").modal("close");
             select_channel(channel_id, should_animate, true);
         });
-        
+
         $("#dismiss_nsfw_btn").click(function () {
             $("#nsfwmodal").modal("close");
         });
-        
+
         $("#upload-file-btn").click(function () {
             $("#fileinput").trigger('click');
         });
-        
+
         $("#proceed_fileupload_btn").click(function () {
             $("#messagebox-filemodal").trigger(jQuery.Event("keydown", { keyCode: 13 } ));
         });
@@ -424,7 +424,7 @@ var passedCookieTest = true; // If passed cross origin test
         $("#proceed_richembedmodal_btn").click(function () {
             $("#messagebox-richembedmodal").trigger(jQuery.Event("keydown", { keyCode: 13 } ));
         });
-        
+
         $("#fileinput").change(function (e){
             var files = e.target.files;
             if (files && files.length > 0) {
@@ -500,21 +500,21 @@ var passedCookieTest = true; // If passed cross origin test
                 return;
             }
         });
-        
+
         $( "#theme-selector" ).change(function () {
             var theme = $("#theme-selector option:selected").val();
             var keep_custom_css = $("#overwrite_theme_custom_css_checkbox").is(':checked');
             changeTheme(theme, keep_custom_css);
         });
-        
+
         $("#overwrite_theme_custom_css_checkbox").change(function () {
             var keep_custom_css = $("#overwrite_theme_custom_css_checkbox").is(':checked');
             changeTheme(null, keep_custom_css);
         });
-        
+
         hljs.configure({useBR: true});
         linkify.options.defaults.ignoreTags = ["code"];
-        
+
         wdtEmojiBundle.defaults.emojiSheets = {
             'apple': 'https://cdnjs.cloudflare.com/ajax/libs/wdt-emoji-bundle/0.2.1/sheets/sheet_apple_64_indexed_128.png',
             'google': 'https://cdnjs.cloudflare.com/ajax/libs/wdt-emoji-bundle/0.2.1/sheets/sheet_google_64_indexed_128.png',
@@ -524,7 +524,7 @@ var passedCookieTest = true; // If passed cross origin test
         wdtEmojiBundle.defaults.pickerColors = ['gray'];
         wdtEmojiBundle.defaults.emojiType = 'twitter';
         wdtEmojiBundle.init('#messagebox');
-        
+
         var themeparam = getParameterByName('theme');
         var localstore_theme = "";
         if (localstorage_avaliable) {
@@ -542,7 +542,7 @@ var passedCookieTest = true; // If passed cross origin test
             $("#theme-selector option[value=" + theme + "]").attr('selected', 'selected');
             $('select').material_select();
         }
-        
+
         $("[name=notification_sound_radiobtn]").click(function (event) {
             changeNotificationSound(event.target.value);
         });
@@ -555,13 +555,13 @@ var passedCookieTest = true; // If passed cross origin test
         } else {
             changeNotificationSound("mentions");
         }
-        
+
         notification_sound = soundManager.createSound({
             id: 'notification_sound_id',
             url: "/static/audio/demonstrative.mp3",
             volume: 8,
         });
-        
+
         $("[name=richembed_toggle_radiobtn]").click(function (event) {
             display_richembeds = event.target.value == "true";
             if (localstorage_avaliable) {
@@ -579,7 +579,7 @@ var passedCookieTest = true; // If passed cross origin test
             display_richembeds = true;
         }
         $("[name=richembed_toggle_radiobtn][value=" + display_richembeds + "]").prop("checked", true);
-        
+
         var dembed = discord_embed();
         dembed.done(function (data) {
             if (data.instant_invite) {
@@ -594,11 +594,11 @@ var passedCookieTest = true; // If passed cross origin test
             $("#modal_invite_btn").hide();
             $("#instant-inv").hide();
         });
-        
+
         if (getParameterByName("noscroll") != "true") {
             has_handled_noscroll = true;
         }
-        
+
         $(window).resize(function(){
             // For those who decides to hide the embed at first load (display: none), resulting in the messages being not scrolled down.
             if (!has_already_been_initially_resized) {
@@ -615,7 +615,7 @@ var passedCookieTest = true; // If passed cross origin test
                 }
             }
         });
-        
+
         $("#chatcontent")
             .mousedown(function () {
                 $(window).mousemove(function() {
@@ -631,7 +631,7 @@ var passedCookieTest = true; // If passed cross origin test
                     $("#messagebox").focus();
                 }
             });
-        
+
         var showScrollbar = getParameterByName("lockscrollbar") == "true";
         if (showScrollbar) {
             showScrollbar = 2;
@@ -646,19 +646,19 @@ var passedCookieTest = true; // If passed cross origin test
             });
             $("body").addClass("custom-scrollbars");
         }
-        
+
         if (disabled) {
             Materialize.toast('This server is currently disabled. If you are an administrator of this server, please get in touch with a TitanEmbeds team member to lift the ban.', 100000);
             return;
         }
-        
+
         primeEmbed();
         setInterval(send_socket_heartbeat, 30000);
         if (getParameterByName("username")) {
             $("#custom_username_field").val(getParameterByName("username"));
         }
     });
-    
+
     function changeNotificationSound(sound) {
         var soundTypes = ["newmsgs", "mentions", "nothing"];
         if ($.inArray(sound, soundTypes) != -1) {
@@ -669,7 +669,7 @@ var passedCookieTest = true; // If passed cross origin test
             }
         }
     }
-    
+
     function changeTheme(theme, keep_custom_css, modifyLocalStore) {
         if (theme === undefined) {
             theme = null;
@@ -700,7 +700,7 @@ var passedCookieTest = true; // If passed cross origin test
             }
         }
     }
-    
+
     /* https://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript */
     function getParameterByName(name, url) {
         if (!url) url = window.location.href;
@@ -711,7 +711,7 @@ var passedCookieTest = true; // If passed cross origin test
         if (!results[2]) return '';
         return decodeURIComponent(results[2].replace(/\+/g, " "));
     }
-    
+
     function setVisitorMode(enabled) {
         if (!visitors_enabled) {
             return;
@@ -803,7 +803,7 @@ var passedCookieTest = true; // If passed cross origin test
             setTimeout(displayDblAdvert, 1500);
         }
     }
-    
+
     function displayDblAdvert() {
         var hideDblUntil = "";
         if (localstorage_avaliable) {
@@ -835,7 +835,7 @@ var passedCookieTest = true; // If passed cross origin test
             }
         });
     }
-    
+
     function switch_to_default_channel(guildchannels) {
         var defaultChannel = getParameterByName("defaultchannel");
         if (!defaultChannel) {
@@ -985,7 +985,7 @@ var passedCookieTest = true; // If passed cross origin test
         $("#messagebox").focus();
       }
     }
-    
+
     function update_emoji_picker() {
         var emojis = wdtEmojiBundle.listCustomEmojis();
         var short_names = [];
@@ -1156,7 +1156,7 @@ var passedCookieTest = true; // If passed cross origin test
             });
         }, 5000);
     }
-    
+
     function openUserCard(user_id) {
         var usr = api_user(user_id);
         usr.done(function (data) {
@@ -1172,7 +1172,7 @@ var passedCookieTest = true; // If passed cross origin test
             $("#usercard .identity .username").text(data.username);
             $("#usercard .identity .discriminator").text(zeroPad(data.discriminator));
             $("#usercard .identity .discriminator").text(zeroPad(data.discriminator));
-            
+
             var template = $('#mustache_rolebubble').html();
             Mustache.parse(template);
             data.roles.sort(function(a, b) {
@@ -1198,14 +1198,14 @@ var passedCookieTest = true; // If passed cross origin test
             } else {
                 $("#usercard .role").hide();
             }
-            
+
             $("#usercard-mention-btn").off("click");
             $("#usercard-mention-btn").click(function () {
                 mention_member(data.id);
                 $("#usercard").modal('close');
             });
         });
-        
+
         $("#usercard .offline-text").show();
         $("#usercard .game").hide();
         $("#usercard .bottag").hide();
@@ -1323,10 +1323,10 @@ var passedCookieTest = true; // If passed cross origin test
                 });
             }
         }
-        
+
         return output;
     }
-    
+
     function flashElement(element) {
         var opacity = element.css("opacity");
         for (var i = 0; i < 3; i++) {
@@ -1384,7 +1384,7 @@ var passedCookieTest = true; // If passed cross origin test
             message.content = message.content.replace(new RegExp("&lt;@" + mention.id + "&gt;", 'g'), rendered);
             message.content = message.content.replace(new RegExp("&lt;@!" + mention.id + "&gt;", 'g'), rendered);
         }
-        
+
         message.content = parse_role_mention(message.content);
 
         return message;
@@ -1467,7 +1467,7 @@ var passedCookieTest = true; // If passed cross origin test
             lastmsg.addClass( "mentioned" );
         }
     }
-    
+
     function play_notification_sound(type) { // type can be mention or new
         if (notification_sound_setting == "nothing") {
             return;
@@ -1502,7 +1502,7 @@ var passedCookieTest = true; // If passed cross origin test
         }
         return message;
     }
-    
+
     function parse_emoji_in_message(message) {
         var template = $('#mustache_message_emoji').html();
         Mustache.parse(template);
@@ -1535,7 +1535,7 @@ var passedCookieTest = true; // If passed cross origin test
         });
         return message;
     }
-    
+
     function parse_message_markdown(text, embed=false) {
         var geturl_regex = /(\(.*?)?\b((?:https?|ftp|file):\/\/[-a-z0-9+&@#\/%?=~_()|!:,.;]*[-a-z0-9+&@#\/%=~_()|])/ig;
         var links = text.match(geturl_regex); // temporarily remove urls so markdown won't mark inside of the url
@@ -1562,7 +1562,7 @@ var passedCookieTest = true; // If passed cross origin test
         }
         return text;
     }
-    
+
     function render_code_highlighting(element) {
         for (var i = 0; i < element.length; i++) {
             var elem = $(element[i]);
@@ -1585,7 +1585,7 @@ var passedCookieTest = true; // If passed cross origin test
             }
         }
     }
-    
+
     function generate_avatar_url(user_id, avatar_hash, message_contents) {
         if (message_contents === undefined) {
             message_contents = null;
@@ -1596,7 +1596,7 @@ var passedCookieTest = true; // If passed cross origin test
             return "https://cdn.discordapp.com/avatars/" + user_id + "/" + avatar_hash + ".png";
         }
     }
-    
+
     function parse_message_embeds(embeds) {
         var emb = [];
         if (display_richembeds) {
@@ -1617,7 +1617,7 @@ var passedCookieTest = true; // If passed cross origin test
             var img = "<img class=\"image attachment materialboxed\" src=\"" + disembed.thumbnail.proxy_url + "\">";
             return img;
         }
-        
+
         disembed.isVideo = false;
         if (disembed.type == "video") {
             disembed.isVideo = true;
@@ -1678,7 +1678,7 @@ var passedCookieTest = true; // If passed cross origin test
         });
         return el.html();
     }
-    
+
     function parse_message_reactions(reactions) {
         var reacts = []
         var template = $("#mustache_reactionchip").html();
@@ -1705,14 +1705,14 @@ var passedCookieTest = true; // If passed cross origin test
         }
         return reacts;
     }
-    
+
     function scroll_on_dom_update() {
         var scrollRegion = $(window).height() / 2;
         if (!getParameterByName("scrollbartheme") && $("main").prop("scrollHeight") - ($("main").scrollTop() + $("main").outerHeight()) < scrollRegion) {
             $("main").scrollTop($("#chatcontent").outerHeight());
         }
     }
-    
+
     function format_new_member_message(message) {
         var formats = [
             "{0} just joined the server - glhf!",
@@ -1849,7 +1849,7 @@ var passedCookieTest = true; // If passed cross origin test
         if ($("#chatcontent p:last-child.mentioned").length) {
             play_notification_sound("mention");
         }
-        
+
         if (replace == null && jumpscroll) {
             if (!has_handled_noscroll) {
                 has_handled_noscroll = true;
@@ -1940,7 +1940,7 @@ var passedCookieTest = true; // If passed cross origin test
             $("#message-spinner").addClass("error");
         });
     }
-    
+
     function process_message_users_cache() {
         var keys = Object.keys(message_users_cache);
         for (var i = 0; i < keys.length; i++) {
@@ -1962,7 +1962,7 @@ var passedCookieTest = true; // If passed cross origin test
 
         }
     }
-    
+
     function process_message_users_cache_helper(key, usr) {
         var msgs = message_users_cache[key]["msgs"];
         while (msgs.length > 0) {
@@ -1986,7 +1986,7 @@ var passedCookieTest = true; // If passed cross origin test
         }
         collapse_messages();
     }
-    
+
     function collapse_messages() {
         var allMessages = $('[id^="discordmessage_"]').parent();
         for (var i = 1; i < allMessages.length; i++) {
@@ -2022,7 +2022,7 @@ var passedCookieTest = true; // If passed cross origin test
             current_username_discrim = username + current_username_discrim;
         }
     }
-    
+
     function update_change_username_modal(authenticated, username) {
         if (authenticated === undefined) {
             authenticated = null;
@@ -2055,13 +2055,13 @@ var passedCookieTest = true; // If passed cross origin test
         lock_login_fields();
         wait_for_discord_login();
     });
-    
+
     $("#custom_username_field").keyup(function(event){
         if (event.keyCode == 13) {
             do_guest_login();
         }
     });
-    
+
     $("#guestlogin_btn").click(function () {
         do_guest_login();
     });
@@ -2103,7 +2103,7 @@ var passedCookieTest = true; // If passed cross origin test
             setVisitorMode(true);
         });
     });
-    
+
     $("#change_username_field").keyup(function(event){
         if (event.keyCode == 13) {
             $(this).blur();
@@ -2136,7 +2136,7 @@ var passedCookieTest = true; // If passed cross origin test
             }
         }
     });
-    
+
     function stringToDefaultEmote(input) {
         var map = {
             "<3": "\u2764\uFE0F",
@@ -2157,16 +2157,16 @@ var passedCookieTest = true; // If passed cross origin test
         }
         return input;
     }
-    
+
     $("#chatcontent").bind("click", function () {
         $("#mention-picker").hide();
         wdtEmojiBundle.close();
     });
-    
+
     $("#messagebox").bind("click", function () {
         wdtEmojiBundle.close();
     });
-    
+
     $('#messagebox').bind('input keydown click', function(event) {
         if (event.type == "keydown" && (event.which == 38 || event.which == 40 || event.which == 13) && $("#mention-picker").is(":visible")) {
             return;
@@ -2234,7 +2234,7 @@ var passedCookieTest = true; // If passed cross origin test
         $("#mention-picker .mention-choice.selected").removeClass("selected");
         $("#mention-picker .mention-choice").first().addClass("selected");
     });
-    
+
     $("#messagebox").keyup(function (event) {
         if (event.keyCode == 16) {
             shift_pressed = false;
@@ -2274,8 +2274,8 @@ var passedCookieTest = true; // If passed cross origin test
                 $("#mention-picker").hide();
             }
         }
-        
-        
+
+
         if ($(this).val().length == 1) {
             $(this).val($.trim($(this).val()));
         }
@@ -2348,13 +2348,13 @@ var passedCookieTest = true; // If passed cross origin test
             });
         }
     });
-    
+
     $("#messagebox-filemodal").keyup(function (event) {
         if (event.keyCode == 16) {
             shift_pressed = false;
         }
     });
-    
+
     $("#messagebox-filemodal").keydown(function (event) {
         if ($(this).val().length == 1) {
             $(this).val($.trim($(this).val()));
@@ -2362,7 +2362,7 @@ var passedCookieTest = true; // If passed cross origin test
         if (event.keyCode == 16) {
             shift_pressed = true;
         }
-        
+
         if(event.keyCode == 13 && !shift_pressed) {
             $(this).val($.trim($(this).val()));
             $(this).blur();
@@ -2376,7 +2376,7 @@ var passedCookieTest = true; // If passed cross origin test
             shift_pressed = false;
         }
     });
-    
+
     $("#messagebox-richembedmodal").keydown(function (event) {
         if ($(this).val().length == 1) {
             $(this).val($.trim($(this).val()));
@@ -2384,7 +2384,7 @@ var passedCookieTest = true; // If passed cross origin test
         if (event.keyCode == 16) {
             shift_pressed = true;
         }
-        
+
         if(event.keyCode == 13 && !shift_pressed) {
             $(this).val($.trim($(this).val()));
             $(this).blur();
@@ -2392,7 +2392,7 @@ var passedCookieTest = true; // If passed cross origin test
             $("#messagebox").trigger(jQuery.Event("keydown", { keyCode: 13 } ));
         }
     });
-    
+
     $("#send-msg-btn").click(function () {
         $("#messagebox").focus();
         $("#messagebox").trigger(jQuery.Event("keydown", { keyCode: 13 } ));
@@ -2412,18 +2412,18 @@ var passedCookieTest = true; // If passed cross origin test
         draggable: true // Choose whether you can drag to open on touch screens
     }
     );
-    
+
     // enter konami code into the embed page for some ponies action!
     cheet('↑ ↑ ↓ ↓ ← → ← → b a', function () {
         // basically copied and pasted of browser ponies bookmarklet
         (function (srcs,cfg) { var cbcount = 1; var callback = function () { -- cbcount; if (cbcount === 0) { BrowserPonies.setBaseUrl(cfg.baseurl); if (!BrowserPoniesBaseConfig.loaded) { BrowserPonies.loadConfig(BrowserPoniesBaseConfig); BrowserPoniesBaseConfig.loaded = true; } BrowserPonies.loadConfig(cfg); if (!BrowserPonies.running()) BrowserPonies.start(); } }; if (typeof(BrowserPoniesConfig) === "undefined") { window.BrowserPoniesConfig = {}; } if (typeof(BrowserPoniesBaseConfig) === "undefined") { ++ cbcount; BrowserPoniesConfig.onbasecfg = callback; } if (typeof(BrowserPonies) === "undefined") { ++ cbcount; BrowserPoniesConfig.oninit = callback; } var node = (document.body || document.documentElement || document.getElementsByTagName('head')[0]); for (var id in srcs) { if (document.getElementById(id)) continue; if (node) { var s = document.createElement('script'); s.type = 'text/javascript'; s.id = id; s.src = srcs[id]; node.appendChild(s); } else { document.write('\u003cscript type="text/javscript" src="'+ srcs[id]+'" id="'+id+'"\u003e\u003c/script\u003e'); } } callback();})({"browser-ponies-script":"https://panzi.github.io/Browser-Ponies/browserponies.js","browser-ponies-config":"https://panzi.github.io/Browser-Ponies/basecfg.js"},{"baseurl":"https://panzi.github.io/Browser-Ponies/","fadeDuration":500,"volume":1,"fps":25,"speed":3,"audioEnabled":false,"showFps":false,"showLoadProgress":true,"speakProbability":0.1,"spawn":{"applejack":1,"fluttershy":1,"pinkie pie":1,"rainbow dash":1,"rarity":1,"twilight sparkle":1}});
     });
-    
+
     function initiate_websockets() {
         if (socket || !shouldUtilizeGateway) {
             return;
         }
-        
+
         socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + "/gateway", {path: '/gateway', transports: ['websocket'], query: "v=1"});
         socket.on('connect', function () {
             var sen = {"guild_id": guild_id, "visitor_mode": visitor_mode};
@@ -2445,11 +2445,11 @@ var passedCookieTest = true; // If passed cross origin test
             socket_identified = true;
             process_message_users_cache();
         })
-        
+
         socket.on("disconnect", function () {
             socket_identified = false;
         });
-        
+
         socket.on("revoke", function () {
             socket.disconnect();
             socket = null;
@@ -2457,7 +2457,7 @@ var passedCookieTest = true; // If passed cross origin test
             primeEmbed();
             Materialize.toast('Authentication error! You have been disconnected by the server.', 10000);
         });
-        
+
         socket.on("embed_user_connect", function (msg) {
             if (msg.unauthenticated) {
                 for (var i = 0; i < unauthenticated_users_list.length; i++) {
@@ -2479,7 +2479,7 @@ var passedCookieTest = true; // If passed cross origin test
                 fill_authenticated_users(authenticated_users_list);
             }
         });
-        
+
         socket.on("embed_user_disconnect", function (msg) {
             if (msg.unauthenticated) {
                 for (var i = 0; i < unauthenticated_users_list.length; i++) {
@@ -2501,7 +2501,7 @@ var passedCookieTest = true; // If passed cross origin test
                 }
             }
         });
-        
+
         socket.on("MESSAGE_CREATE", function (msg) {
             var thismsgchan = msg.channel_id;
             if (selected_channel != thismsgchan) {
@@ -2513,7 +2513,7 @@ var passedCookieTest = true; // If passed cross origin test
             }
             last_message_id = fill_discord_messages([msg], jumpscroll);
         });
-        
+
         socket.on("MESSAGE_DELETE", function (msg) {
             var msgchan = msg.channel_id;
             if (selected_channel != msgchan) {
@@ -2527,7 +2527,7 @@ var passedCookieTest = true; // If passed cross origin test
                 last_message_id = null;
             }
         });
-        
+
         socket.on("MESSAGE_UPDATE", function (msg) {
             var msgelem = $("#discordmessage_"+msg.id);
             if (msgelem.length == 0) {
@@ -2536,7 +2536,7 @@ var passedCookieTest = true; // If passed cross origin test
             var msgelem_parent = msgelem.parent();
             fill_discord_messages([msg], false, msgelem_parent);
         });
-        
+
         socket.on("MESSAGE_REACTION_ADD", function (msg) {
             var msgelem = $("#discordmessage_"+msg.id);
             if (msgelem.length == 0) {
@@ -2545,7 +2545,7 @@ var passedCookieTest = true; // If passed cross origin test
             var msgelem_parent = msgelem.parent();
             fill_discord_messages([msg], false, msgelem_parent);
         });
-        
+
         socket.on("MESSAGE_REACTION_REMOVE", function (msg) {
             var msgelem = $("#discordmessage_"+msg.id);
             if (msgelem.length == 0) {
@@ -2554,7 +2554,7 @@ var passedCookieTest = true; // If passed cross origin test
             var msgelem_parent = msgelem.parent();
             fill_discord_messages([msg], false, msgelem_parent);
         });
-        
+
         socket.on("MESSAGE_REACTION_REMOVE_ALL", function (msg) {
             var msgelem = $("#discordmessage_"+msg.id);
             if (msgelem.length == 0) {
@@ -2563,7 +2563,7 @@ var passedCookieTest = true; // If passed cross origin test
             var msgelem_parent = msgelem.parent();
             fill_discord_messages([msg], false, msgelem_parent);
         });
-        
+
         socket.on("GUILD_MEMBER_ADD", function (usr) {
             if (usr.status != "offline") {
                 discord_users_list.push(usr);
@@ -2581,7 +2581,7 @@ var passedCookieTest = true; // If passed cross origin test
                 "discriminator": usr.discriminator
             });
         });
-        
+
         socket.on("GUILD_MEMBER_UPDATE", function (usr) {
             if (usr.id == current_user_discord_id) {
                 update_socket_channels();
@@ -2644,7 +2644,7 @@ var passedCookieTest = true; // If passed cross origin test
             emoji_store = emo;
             update_emoji_picker();
         });
-        
+
         socket.on("GUILD_UPDATE", function (guil) {
             $("#guild_name").text(guil.name);
             if (guil.icon) {
@@ -2654,7 +2654,7 @@ var passedCookieTest = true; // If passed cross origin test
                 $("#guild_icon").hide();
             }
         });
-        
+
         socket.on("CHANNEL_DELETE", function (chan) {
             for (var i = 0; i < guild_channels_list.length; i++) {
                 var thatchannel = guild_channels_list[i];
@@ -2665,20 +2665,20 @@ var passedCookieTest = true; // If passed cross origin test
                 }
             }
         });
-        
+
         socket.on("CHANNEL_UPDATE", function (chan) {
             update_socket_channels();
         });
-        
+
         socket.on("CHANNEL_CREATE", function (chan) {
             update_socket_channels();
         });
-        
+
         socket.on("GUILD_ROLE_CREATE", function (role) {
             update_socket_channels();
             guild_roles_list.push(role);
         });
-        
+
         socket.on("GUILD_ROLE_UPDATE", function (role) {
             update_socket_channels();
             for (var i = 0; i < guild_roles_list.length; i++) {
@@ -2689,7 +2689,7 @@ var passedCookieTest = true; // If passed cross origin test
                 }
             }
         });
-        
+
         socket.on("GUILD_ROLE_DELETE", function (role) {
             update_socket_channels();
             for (var i = 0; i < guild_roles_list.length; i++) {
@@ -2699,7 +2699,7 @@ var passedCookieTest = true; // If passed cross origin test
                 }
             }
         });
-        
+
         socket.on("channel_list", function (chans) {
             fill_channels(chans);
             for (var i = 0; i < chans.length; i++) {
@@ -2709,11 +2709,11 @@ var passedCookieTest = true; // If passed cross origin test
                 }
             }
         });
-        
+
         socket.on("current_user_info", function (usr) {
             update_embed_userchip(true, usr.avatar, usr.username, usr.nickname, usr.userid, usr.discriminator);
         });
-        
+
         socket.on("lookup_user_info", function (usr) {
             var key = usr.name + "#" + usr.discriminator;
             var cache = message_users_cache[key];
@@ -2723,11 +2723,11 @@ var passedCookieTest = true; // If passed cross origin test
             cache["data"] = usr;
             process_message_users_cache_helper(key, usr);
         });
-        
+
         socket.on("guest_icon_change", function (icon) {
             global_guest_icon = icon.guest_icon;
         });
-        
+
         socket.on("ack", function () {
             socket_last_ack = moment();
             if (socket && socket_error_should_refetch) {
@@ -2735,14 +2735,14 @@ var passedCookieTest = true; // If passed cross origin test
             }
         });
     }
-    
+
     function update_socket_channels() {
         if (!socket) {
             return;
         }
         socket.emit("channel_list", {"guild_id": guild_id, "visitor_mode": visitor_mode});
     }
-    
+
     function send_socket_heartbeat() {
         if (socket_last_ack) {
             var now = moment();
@@ -2754,7 +2754,7 @@ var passedCookieTest = true; // If passed cross origin test
                 initiate_websockets();
             }
         }
-        
+
         if (socket) {
             socket.emit("heartbeat", {"guild_id": guild_id, "visitor_mode": visitor_mode});
         }

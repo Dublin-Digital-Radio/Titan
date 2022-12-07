@@ -15,9 +15,12 @@ def valid_session_required(api=False):
             ):
                 if api:
                     return jsonify(error=True, message="Unauthenticated session"), 401
+
                 redirect(url_for("user.logout"))
+
             if session["unauthenticated"] and "user_keys" not in session:
                 session["user_keys"] = {}
+
             return f(*args, **kwargs)
 
         return decorated_function
@@ -50,8 +53,10 @@ def abort_if_guild_disabled(*args):
             guild_id = request.args.get("guild_id", None)
             if not guild_id and len(args) > 0:
                 guild_id = args[0]
+
             if guild_id in list_disabled_guilds():
                 return "", 423
+
             return f(*args, **kwargs)
 
         return decorated_function

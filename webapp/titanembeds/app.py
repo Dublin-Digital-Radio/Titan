@@ -53,8 +53,7 @@ class ConfigError(Error):
 
 app_start_stamp = time.time()
 
-app_name = __name__.split(".")[0]
-app = Flask(app_name, static_folder="static")
+app = Flask(__name__.split(".")[0], static_folder="static")
 
 if __name__ != "__main__":
     gunicorn_logger = logging.getLogger("gunicorn.error")
@@ -161,8 +160,8 @@ def context_processor():
         "constants": constants,
         "af_mode_enabled": datetime.datetime.now().date()
         == datetime.date(datetime.datetime.now().year, 4, 1),
-        "dbl_voted": session.get("unauthenticated", True) == False
-        and bool(redis_store.get("DiscordBotsOrgVoted/" + str(session.get("user_id", -1)))),
+        "dbl_voted": not session.get("unauthenticated", True)
+        and bool(redis_store.get(f"DiscordBotsOrgVoted/{session.get('user_id', -1)}")),
         "app_start_stamp": app_start_stamp,
     }
 

@@ -15,6 +15,17 @@ There was a time when Discord doesn't support embedding the chat on a webpage. B
 - Discord OAuth support. (Allows those who have a discord account to access the embed)
 - Responsive material design! (Thanks materializecss!!)
 
+# Discord Settings
+
+### Enable Widget
+
+- in your discord server go to the drop-down menu
+- select "server settings"
+- select "widget"
+- enable the widget
+- copy the server id if you have not already
+- the widget is now available at https://discord.com/api/guilds/<server id>/widget.json
+
 ## Installation
 Would you like to run your own copy of Titan Embeds? There are two parts that integrate nicely together. The webapp (website) handles the frontend and communication with the database to retrieve server messages, etc. The discordbot (bot) handles the communcation
 between Discord's websockets and pushing out the data to the database for the webapp. Check out the respective folder for their installation instructions. Titan is written in Python and requires **Python 3.6.8** at minimum to run.

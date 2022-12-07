@@ -116,7 +116,7 @@ def guild_query_unauth_users_bool(guild_id):
 
 
 def user_unauthenticated():
-    return getattr(session, "unauthenticated", True)
+    return session.get("unauthenticated", True)
 
 
 def checkUserRevoke(guild_id, user_key=None):

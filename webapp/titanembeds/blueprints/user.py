@@ -1,4 +1,6 @@
 import json
+import logging
+from pprint import pformat
 
 import patreon
 import paypalrestsdk
@@ -32,9 +34,13 @@ from titanembeds.oauth import (
     get_user_managed_servers,
     make_authenticated_session,
     token_url,
+    PERMISSION_KICK,
+    PERMISSION_MANAGE,
+    PERMISSION_BAN,
 )
 from titanembeds.utils import redisqueue
 
+log = logging.getLogger(__name__)
 user = Blueprint("user", __name__)
 
 
@@ -88,6 +94,8 @@ def callback():
 
     if session["tokens"] == -1:
         session["tokens"] = 0
+
+    log.info('Callback ok. Session: %s', pformat(session))
 
     if session["redirect"]:
         redir = session["redirect"]
@@ -290,6 +298,7 @@ def edit_custom_css_delete(css_id):
 def administrate_guild(guild_id):
     if not check_user_can_administrate_guild(guild_id):
         return redirect(url_for("user.dashboard"))
+
     guild = redisqueue.get_guild(guild_id)
     if not guild:
         session["redirect"] = url_for(
@@ -305,11 +314,11 @@ def administrate_guild(guild_id):
         db.session.commit()
 
     permissions = []
-    if check_user_permission(guild_id, 5):
+    if check_user_permission(guild_id, PERMISSION_MANAGE):
         permissions.append("Manage Embed Settings")
-    if check_user_permission(guild_id, 2):
+    if check_user_permission(guild_id, PERMISSION_BAN):
         permissions.append("Ban Members")
-    if check_user_permission(guild_id, 1):
+    if check_user_permission(guild_id, PERMISSION_KICK):
         permissions.append("Kick Members")
 
     cosmetics = (
@@ -372,7 +381,7 @@ def update_administrate_guild(guild_id):
     db_guild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
     if not db_guild:
         abort(400)
-    if not check_user_permission(guild_id, 5):
+    if not check_user_permission(guild_id, PERMISSION_MANAGE):
         abort(403)
     db_guild.unauth_users = request.form.get("unauth_users", db_guild.unauth_users) in [
         "true",
@@ -555,7 +564,7 @@ def ban_unauthenticated_user():
 
     if not guild_id or not user_id:
         abort(400)
-    if not check_user_permission(guild_id, 2):
+    if not check_user_permission(guild_id, PERMISSION_BAN):
         abort(401)
 
     db_user = (
@@ -600,11 +609,12 @@ def ban_unauthenticated_user():
 def unban_unauthenticated_user():
     guild_id = request.args.get("guild_id", None)
     user_id = request.args.get("user_id", None)
+
     if guild_id in list_disabled_guilds():
-        return ("", 423)
+        return "", 423
     if not guild_id or not user_id:
         abort(400)
-    if not check_user_permission(guild_id, 2):
+    if not check_user_permission(guild_id, PERMISSION_BAN):
         abort(401)
 
     db_user = (
@@ -640,12 +650,14 @@ def unban_unauthenticated_user():
 def revoke_unauthenticated_user():
     guild_id = request.form.get("guild_id", None)
     user_id = request.form.get("user_id", None)
+
     if guild_id in list_disabled_guilds():
-        return ("", 423)
+        return "", 423
     if not guild_id or not user_id:
         abort(400)
-    if not check_user_permission(guild_id, 1):
+    if not check_user_permission(guild_id, PERMISSION_KICK):
         abort(401)
+
     db_user = (
         db.session.query(UnauthenticatedUsers)
         .filter(

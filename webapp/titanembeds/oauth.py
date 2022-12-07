@@ -1,5 +1,6 @@
 import json
 import logging
+from pprint import pformat
 
 from config import config
 from flask import abort, request, session, url_for
@@ -12,6 +13,9 @@ from titanembeds.utils import make_user_cache_key
 log = logging.getLogger(__name__)
 
 BOT_PERMISSIONS = 641195117
+PERMISSION_MANAGE = 5
+PERMISSION_BAN = 2
+PERMISSION_KICK = 1
 
 authorize_url = "https://discordapp.com/api/oauth2/authorize"
 token_url = "https://discordapp.com/api/oauth2/token"
@@ -61,64 +65,54 @@ def user_has_permission(permission, index):
 
 
 def get_user_guilds():
-    cache = redis_store.get("OAUTH/USERGUILDS/" + str(make_user_cache_key()))
+    cache_key = f"OAUTH/USERGUILDS/{make_user_cache_key()}"
+
+    cache = redis_store.get(cache_key)
     if cache:
-        return cache
+        log.info("got user guilds from cache: '%s'", pformat(json.loads(cache)))
+        return json.loads(cache)
 
     req = discordrest_from_user("/users/@me/guilds")
     if req.status_code != 200:
+        log.info("could not authenticate user with discord")
         if hasattr(request, "sid"):
             disconnect()
             return
         abort(req.status_code)
 
-    req = json.dumps(req.json())
-    redis_store.set("OAUTH/USERGUILDS/" + str(make_user_cache_key()), req, 250)
-    return req
+    result = req.json()
+    redis_store.set(cache_key, json.dumps(result), 250)
+
+    log.info("get_user_guilds - type '%s' - value: '%s'", type(result), pformat(result))
+    return result
 
 
 def get_user_managed_servers():
-    fetched = get_user_guilds()
-    if not fetched:
-        return []
+    guilds = get_user_guilds() or []
 
-    guilds = json.loads(fetched)
     filtered = []
     for guild in guilds:
         permission = guild["permissions"]  # Manage Server, Ban Members, Kick Members
         if (
             guild["owner"]
-            or user_has_permission(permission, 5)
-            or user_has_permission(permission, 2)
-            or user_has_permission(permission, 1)
+            or user_has_permission(permission, PERMISSION_MANAGE)
+            or user_has_permission(permission, PERMISSION_BAN)
+            or user_has_permission(permission, PERMISSION_KICK)
         ):
             filtered.append(guild)
 
-    filtered = sorted(filtered, key=lambda guild: guild["name"])
-    return filtered
-
-
-def get_user_managed_servers_safe():
-    guilds = get_user_managed_servers()
-    if guilds:
-        return guilds
-
-    return []
-
-
-def get_user_managed_servers_id():
-    return [guild["id"] for guild in get_user_managed_servers_safe()]
+    return sorted(filtered, key=lambda g: g["name"])
 
 
 def check_user_can_administrate_guild(guild_id):
-    return guild_id in get_user_managed_servers_id()
+    return guild_id in [guild["id"] for guild in get_user_managed_servers()]
 
 
-def check_user_permission(guild_id, id):
-    guilds = get_user_managed_servers_safe()
-    for guild in guilds:
+def check_user_permission(guild_id, permission_id):
+    for guild in get_user_managed_servers():
         if guild["id"] == guild_id:
-            return user_has_permission(guild["permissions"], id) or guild["owner"]
+            return user_has_permission(guild["permissions"], permission_id) or guild["owner"]
+
     return False
 
 
