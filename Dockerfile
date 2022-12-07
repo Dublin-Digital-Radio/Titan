@@ -85,6 +85,6 @@ RUN cd webapp && /home/titan/venv/bin/python bin/tr_compile.py
 
 USER titan
 WORKDIR /home/titan/Titan/webapp
-CMD ["gunicorn", "--worker-class", "eventlet", "-w", "1", "-b", "0.0.0.0:8080", "--log-level", "info", "titanembeds.app:app"]
+CMD ["gunicorn", "--worker-class", "eventlet", "-w", "1", "-b", "0.0.0.0:8080", "--log-level", "debug", "--access-logfile", "-", "--error-logfile", "-", "titanembeds.app:app"]
 
 
