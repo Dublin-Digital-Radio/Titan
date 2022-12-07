@@ -201,7 +201,7 @@ class Commands:
         )
         embed = discord.Embed(
             title="Currently Online Embed Members",
-            url="https://TitanEmbeds.com/",
+            url="https://ddr-titan.fly.dev/",
             color=7964363,
             description=embed_description,
         )

@@ -4,6 +4,7 @@ import json
 import asyncio
 import logging
 import traceback
+from pprint import pformat
 
 import aioredis
 import async_timeout
@@ -60,6 +61,8 @@ class RedisQueue:
             self.bot.loop.create_task(self._run_event(method, key, params))
 
     async def _run_event(self, event, key, params):
+        log.info("_run_event '%s': '%s': '%s'", event, key, pformat(params))
+
         try:
             await getattr(self, event)(key, params)
         except asyncio.CancelledError:
@@ -109,7 +112,7 @@ class RedisQueue:
         if not channel or not isinstance(channel, discord.channel.TextChannel):
             return
 
-        await self.connection.delete([key])
+        await self.connection.delete(key)
         messages = []
         me = channel.guild.get_member(self.bot.user.id)
 
@@ -118,7 +121,7 @@ class RedisQueue:
                 formatted = get_formatted_message(message)
                 messages.append(json.dumps(formatted, separators=(",", ":")))
 
-        await self.connection.sadd(key, [""] + messages)
+        await self.connection.sadd(key, "", *messages)
 
     async def push_message(self, message):
         if not message.guild:
@@ -129,7 +132,7 @@ class RedisQueue:
             return
 
         message = get_formatted_message(message)
-        await self.connection.sadd(key, [json.dumps(message, separators=(",", ":"))])
+        await self.connection.sadd(key, json.dumps(message, separators=(",", ":")))
 
     async def delete_message(self, message):
         if not message.guild:
@@ -141,7 +144,7 @@ class RedisQueue:
 
         unformatted_item, formatted_item = await self.set_scan_json(key, "id", message.id)
         if formatted_item:
-            await self.connection.srem(key, [unformatted_item])
+            await self.connection.srem(key, unformatted_item)
 
     async def update_message(self, message):
         await self.delete_message(message)
@@ -209,13 +212,13 @@ class RedisQueue:
             get_guild_member_param = {"guild_id": guild.id, "user_id": member.id}
             await self.on_get_guild_member(get_guild_member_key, get_guild_member_param)
 
-        await self.connection.sadd(key, member_ids)
+        await self.connection.sadd(key, *member_ids)
 
     async def add_member(self, member):
         if await self.connection.exists(f"Queue/guilds/{member.guild.id}/members"):
             await self.connection.sadd(
                 f"Queue/guilds/{member.guild.id}/members",
-                [json.dumps({"user_id": member.id}, separators=(",", ":"))],
+                json.dumps({"user_id": member.id}, separators=(",", ":")),
             )
 
         get_guild_member_key = f"Queue/guilds/{member.guild.id}/members/{member.id}"
@@ -228,9 +231,9 @@ class RedisQueue:
 
         await self.connection.srem(
             f"Queue/guilds/{guild.id}/members",
-            [json.dumps({"user_id": member.id}, separators=(",", ":"))],
+            json.dumps({"user_id": member.id}, separators=(",", ":")),
         )
-        await self.connection.delete([f"Queue/guilds/{guild.id}/members/{member.id}"])
+        await self.connection.delete(f"Queue/guilds/{guild.id}/members/{member.id}")
 
     async def update_member(self, member):
         await self.remove_member(member)

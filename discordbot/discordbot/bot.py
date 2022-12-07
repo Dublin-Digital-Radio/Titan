@@ -1,8 +1,8 @@
 import sys
 import asyncio
 import logging
-from collections import deque
 from pprint import pformat
+from collections import deque
 
 # from raven import Client as RavenClient
 # import raven
