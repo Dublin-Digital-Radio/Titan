@@ -48,7 +48,7 @@ class RedisQueue:
                     if reply is None:
                         continue
 
-                    request = reply["data"].decode()
+                    request = json.loads(reply["data"].decode())
                     self.dispatch(request["resource"], request["key"], request["params"])
                     await asyncio.sleep(0.01)
             except asyncio.TimeoutError:
@@ -258,7 +258,7 @@ class RedisQueue:
         await self.enforce_expiring_key(key)
 
     async def delete_guild(self, guild):
-        await self.connection.delete([f"Queue/guilds/{guild.id}"])
+        await self.connection.delete(f"Queue/guilds/{guild.id}")
 
     async def update_guild(self, guild):
         key = f"Queue/guilds/{guild.id}"
