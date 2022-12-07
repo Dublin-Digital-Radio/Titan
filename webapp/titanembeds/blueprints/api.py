@@ -12,6 +12,7 @@ from flask import Blueprint, abort
 from flask import current_app as app
 from flask import jsonify, request, session, url_for
 from flask_socketio import emit
+from itsdangerous.exc import BadSignature
 from sqlalchemy import and_
 from titanembeds.database import (
     AuthenticatedUsers,
@@ -69,12 +70,15 @@ def after_request(response):
 @api.before_request
 def before_request():
     authorization = request.headers.get("authorization", None)
+
     if authorization:
         try:
             data = serializer.loads(authorization)
             session.update(data)
+        except BadSignature:
+            log.error(f'Bad signature in auth header value')
         except json.JSONDecodeError:
-            pass
+            log.error(f'Could not JSON decode auth header value')
 
 
 def parse_emoji(textToParse, guild_id):

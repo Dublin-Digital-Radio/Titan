@@ -2,6 +2,7 @@ import sys
 import asyncio
 import logging
 from collections import deque
+from pprint import pformat
 
 # from raven import Client as RavenClient
 # import raven
@@ -96,23 +97,35 @@ class Titan(discord.AutoShardedClient):
     async def on_message(self, message):
         await self.socketio.on_message(message)
         await self.redisqueue.push_message(message)
-
         msg_arr = message.content.split()  # split the message
+
+        self.log.info("received message:\n%s\n%s", message, msg_arr)
+
+        if len(msg_arr) <= 1:
+            self.log.info(
+                "Could not read message - too few content members\n%s", pformat(msg_arr)
+            )
+            return
+
         msg_cmd = msg_arr[1].lower()
+        if msg_cmd == "__init__":
+            self.log.info("Could not read message - command is '__init__'\n%s", pformat(msg_arr))
+            return
 
         # making sure there is actually stuff in the message and have arguments
         # and check if it is sent in server (not PM)
         if (
-            len(message.content.split()) > 1
-            and message.guild
+            message.guild
             # make sure it is mention
             and (msg_arr[0] in [f"<@{self.user.id}>", f"<@!{self.user.id}>"])
-            and msg_cmd != "__init__"
             and getattr(self.command, msg_cmd, None)
         ):
+            self.log.info("running message %s", msg_cmd)
             async with message.channel.typing():  # this looks nice
                 # actually run cmd, passing in msg obj
                 await getattr(self.command, msg_cmd)(message)
+        else:
+            self.log.info("Could not run message %s\n%s", msg_cmd, pformat(msg_arr))
 
     async def on_message_edit(self, message_before, message_after):
         await self.redisqueue.update_message(message_after)
