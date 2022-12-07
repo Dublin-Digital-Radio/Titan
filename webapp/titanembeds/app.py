@@ -53,7 +53,7 @@ class ConfigError(Error):
 
 app_start_stamp = time.time()
 
-app_name = __name__.split('.')[0]
+app_name = __name__.split(".")[0]
 app = Flask(app_name, static_folder="static")
 
 if __name__ != "__main__":
