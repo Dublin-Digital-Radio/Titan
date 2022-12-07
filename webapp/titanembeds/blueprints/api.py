@@ -532,6 +532,7 @@ def create_unauthenticated_user():
     username = request.form["username"]
     guild_id = request.form["guild_id"]
     ip_address = get_client_ipaddr()
+
     username = username.strip()
     if len(username) < 2 or len(username) > 32:
         abort(406)
@@ -541,30 +542,34 @@ def create_unauthenticated_user():
         abort(404)
     if not guild_query_unauth_users_bool(guild_id):
         abort(401)
+
     if guild_unauthcaptcha_enabled(guild_id):
-        captcha_response = request.form["captcha_response"]
-        if not verify_captcha_request(captcha_response, request.remote_addr):
+        if not verify_captcha_request(request.form["captcha_response"], request.remote_addr):
             abort(412)
-    final_response = None
+
     if not checkUserBanned(guild_id, ip_address):
         session["username"] = username
         if "user_id" not in session or len(str(session["user_id"])) > 4:
             session["user_id"] = random.randint(0, 9999)
+
         user = UnauthenticatedUsers(guild_id, username, session["user_id"], ip_address)
         db.session.add(user)
+
         key = user.user_key
         if "user_keys" not in session:
             session["user_keys"] = {guild_id: key}
         else:
             session["user_keys"][guild_id] = key
+
         session.permanent = False
+
         status = update_user_status(guild_id, username, key)
         final_response = jsonify(status=status)
     else:
         status = {"banned": True}
-        response = jsonify(status=status)
-        response.status_code = 403
-        final_response = response
+        final_response = jsonify(status=status)
+        final_response.status_code = 403
+
     db.session.commit()
     return final_response
 

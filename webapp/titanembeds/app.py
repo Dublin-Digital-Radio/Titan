@@ -53,7 +53,8 @@ class ConfigError(Error):
 
 app_start_stamp = time.time()
 
-app = Flask(__name__, static_folder="static")
+app_name = __name__.split('.')[0]
+app = Flask(app_name, static_folder="static")
 
 if __name__ != "__main__":
     gunicorn_logger = logging.getLogger("gunicorn.error")

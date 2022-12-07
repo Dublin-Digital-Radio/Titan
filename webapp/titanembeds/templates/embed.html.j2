@@ -11,13 +11,13 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/malihu-custom-scrollbar-plugin/3.1.5/jquery.mCustomScrollbar.min.css" integrity="sha256-JHGEmB629pipTkMag9aMaw32I8zle24p3FpsEeI6oZU=" crossorigin="anonymous" />
     <link type="text/css" rel="stylesheet" href="{{ url_for('static', filename='css/embed.css', t=app_start_stamp) }}">
     <link id="css-theme" type="text/css" rel="stylesheet" href="">
-    
+
     {% if af_mode_enabled %}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/site.af.rainbow.css') }}">
     {% endif %}
-    
+
     <meta name="robots" content="noindex, nofollow">
-    
+
     <!--Check whether JavaScript is enabled, otherwise redirect to error page-->
     <noscript>
       <meta http-equiv="refresh" content="0; URL={{ url_for("embed.noscript") }}">
@@ -25,18 +25,18 @@
 
     <!--Let browser know website is optimized for mobile-->
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    
+
     {% if not userscalable %}
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="HandheldFriendly" content="true" />
     {% endif %}
-    
+
     {% include 'seo_meta.html.j2' %}
-    
+
     <!--Provide default mobile metadata-->
     <meta name="apple-mobile-web-app-title" content="{{ guild['name']|e }}">
     <meta name="application-name" content="{{ guild['name']|e }}">
-    
+
     {% with title="Visit " + guild['name'] + " embed", description="Visit " + guild['name'] + " on Titan Embeds and chat with your friends from the comfort of your own website. This page is 100% embeddable, iFrameable and looks good on any webpages. Titan is hassle free and designed as easy to setup!", image=generate_guild_icon( guild['id'], guild['icon']) %}
       {% include "opengraph_tags.html.j2" %}
     {% endwith %}
@@ -44,7 +44,7 @@
     <title>{{ guild['name']|e }} - Embed - Titan Embeds for Discord</title>
     {% include 'google_analytics.html.j2' %}
     <script src='https://www.google.com/recaptcha/api.js'></script>
-    
+
     <style id="user-defined-css">
       {% if css is not none %}
         {% if cssvariables is not none and css.css_var_bool %}{{ cssvariables|e }}{% endif %}
@@ -70,10 +70,10 @@
           <div class="sk-child sk-double-bounce1"></div>
           <div class="sk-child sk-double-bounce2"></div>
         </div>
-        
+
         <div id="chatcontent" class="chatcontent"></div>
       </main>
-      
+
       <footer id="footer" class="footer">
         <div id="footercontainer" class="footercontainer">
           <div class="currentuserchip" id="nameplate">
@@ -145,7 +145,7 @@
                     We store session data (like your username, avatar, Discord user ID, Discord oauth token, etc) in cookies to
                     help Titan identify who is using the service when logging in. Without these pieces of data, we won't know who
                     is sending the messages and whether if you have permission to view messages at all. When the embed is loaded,
-                    the first thing we check is whether cookies are enabled. However small issues like high latency internet connection 
+                    the first thing we check is whether cookies are enabled. However small issues like high latency internet connection
                     or other anomalies can prevent the cookie check from performing successfully.<br>
                     <span id="third-party-cookies-opt1">With that being said, <a id="third-party-cookies-force-hide">you may attempt to login</a>, however, there are no gurantee that the login will be made successfully.<br></span>
                     <span id="third-party-cookies-opt2">Alternatively, you may <a id="third-party-cookies-force-window">try logging in from a new window</a>.</span>
@@ -189,7 +189,7 @@
           </div>
         </div>
       </div>
-    
+
     <div id="userembedmodal" class="modal">
       <div class="modal-content">
         {% if unauth_enabled %}
@@ -254,7 +254,7 @@
         </div>
       </div>
     </div>
-    
+
     <div id="recaptchamodal" class="modal">
       <div class="modal-content">
         <h4 class="center-align">{{ _("Just one more step...") }}</h4>
@@ -262,7 +262,7 @@
         <input type="hidden" id="submit-unauthenticated-captcha-btn" />
       </div>
     </div>
-    
+
     <div id="nsfwmodal" class="modal">
       <div class="modal-content">
         <h4 class="center-align"><i class="material-icons">warning</i> {{ _("NSFW Channel") }} <i class="material-icons">warning</i></h4>
@@ -273,7 +273,7 @@
         </p>
       </div>
     </div>
-    
+
     <div id="filemodal" class="modal">
       <div class="modal-content">
         <h4 class="center-align">{{ _("Attaching File") }}</h4>
@@ -359,7 +359,7 @@
         </p>
       </div>
     </div>
-    
+
     <div id="usercard" class="modal bottom-sheet">
       <div class="modal-content">
         <div class="row">
@@ -383,7 +383,7 @@
         </div>
       </div>
     </div>
-    
+
     <div class="wdt-emoji-popup">
       <a href="#" class="wdt-emoji-popup-mobile-closer"> × </a>
       <div class="wdt-emoji-menu-content">
@@ -421,18 +421,18 @@
         </div>
       </div>
     </div>
-    
+
     <div id="mention-picker">
       <div id="mention-picker-content">
-        
+
       </div>
     </div>
-    
+
     <!-- Electron fix -->
     <script>
       if (typeof module === "object") {
         window.module = module;
-        module = undefined;  
+        module = undefined;
       }
     </script>
 
@@ -444,7 +444,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jQuery-linkify/2.1.4/linkify.min.js" integrity="sha256-/qh8j6L0/OTx+7iY8BAeLirxCDBsu3P15Ci5bo7BJaU=" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jQuery-linkify/2.1.4/linkify-jquery.min.js" integrity="sha256-BlSfVPlZijMLojgte2AtSget879chk1+8Z8bEH/L4Cs=" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cheet.js/0.3.3/cheet.min.js" integrity="sha256-FxQrnIC3BX45JRzOyFUlKiM6dY3A/ZakV6w4WpYyfyA=" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.3/socket.io.js" integrity="sha256-sdmLD9jD1PIzq3KOQPNSGZYxjv76rds79Mnyk5JNp1M=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.min.js" integrity="sha512-HTENHrkQ/P0NGDFd5nk6ibVtCkcM7jhr2c7GyvXp5O+4X6O5cQO9AhqFzM+MdeBivsX7Hoys2J7pp2wdgMpCvw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/2.5.0/2/twemoji.min.js" integrity="sha256-t5bxASdQ5tDbKQZy330h/YufCiZg82xG8PqIYzFpwhU=" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/soundmanager2/2.97a.20150601/script/soundmanager2-nodebug-jsmin.js" integrity="sha256-5KBL+8gS3BkWOs22YOrezN3Djl4pwodgZaPQY9hgu4Y=" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/es6-shim/0.35.3/es6-shim.min.js" integrity="sha256-THlgZSjqt7idNSdnUvGypTuXB5C4hV9kSuPYrbiq19o=" crossorigin="anonymous"></script>
@@ -471,7 +471,7 @@
     <script id="mustache_unauthedusers" type="text/template">
       <li><a class="waves-effect truncate"><span class="membername">{{username}}#{{discriminator}}</span></a></li>
     </script>
-    
+
     <script id="mustache_usermessage" type="text/template">
       <p><img class="authoravatar" src="{{avatar}}"> <span class="chatusername"><span class="authorname">{{username}}</span><span class="authorhash">#</span><span class="authordiscriminator">{{discriminator}}</span></span> <span id="discordmessage_{{id}}" title="{{full_timestamp}}" class="chattimestamp">{{time}}</span> <span class="chatmessage">{{{content}}}</span><span class="embeds"></span><span class="reactions"></span></p>
     </script>
@@ -479,7 +479,7 @@
     <script id="mustache_memberrole" type="text/template">
       <li><a class="subheader role-title">{{name}}</a></li>
     </script>
-    
+
     <script id="mustache_channelcategory" type="text/template">
       <li><a class="subheader channel-category">{{name}}</a></li>
     </script>
@@ -487,15 +487,15 @@
     <script id="mustache_message_emoji" type="text/template">
       <img class="message_emoji tooltipped" src='https://cdn.discordapp.com/emojis/{{id}}{{#animated}}.gif{{/animated}}{{^animated}}.png{{/animated}}' data-position="top" data-delay="200" data-tooltip=":{{name}}:" alt=":{{name}}:" />
     </script>
-    
+
     <script id="mustache_discordmention" type="text/template">
       <span class="discordmention"><span class="atsign">@</span><span class="username">{{username}}</span><span class="hash">#</span><span class="discriminator">{{discriminator}}</span></span>
     </script>
-    
+
     <script id="mustache_rolemention" type="text/template">
       <span class="rolemention" {{#color}}style="color: {{color}}"{{/color}}><span class="atsign">@</span><span class="rolename">{{rolename}}</span></span>
     </script>
-    
+
     <script id="mustache_richembed" type="text/template">
       <div class="richembed">
         {{#color}}
@@ -590,11 +590,11 @@
         </div>
       </div>
     </script>
-    
+
     <script id="mustache_rolebubble" type="text/template">
       <span class="bubble" {{#color}}style="color: {{color}};"{{/color}}><span class="color" {{#color}}style="background-color: {{color}};"{{/color}}></span> <span class="text">{{name}}</span></span>
     </script>
-    
+
     <script id="mustache_usermentionchoices" type="text/template">
         <div class="mention-choice" discorduserid="{{ id }}">
           <img src="{{ avatar }}" class="circle">
@@ -604,7 +604,7 @@
           </span>
         </div>
     </script>
-    
+
     <script id="mustache_reactionchip" type="text/template">
       <span class="reaction tooltipped" data-position="top" data-delay="200" data-tooltip="{{#emoji.id}}:{{/emoji.id}}{{emoji.name}}{{#emoji.id}}:{{/emoji.id}}"><img src="{{img_url}}"> <span class="count">{{count}}</span></span>
     </script>
@@ -636,15 +636,15 @@
     </script>
 
     <script type="text/javascript" src="{{ url_for('static', filename='js/embed.js', t=app_start_stamp) }}"></script>
-    
+
     {% if af_mode_enabled %}
     <script type="text/javascript" src="{{ url_for('static', filename='js/embed.af.directmessage.js') }}"></script>
     <script type="text/javascript" src="{{ url_for('static', filename='js/site.af.sausage.js') }}"></script>
     {% endif %}
-    
+
     <!-- Third party cookie test -->
     <script type="text/javascript" src="{{ url_for("embed.cookietest1", _external=True) }}"></script>
-    
+
     <!-- Electron fix -->
     <script>
       if (window.module) {

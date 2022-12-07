@@ -2,6 +2,7 @@
 import random
 import string
 import hashlib
+import logging
 
 from config import config
 from flask import request, session
@@ -21,6 +22,8 @@ from titanembeds.database import (
 )
 from titanembeds.discordrest import DiscordREST
 from titanembeds.redisqueue import redis_store
+
+log = logging.getLogger(__name__)
 
 discord_api = DiscordREST(config["bot-token"])
 
@@ -240,9 +243,10 @@ def get_online_embed_user_keys(guild_id="*", user_type=None):
 
 def check_user_in_guild(guild_id):
     if user_unauthenticated():
+        log.info('checking if unauthenticated user in guild')
         return guild_id in session.get("user_keys", {})
 
-    dbUser = (
+    db_user = (
         db.session.query(AuthenticatedUsers)
         .filter(
             and_(
@@ -252,7 +256,12 @@ def check_user_in_guild(guild_id):
         )
         .first()
     )
-    return dbUser is not None and not checkUserRevoke(guild_id)
+
+    log.info('checking if authenticated user in guild')
+    log.info(db_user)
+    user_revoked = checkUserRevoke(guild_id)
+    log.info('revoked: %s', user_revoked)
+    return db_user is not None and not user_revoked
 
 
 def get_member_roles(guild_id, user_id):
