@@ -31,8 +31,8 @@ ENV VIRTUAL_ENV=$VIRTUAL_ENV
 ARG PATH="$VIRTUAL_ENV/bin":$PATH
 ENV PATH=$PATH
 
-COPY requirements/requirements.discordbot.txt .
-RUN pip install -r requirements.discordbot.txt
+COPY discordbot/requirements.txt .
+RUN pip install -r requirements.txt
 
 
 FROM build as build-webapp
@@ -42,8 +42,8 @@ ENV VIRTUAL_ENV=$VIRTUAL_ENV
 ARG PATH="$VIRTUAL_ENV/bin":$PATH
 ENV PATH=$PATH
 
-COPY requirements/requirements.webapp.txt .
-RUN pip install -r requirements.webapp.txt
+COPY webapp/requirements.txt .
+RUN pip install -r requirements.txt
 
 
 FROM base as discordbot
