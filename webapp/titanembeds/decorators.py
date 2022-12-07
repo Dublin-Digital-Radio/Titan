@@ -51,7 +51,7 @@ def abort_if_guild_disabled(*args):
             if not guild_id and len(args) > 0:
                 guild_id = args[0]
             if guild_id in list_disabled_guilds():
-                return ("", 423)
+                return "", 423
             return f(*args, **kwargs)
 
         return decorated_function

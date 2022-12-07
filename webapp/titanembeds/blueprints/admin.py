@@ -32,7 +32,8 @@ from titanembeds.database import (
     set_titan_token,
 )
 from titanembeds.oauth import generate_guild_icon_url
-from titanembeds.utils import get_online_embed_user_keys, redisqueue
+from titanembeds.utils import get_online_embed_user_keys
+from titanembeds import redisqueue
 
 admin = Blueprint("admin", __name__)
 

@@ -5,6 +5,7 @@ import logging
 from flask import session
 from flask_socketio import Namespace, disconnect, emit, join_room, leave_room
 from titanembeds.database import db
+from titanembeds.redisqueue import redis_store
 from titanembeds.utils import (
     check_user_in_guild,
     discord_api,
@@ -13,7 +14,6 @@ from titanembeds.utils import (
     get_guild_channels,
     guild_accepts_visitors,
     guild_webhooks_enabled,
-    redis_store,
     redisqueue,
     serializer,
     update_user_status,

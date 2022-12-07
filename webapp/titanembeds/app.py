@@ -1,12 +1,11 @@
 import time
 import random
+import logging
 import datetime
 from datetime import timedelta
-import logging
-
-from werkzeug.middleware.proxy_fix import ProxyFix
 
 from config import config
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 try:
     import uwsgi
@@ -36,12 +35,12 @@ from titanembeds.utils import (  # , sentry
     discord_api,
     language_code_list,
     rate_limiter,
-    redis_store,
     socketio,
 )
 
 from .blueprints import admin, api, embed, gateway, user
 from .database import db
+from .redisqueue import redis_store
 
 
 class Error(Exception):

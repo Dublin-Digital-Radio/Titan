@@ -29,6 +29,7 @@ from titanembeds.decorators import (
     valid_session_required,
 )
 from titanembeds.oauth import generate_avatar_url
+from titanembeds.redisqueue import redis_store
 from titanembeds.utils import (
     channel_ratelimit_key,
     check_guild_existance,
@@ -46,7 +47,6 @@ from titanembeds.utils import (
     guild_unauthcaptcha_enabled,
     guild_webhooks_enabled,
     rate_limiter,
-    redis_store,
     redisqueue,
     serializer,
     update_user_status,
@@ -76,9 +76,9 @@ def before_request():
             data = serializer.loads(authorization)
             session.update(data)
         except BadSignature:
-            log.error(f'Bad signature in auth header value')
+            log.error(f"Bad signature in auth header value")
         except json.JSONDecodeError:
-            log.error(f'Could not JSON decode auth header value')
+            log.error(f"Could not JSON decode auth header value")
 
 
 def parse_emoji(textToParse, guild_id):
@@ -413,29 +413,36 @@ def post():
     guild_id = request.form.get("guild_id")
     channel_id = request.form.get("channel_id")
     content = request.form.get("content", "")
+
     file = None
     if "file" in request.files:
         file = request.files["file"]
     if file and file.filename == "":
         file = None
+
     rich_embed = request.form.get("richembed", None)
     if rich_embed:
         rich_embed = json.loads(rich_embed)
+
     if "user_id" in session:
         dbUser = redisqueue.get_guild_member(guild_id, session["user_id"])
     else:
         dbUser = None
+
     if user_unauthenticated():
         key = session["user_keys"][guild_id]
     else:
         key = None
+
     content, illegal_post, illegal_reasons = format_post_content(
         guild_id, channel_id, content, dbUser
     )
     status = update_user_status(guild_id, session["username"], key)
     message = {}
+
     if illegal_post:
         status_code = 417
+
     if status["banned"] or status["revoked"]:
         status_code = 401
     else:
@@ -494,6 +501,7 @@ def post():
             else:
                 message = discord_api.create_message(channel_id, content, file, rich_embed)
             status_code = message["code"]
+
     db.session.commit()
     response = jsonify(
         message=message.get("content", message),
@@ -620,25 +628,20 @@ def get_guild_guest_icon(guild_id):
 
 
 def process_query_guild(guild_id, visitor=False):
-    forced_role = get_forced_role(guild_id)
-    channels = get_guild_channels(guild_id, visitor, forced_role=forced_role)
-    discordmembers = (
-        []
-    )  # Discord members & embed members listed here is moved to its own api endpoint
-    embedmembers = {"authenticated": [], "unauthenticated": []}
-    emojis = get_guild_emojis(guild_id)
-    roles = get_guild_roles(guild_id)
-    guest_icon = get_guild_guest_icon(guild_id)
+    channels = get_guild_channels(guild_id, visitor, forced_role=(get_forced_role(guild_id)))
+
+    # Discord members & embed members listed here is moved to its own api endpoint
     if visitor:
         for channel in channels:
             channel["write"] = False
+
     return jsonify(
         channels=channels,
-        discordmembers=discordmembers,
-        embedmembers=embedmembers,
-        emojis=emojis,
-        roles=roles,
-        guest_icon=guest_icon,
+        discordmembers=([]),
+        embedmembers={"authenticated": [], "unauthenticated": []},
+        emojis=get_guild_emojis(guild_id),
+        roles=get_guild_roles(guild_id),
+        guest_icon=get_guild_guest_icon(guild_id),
         instant_invite=None,
     )
 
@@ -648,11 +651,15 @@ def process_query_guild(guild_id, visitor=False):
 @abort_if_guild_disabled()
 def query_guild():
     guild_id = request.args.get("guild_id")
-    if check_guild_existance(guild_id):
-        if check_user_in_guild(guild_id):
-            return process_query_guild(guild_id)
+
+    if not check_guild_existance(guild_id):
+        log.warning('could not find guild %s in redis', guild_id)
+        abort(404)
+    if not check_user_in_guild(guild_id):
+        log.warning('user not in guild')
         abort(403)
-    abort(404)
+
+    return process_query_guild(guild_id)
 
 
 @api.route("/query_guild_visitor", methods=["GET"])

@@ -7,10 +7,10 @@ from config import config
 from flask import request, session
 from flask_babel import Babel
 from flask_limiter import Limiter
-from flask_redis import FlaskRedis
 from flask_socketio import SocketIO, disconnect
 from itsdangerous import URLSafeSerializer
 from sqlalchemy import and_
+from titanembeds import redisqueue
 from titanembeds.constants import LANGUAGES
 from titanembeds.database import (
     AuthenticatedUsers,
@@ -19,14 +19,10 @@ from titanembeds.database import (
     UnauthenticatedUsers,
     db,
 )
-
-redis_store = FlaskRedis(charset="utf-8", decode_responses=True)
-
 from titanembeds.discordrest import DiscordREST
-from titanembeds.redisqueue import RedisQueue
+from titanembeds.redisqueue import redis_store
 
 discord_api = DiscordREST(config["bot-token"])
-redisqueue = RedisQueue()
 
 serializer = URLSafeSerializer(config["app-secret"])
 
@@ -88,9 +84,21 @@ def guild_ratelimit_key():
     return ip + guild_id
 
 
+def get_guild(guild_id):
+    try:
+        guild_id = int(guild_id)
+    except (TypeError, ValueError):
+        return None
+
+    return redisqueue.get_guild(guild_id)
+
+
 def check_guild_existance(guild_id):
-    if not is_int(guild_id):
+    try:
+        guild_id = int(guild_id)
+    except (TypeError, ValueError):
         return False
+
     return bool(redisqueue.get_guild(guild_id))
 
 
@@ -119,15 +127,16 @@ def checkUserRevoke(guild_id, user_key=None):
             )
             .first()
         )
-        revoked = dbUser.isRevoked()
+        if not dbUser:
+            return True
+
+        return dbUser.isRevoked()
     else:
         banned = checkUserBanned(guild_id)
         if banned:
             return revoked
         dbUser = redisqueue.get_guild_member(guild_id, session["user_id"])
-        revoked = not dbUser
-
-    return revoked
+        return not dbUser
 
 
 def checkUserBanned(guild_id, ip_address=None):
@@ -463,7 +472,7 @@ def is_int(specimen):
     try:
         int(specimen)
         return True
-    except ValueError:
+    except (TypeError, ValueError):
         return False
 
 

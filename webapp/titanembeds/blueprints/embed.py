@@ -1,6 +1,7 @@
 import copy
 import json
 import random
+import logging
 from urllib.parse import urlparse
 
 from config import config
@@ -18,7 +19,6 @@ from flask_babel import gettext
 from titanembeds.database import Guilds, UserCSS, db, list_disabled_guilds
 from titanembeds.oauth import generate_guild_icon_url
 from titanembeds.utils import (
-    check_guild_existance,
     get_online_embed_user_keys,
     guild_accepts_visitors,
     guild_query_unauth_users_bool,
@@ -27,6 +27,8 @@ from titanembeds.utils import (
     redisqueue,
     serializer,
 )
+
+log = logging.getLogger(__name__)
 
 embed = Blueprint("embed", __name__)
 
@@ -93,41 +95,45 @@ def is_peak(guild_id):
 
 @embed.route("/<int:guild_id>")
 def guild_embed(guild_id):
-    if check_guild_existance(guild_id):
-        guild = redisqueue.get_guild(guild_id)
-        dbguild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
-        if not dbguild:
-            abort(404)
-        guild_dict = {
-            "id": guild["id"],
-            "name": guild["name"],
-            "unauth_users": dbguild.unauth_users,
-            "icon": guild["icon"],
-            "invite_link": dbguild.invite_link,
-            "invite_domain": parse_url_domain(dbguild.invite_link),
-            "post_timeout": dbguild.post_timeout,
-        }
-        customcss = get_custom_css()
-        return render_template(
-            "embed.html.j2",
-            disabled=str(guild_id) in list_disabled_guilds(),
-            login_greeting=get_logingreeting(),
-            guild_id=guild_id,
-            guild=guild_dict,
-            generate_guild_icon=generate_guild_icon_url,
-            unauth_enabled=guild_query_unauth_users_bool(guild_id),
-            visitors_enabled=guild_accepts_visitors(guild_id),
-            unauth_captcha_enabled=guild_unauthcaptcha_enabled(guild_id),
-            client_id=config["client-id"],
-            recaptcha_site_key=config["recaptcha-site-key"],
-            css=customcss,
-            cssvariables=parse_css_variable(customcss),
-            same_target=request.args.get("sametarget", False) == "true",
-            userscalable=request.args.get("userscalable", "True").lower().startswith("t"),
-            fixed_sidenav=request.args.get("fixedsidenav", "False").lower().startswith("t"),
-            is_peak=request.args.get("forcepeak", False) == "1" or is_peak(guild_id),
-        )
-    abort(404)
+    guild = redisqueue.get_guild(guild_id)
+    if not guild:
+        log.warning("could not get guild '%s' from redis", guild_id)
+        abort(404)
+
+    dbguild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+    if not dbguild:
+        log.warning("found guild '%s' in redis but not in db", guild_id)
+        abort(404)
+
+    guild_dict = {
+        "id": guild["id"],
+        "name": guild["name"],
+        "unauth_users": dbguild.unauth_users,
+        "icon": guild["icon"],
+        "invite_link": dbguild.invite_link,
+        "invite_domain": parse_url_domain(dbguild.invite_link),
+        "post_timeout": dbguild.post_timeout,
+    }
+    customcss = get_custom_css()
+    return render_template(
+        "embed.html.j2",
+        disabled=str(guild_id) in list_disabled_guilds(),
+        login_greeting=get_logingreeting(),
+        guild_id=guild_id,
+        guild=guild_dict,
+        generate_guild_icon=generate_guild_icon_url,
+        unauth_enabled=guild_query_unauth_users_bool(guild_id),
+        visitors_enabled=guild_accepts_visitors(guild_id),
+        unauth_captcha_enabled=guild_unauthcaptcha_enabled(guild_id),
+        client_id=config["client-id"],
+        recaptcha_site_key=config["recaptcha-site-key"],
+        css=customcss,
+        cssvariables=parse_css_variable(customcss),
+        same_target=request.args.get("sametarget", False) == "true",
+        userscalable=request.args.get("userscalable", "True").lower().startswith("t"),
+        fixed_sidenav=request.args.get("fixedsidenav", "False").lower().startswith("t"),
+        is_peak=request.args.get("forcepeak", False) == "1" or is_peak(guild_id),
+    )
 
 
 @embed.route("/signin_complete")

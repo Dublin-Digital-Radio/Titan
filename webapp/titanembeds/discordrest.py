@@ -3,7 +3,7 @@ import json
 import time
 
 import requests
-from titanembeds.utils import redis_store
+from titanembeds.redisqueue import redis_store
 
 _DISCORD_API_BASE = "https://discordapp.com/api/v6"
 
@@ -20,9 +20,7 @@ class DiscordREST:
         self.global_redis_prefix = "discordapiratelimit/"
         self.bot_token = bot_token
         self.user_agent = (
-            "TitanEmbeds (https://github.com/TitanEmbeds/Titan) Python/{} requests/{}".format(
-                sys.version_info, requests.__version__
-            )
+            f"TitanEmbeds (https://github.com/TitanEmbeds/Titan) Python/{sys.version_info} requests/{requests.__version__}"
         )
 
     def init_discordrest(self):
@@ -45,7 +43,7 @@ class DiscordREST:
     def request(self, verb, url, **kwargs):
         headers = {
             "User-Agent": self.user_agent,
-            "Authorization": "Bot {}".format(self.bot_token),
+            "Authorization": f"Bot {self.bot_token}",
         }
         params = None
         if "params" in kwargs:
@@ -122,7 +120,7 @@ class DiscordREST:
     #####################
 
     def create_message(self, channel_id, content, file=None, richembed=None):
-        _endpoint = "/channels/{channel_id}/messages".format(channel_id=channel_id)
+        _endpoint = f"/channels/{channel_id}/messages"
         payload = {"content": content}
         is_json = False
         if file:
@@ -145,28 +143,24 @@ class DiscordREST:
     #####################
 
     def add_guild_member(self, guild_id, user_id, access_token, **kwargs):
-        _endpoint = "/guilds/{guild_id}/members/{user_id}".format(
-            user_id=user_id, guild_id=guild_id
-        )
+        _endpoint = f"/guilds/{guild_id}/members/{user_id}"
         payload = {"access_token": access_token}
         payload.update(kwargs)
         r = self.request("PUT", _endpoint, data=payload, json=True)
         return r
 
     def get_guild_embed(self, guild_id):
-        _endpoint = "/guilds/{guild_id}/embed".format(guild_id=guild_id)
+        _endpoint = f"/guilds/{guild_id}/embed"
         r = self.request("GET", _endpoint)
         return r
 
     def get_guild_member(self, guild_id, user_id):
-        _endpoint = "/guilds/{guild_id}/members/{user_id}".format(
-            guild_id=guild_id, user_id=user_id
-        )
+        _endpoint = f'/guilds/{guild_id}/members/{user_id}'
         r = self.request("GET", _endpoint)
         return r
 
     def modify_guild_embed(self, guild_id, **kwargs):
-        _endpoint = "/guilds/{guild_id}/embed".format(guild_id=guild_id)
+        _endpoint = f"/guilds/{guild_id}/embed"
         r = self.request("PATCH", _endpoint, data=kwargs, json=True)
         return r
 
@@ -175,14 +169,14 @@ class DiscordREST:
     #####################
 
     def get_widget(self, guild_id):
-        _endpoint = _DISCORD_API_BASE + "/servers/{guild_id}/widget.json".format(
-            guild_id=guild_id
-        )
+        _endpoint = f"{_DISCORD_API_BASE}/servers/{guild_id}/widget.json"
         embed = self.get_guild_embed(guild_id)
         if not embed.get("success", True):
             return {"success": False}
+
         if not embed["content"]["enabled"]:
             self.modify_guild_embed(guild_id, enabled=True, channel_id=guild_id)
+
         widget = requests.get(_endpoint).json()
         return widget
 
@@ -191,7 +185,7 @@ class DiscordREST:
     #####################
 
     def create_webhook(self, channel_id, name, avatar=None):
-        _endpoint = "/channels/{channel_id}/webhooks".format(channel_id=channel_id)
+        _endpoint = f"/channels/{channel_id}/webhooks"
         payload = {
             "name": name,
         }
@@ -211,7 +205,7 @@ class DiscordREST:
         richembed=None,
         wait=True,
     ):
-        _endpoint = "/webhooks/{id}/{token}".format(id=webhook_id, token=webhook_token)
+        _endpoint = f"/webhooks/{webhook_id}/{webhook_token}"
         if wait:
             _endpoint += "?wait=true"
         is_json = False
@@ -233,6 +227,6 @@ class DiscordREST:
         return r
 
     def delete_webhook(self, webhook_id, webhook_token):
-        _endpoint = "/webhooks/{id}/{token}".format(id=webhook_id, token=webhook_token)
+        _endpoint = f'/webhooks/{webhook_id}/{webhook_token}'
         r = self.request("DELETE", _endpoint)
         return r

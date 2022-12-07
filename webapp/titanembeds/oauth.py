@@ -5,7 +5,8 @@ from flask import abort, request, session, url_for
 from flask_socketio import disconnect
 from oauthlib.oauth2.rfc6749.errors import InvalidGrantError
 from requests_oauthlib import OAuth2Session
-from titanembeds.utils import make_user_cache_key, redis_store
+from titanembeds.redisqueue import redis_store
+from titanembeds.utils import make_user_cache_key
 
 authorize_url = "https://discordapp.com/api/oauth2/authorize"
 token_url = "https://discordapp.com/api/oauth2/token"
