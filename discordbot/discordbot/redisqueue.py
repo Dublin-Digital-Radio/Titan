@@ -103,8 +103,8 @@ class RedisQueue:
         if not exists:
             return None, None
 
-        for member in await self.connection.smembers(key):
-            the_member = await member
+        for the_member in await self.connection.smembers(key):
+            # the_member = await member
             if not the_member:
                 continue
 
