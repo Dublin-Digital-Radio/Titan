@@ -6,9 +6,13 @@ import logging
 import traceback
 from pprint import pformat
 
-from redis import asyncio as aioredis
 import async_timeout
 import discord
+from redis.asyncio.client import Redis
+from redis.asyncio.connection import ConnectionPool
+from redis.asyncio.retry import Retry
+from redis.backoff import ConstantBackoff
+from redis.exceptions import ConnectionError, TimeoutError
 
 from discordbot.utils import (
     get_formatted_guild,
@@ -31,7 +35,14 @@ class RedisQueue:
         self.connection = UnreadyConnection()
 
     async def connect(self):
-        self.connection = await aioredis.from_url(self.redis_uri)
+        connection_pool = ConnectionPool.from_url(self.redis_uri)
+        self.connection = Redis(
+            connection_pool=connection_pool,
+            retry_on_error=[ConnectionError, TimeoutError],
+            retry=Retry(backoff=ConstantBackoff(2), retries=100),
+            health_check_interval=60,  # seconds
+        )
+        log.info("Connected to redis")
 
     async def subscribe(self):
         await self.bot.wait_until_ready()
@@ -45,12 +56,22 @@ class RedisQueue:
                 continue
             try:
                 async with async_timeout.timeout(1):
-                    reply = await subscriber.get_message(ignore_subscribe_messages=True)
+                    try:
+                        reply = await subscriber.get_message(
+                            ignore_subscribe_messages=True
+                        )
+                    except ConnectionError:
+                        log.error("Redis connection lost... reconnecting")
+                        await self.connect()
+                        continue
+
                     if reply is None:
                         continue
 
                     request = json.loads(reply["data"].decode())
-                    self.dispatch(request["resource"], request["key"], request["params"])
+                    self.dispatch(
+                        request["resource"], request["key"], request["params"]
+                    )
                     await asyncio.sleep(0.01)
             except asyncio.TimeoutError:
                 pass

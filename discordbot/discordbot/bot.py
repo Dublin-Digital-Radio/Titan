@@ -35,6 +35,15 @@ def setup_logger(shard_ids=None):
     return logging.getLogger("TitanBot")
 
 
+def _handle_task_result(task: asyncio.Task) -> None:
+    try:
+        task.result()
+    except asyncio.CancelledError:
+        pass  # Task cancellation should not be logged as an error.
+    except Exception:  # pylint: disable=broad-except
+        logging.exception("Exception raised by task = %r", task)
+
+
 class Titan(discord.AutoShardedClient):
     def __init__(self, shard_ids=None, shard_count=None):
         super().__init__(
@@ -53,9 +62,13 @@ class Titan(discord.AutoShardedClient):
         self.command = Commands(self, config)
         self.socketio = SocketIOInterface(self, config["redis-uri"])
 
-        self.delete_list = deque(maxlen=100)  # List of msg ids to prevent duplicate delete
+        # List of msg ids to prevent duplicate delete
+        self.delete_list = deque(maxlen=100)
         self.discordBotsOrg = None
         self.botsDiscordPw = None
+
+        self.redis_sub_task = None
+        self.post_stats_task = None
 
     def _cleanup(self):
         try:
@@ -88,11 +101,21 @@ class Titan(discord.AutoShardedClient):
         self.log.info("Shard count: " + str(self.shard_count))
         self.log.info("Shard id: " + str(shard_id))
         self.log.info("------")
-        self.loop.create_task(self.redisqueue.subscribe())
 
-        self.discordBotsOrg = DiscordBotsOrg(self.user.id, config["discord-bots-org-token"])
-        self.botsDiscordPw = BotsDiscordPw(self.user.id, config["bots-discord-pw-token"])
-        self.loop.create_task(self.auto_post_stats())
+        self.redis_sub_task = self.loop.create_task(self.redisqueue.subscribe())
+        self.redis_sub_task.add_done_callback(_handle_task_result)
+
+        if config["discord-bots-org-token"]:
+            self.discordBotsOrg = DiscordBotsOrg(
+                self.user.id, config["discord-bots-org-token"]
+            )
+        if config["bots-discord-pw-token"]:
+            self.botsDiscordPw = BotsDiscordPw(
+                self.user.id, config["bots-discord-pw-token"]
+            )
+        if config["discord-bots-org-token"] or config["bots-discord-pw-token"]:
+            self.post_stats_task = self.loop.create_task(self.auto_post_stats())
+            self.post_stats_task.add_done_callback(_handle_task_result)
 
     async def on_message(self, message):
         await self.socketio.on_message(message)
@@ -109,7 +132,9 @@ class Titan(discord.AutoShardedClient):
 
         msg_cmd = msg_arr[1].lower()
         if msg_cmd == "__init__":
-            self.log.info("Could not read message - command is '__init__'\n%s", pformat(msg_arr))
+            self.log.info(
+                "Could not read message - command is '__init__'\n%s", pformat(msg_arr)
+            )
             return
 
         # making sure there is actually stuff in the message and have arguments
@@ -300,7 +325,9 @@ class Titan(discord.AutoShardedClient):
             return
 
         message = await channel.fetch_message(message_id)
-        message._add_reaction({"me": payload.user_id == self.user.id}, emoji, payload.user_id)
+        message._add_reaction(
+            {"me": payload.user_id == self.user.id}, emoji, payload.user_id
+        )
         reaction = message._remove_reaction({}, emoji, payload.user_id)
 
         await self.on_reaction_remove(reaction, None)
@@ -319,7 +346,12 @@ class Titan(discord.AutoShardedClient):
         await self.on_reaction_clear(message, [])
 
     async def on_socket_response(self, msg):
-        if not ("op" in msg and "t" in msg and msg["op"] == 0 and msg["t"] == "WEBHOOKS_UPDATE"):
+        if not (
+            "op" in msg
+            and "t" in msg
+            and msg["op"] == 0
+            and msg["t"] == "WEBHOOKS_UPDATE"
+        ):
             return
 
         guild_id = int(msg["d"]["guild_id"])
