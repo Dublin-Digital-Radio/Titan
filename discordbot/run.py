@@ -44,7 +44,7 @@ def main():
         shard_ids=[args.shard_id] if args.shard_id is not None else None,
         shard_count=args.shard_count,
     )
-    te.run()
+    te.run(config["bot-token"])
     gc.collect()
 
 

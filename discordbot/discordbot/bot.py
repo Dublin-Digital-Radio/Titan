@@ -75,9 +75,9 @@ class Titan(discord.AutoShardedClient):
             self.log.exception("gather")
             pass
 
-    async def start(self):
+    async def start(self, token: str, *, reconnect: bool = True) -> None:
         await self.redisqueue.connect()
-        await super().start(config["bot-token"])
+        await super().start(config["bot-token"], reconnect=reconnect)
 
     async def on_shard_ready(self, shard_id):
         self.log.info("Titan [DiscordBot]")
@@ -269,9 +269,8 @@ class Titan(discord.AutoShardedClient):
             "tts": False,
             "nonce": None,
         }
-        msg = discord.Message(
-            channel=channel, state=self._connection, data=data
-        )  # Procreate a fake message object
+        # Procreate a fake message object
+        msg = discord.Message(channel=channel, state=self._connection, data=data)
         await self.on_message_delete(msg)
 
     async def on_raw_reaction_add(self, payload):

@@ -6,7 +6,7 @@ import logging
 import traceback
 from pprint import pformat
 
-import aioredis
+from redis import asyncio as aioredis
 import async_timeout
 import discord
 
@@ -142,7 +142,9 @@ class RedisQueue:
         if not await self.connection.exists(key):
             return
 
-        unformatted_item, formatted_item = await self.set_scan_json(key, "id", message.id)
+        unformatted_item, formatted_item = await self.set_scan_json(
+            key, "id", message.id
+        )
         if formatted_item:
             await self.connection.srem(key, unformatted_item)
 
@@ -157,7 +159,9 @@ class RedisQueue:
 
         member = guild.get_member(int(params["user_id"]))
         if not member:
-            members = await guild.query_members(user_ids=[int(params["user_id"])], cache=True)
+            members = await guild.query_members(
+                user_ids=[int(params["user_id"])], cache=True
+            )
             if not len(members):
                 await self.connection.set(key, "")
                 await self.enforce_expiring_key(key, 15)
@@ -281,8 +285,10 @@ class RedisQueue:
             "id": user.id,
             "username": user.name,
             "discriminator": user.discriminator,
-            "avatar": user.avatar,
+            "avatar": user.avatar.key if user.avatar else None,
             "bot": user.bot,
         }
-        await self.connection.set(key, json.dumps(user_formatted, separators=(",", ":")))
+        await self.connection.set(
+            key, json.dumps(user_formatted, separators=(",", ":"))
+        )
         await self.enforce_expiring_key(key)

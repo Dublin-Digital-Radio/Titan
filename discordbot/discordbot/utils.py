@@ -49,8 +49,10 @@ def get_formatted_message(message):
 
 def get_formatted_user(user):
     userobj = {
-        "avatar": user.avatar,
-        "avatar_url": str(user.avatar_url_as(static_format="png", size=512)),
+        "avatar": user.avatar.key if user.avatar else None,
+        "avatar_url": str(user.avatar.replace(static_format="png", size=512))
+        if user.avatar
+        else "",
         "color": str(user.color)[1:],
         "discriminator": user.discriminator,
         "game": None,
@@ -94,7 +96,7 @@ def get_message_author(message):
         "discriminator": message.author.discriminator,
         "bot": message.author.bot,
         "id": str(message.author.id),
-        "avatar": message.author.avatar,
+        "avatar": message.author.avatar.key if message.author and message.author.avatar else None,
     }
 
 
@@ -121,8 +123,8 @@ def get_formatted_guild(guild, webhooks=None):
     return {
         "id": str(guild.id),
         "name": guild.name,
-        "icon": guild.icon,
-        "icon_url": str(guild.icon_url),
+        "icon": guild.icon.key if guild.icon else None,
+        "icon_url": str(guild.icon),
         "owner_id": guild.owner_id,
         "roles": get_roles_list(guild.roles),
         "channels": get_channels_list(guild.channels),
@@ -159,7 +161,7 @@ def get_message_mentions(mentions):
                 "discriminator": author.discriminator,
                 "bot": author.bot,
                 "id": str(author.id),
-                "avatar": author.avatar,
+                "avatar": author.avatar.key if author.avatar else None,
             }
         )
     return ments
