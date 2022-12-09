@@ -193,6 +193,7 @@ def get_online_discord_users(guild_id, embed):
 
 def get_online_embed_users(guild_id):
     usrs = redisqueue.get_online_embed_user_keys(guild_id)
+
     unauths = (
         db.session.query(UnauthenticatedUsers)
         .filter(
@@ -204,6 +205,16 @@ def get_online_embed_users(guild_id):
         if usrs["UnauthenticatedUsers"]
         else []
     )
+    users = {
+        "unauthenticated": [
+            {
+                "username": user.username,
+                "discriminator": user.discriminator,
+            }
+            for user in unauths
+        ]
+    }
+
     auths = (
         db.session.query(AuthenticatedUsers)
         .filter(
@@ -214,16 +225,8 @@ def get_online_embed_users(guild_id):
         if usrs["AuthenticatedUsers"]
         else []
     )
-    users = {"unauthenticated": [], "authenticated": []}
-    for user in unauths:
-        meta = {
-            "username": user.username,
-            "discriminator": user.discriminator,
-        }
-        users["unauthenticated"].append(meta)
     for user in auths:
-        client_id = user.client_id
-        usrdb = redisqueue.get_guild_member(guild_id, client_id)
+        usrdb = redisqueue.get_guild_member(guild_id, user.client_id)
         meta = {
             "id": str(usrdb["id"]),
             "username": usrdb["username"],
@@ -232,6 +235,7 @@ def get_online_embed_users(guild_id):
             "avatar_url": generate_avatar_url(usrdb["id"], usrdb["avatar"]),
         }
         users["authenticated"].append(meta)
+
     return users
 
 
