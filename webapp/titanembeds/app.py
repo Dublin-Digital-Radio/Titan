@@ -59,6 +59,10 @@ if __name__ != "__main__":
     gunicorn_logger = logging.getLogger("gunicorn.error")
     app.logger.handlers = gunicorn_logger.handlers
     app.logger.setLevel(gunicorn_logger.level)
+    for handler in app.logger.handlers:
+        handler.setFormatter(
+            logging.Formatter("%(name)s - %(levelname)s - %(message)s")
+        )
 
 app.config["SQLALCHEMY_DATABASE_URI"] = config["database-uri"]
 # Suppress the warning/no need this on for now.
