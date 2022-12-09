@@ -30,13 +30,13 @@ from titanembeds.database import (
     get_application_settings,
     init_application_settings,
 )
-from titanembeds.utils import (  # , sentry
+from titanembeds.utils import (
     babel,
-    discord_api,
     language_code_list,
     rate_limiter,
     socketio,
 )
+from .discordrest import discord_api
 
 from .blueprints import admin, api, embed, gateway, user
 from .database import db

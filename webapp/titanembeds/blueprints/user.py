@@ -2,25 +2,20 @@ import json
 import logging
 from pprint import pformat
 
-import patreon
-import paypalrestsdk
 from config import config
 from flask import Blueprint, abort
-from flask import current_app as app
 from flask import jsonify, redirect, render_template, request, session, url_for
 from flask_socketio import emit
+
 from titanembeds.database import (
     Cosmetics,
     Guilds,
-    Patreon,
     UnauthenticatedBans,
     UnauthenticatedUsers,
     UserCSS,
-    add_badge,
     db,
     get_titan_token,
     list_disabled_guilds,
-    set_titan_token,
 )
 from titanembeds.decorators import discord_users_only
 from titanembeds.oauth import (
@@ -89,13 +84,15 @@ def callback():
     session["user_id"] = int(user["id"])
     session["username"] = user["username"]
     session["discriminator"] = user["discriminator"]
-    session["avatar"] = generate_avatar_url(user["id"], user["avatar"], user["discriminator"])
+    session["avatar"] = generate_avatar_url(
+        user["id"], user["avatar"], user["discriminator"]
+    )
     session["tokens"] = get_titan_token(session["user_id"])
 
     if session["tokens"] == -1:
         session["tokens"] = 0
 
-    log.info('Callback ok. Session: %s', pformat(session))
+    log.info("Callback ok. Session: %s", pformat(session))
 
     if session["redirect"]:
         redir = session["redirect"]
@@ -120,12 +117,10 @@ def logout():
 
 
 def count_user_premium_css():
-    count = 0
-    css_list = db.session.query(UserCSS).filter(UserCSS.user_id == session["user_id"]).all()
-    for css in css_list:
-        if css.css is not None:
-            count += 1
-    return count
+    css_list = (
+        db.session.query(UserCSS).filter(UserCSS.user_id == session["user_id"]).all()
+    )
+    return len([css for css in css_list if css.css is not None])
 
 
 @user.route("/dashboard")
@@ -139,7 +134,9 @@ def dashboard():
         return redirect(redir)
 
     cosmetics = (
-        db.session.query(Cosmetics).filter(Cosmetics.user_id == session["user_id"]).first()
+        db.session.query(Cosmetics)
+        .filter(Cosmetics.user_id == session["user_id"])
+        .first()
     )
     css_list = None
     if cosmetics and cosmetics.css:
@@ -165,7 +162,9 @@ def dashboard():
 @discord_users_only()
 def new_custom_css_get():
     cosmetics = (
-        db.session.query(Cosmetics).filter(Cosmetics.user_id == session["user_id"]).first()
+        db.session.query(Cosmetics)
+        .filter(Cosmetics.user_id == session["user_id"])
+        .first()
     )
     if not cosmetics or not cosmetics.css:
         abort(403)
@@ -183,7 +182,9 @@ def new_custom_css_get():
 @discord_users_only()
 def new_custom_css_post():
     cosmetics = (
-        db.session.query(Cosmetics).filter(Cosmetics.user_id == session["user_id"]).first()
+        db.session.query(Cosmetics)
+        .filter(Cosmetics.user_id == session["user_id"])
+        .first()
     )
     if not cosmetics or not cosmetics.css:
         abort(403)
@@ -198,12 +199,13 @@ def new_custom_css_post():
     else:
         name = name.strip()
         css = css.strip()
+
     if len(css) == 0:
         css = None
-
     css = UserCSS(name, user_id, variables_enabled, variables, css)
     db.session.add(css)
     db.session.commit()
+
     return jsonify({"id": css.id})
 
 
@@ -211,7 +213,9 @@ def new_custom_css_post():
 @discord_users_only()
 def edit_custom_css_get(css_id):
     cosmetics = (
-        db.session.query(Cosmetics).filter(Cosmetics.user_id == session["user_id"]).first()
+        db.session.query(Cosmetics)
+        .filter(Cosmetics.user_id == session["user_id"])
+        .first()
     )
     if not cosmetics or not cosmetics.css:
         abort(403)
@@ -241,7 +245,9 @@ def edit_custom_css_get(css_id):
 @discord_users_only()
 def edit_custom_css_post(css_id):
     cosmetics = (
-        db.session.query(Cosmetics).filter(Cosmetics.user_id == session["user_id"]).first()
+        db.session.query(Cosmetics)
+        .filter(Cosmetics.user_id == session["user_id"])
+        .first()
     )
     if not cosmetics or not cosmetics.css:
         abort(403)
@@ -277,7 +283,9 @@ def edit_custom_css_post(css_id):
 @discord_users_only()
 def edit_custom_css_delete(css_id):
     cosmetics = (
-        db.session.query(Cosmetics).filter(Cosmetics.user_id == session["user_id"]).first()
+        db.session.query(Cosmetics)
+        .filter(Cosmetics.user_id == session["user_id"])
+        .first()
     )
     if not cosmetics or not cosmetics.css:
         abort(403)
@@ -302,7 +310,10 @@ def administrate_guild(guild_id):
     guild = redisqueue.get_guild(guild_id)
     if not guild:
         session["redirect"] = url_for(
-            "user.administrate_guild", guild_id=guild_id, _external=True, _scheme="https"
+            "user.administrate_guild",
+            guild_id=guild_id,
+            _external=True,
+            _scheme="https",
         )
         return redirect(url_for("user.add_bot", guild_id=guild_id))
     session["redirect"] = None
@@ -322,7 +333,9 @@ def administrate_guild(guild_id):
         permissions.append("Kick Members")
 
     cosmetics = (
-        db.session.query(Cosmetics).filter(Cosmetics.user_id == session["user_id"]).first()
+        db.session.query(Cosmetics)
+        .filter(Cosmetics.user_id == session["user_id"])
+        .first()
     )
     all_members = (
         db.session.query(UnauthenticatedUsers)
@@ -361,6 +374,7 @@ def administrate_guild(guild_id):
         "file_upload": db_guild.file_upload,
         "send_rich_embed": db_guild.send_rich_embed,
     }
+
     return render_template(
         "administrate_guild.html.j2",
         guild=dbguild_dict,
@@ -375,7 +389,7 @@ def administrate_guild(guild_id):
 @discord_users_only()
 def update_administrate_guild(guild_id):
     if guild_id in list_disabled_guilds():
-        return ("", 423)
+        return "", 423
     if not check_user_can_administrate_guild(guild_id):
         abort(403)
     db_guild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
@@ -383,60 +397,50 @@ def update_administrate_guild(guild_id):
         abort(400)
     if not check_user_permission(guild_id, PERMISSION_MANAGE):
         abort(403)
-    db_guild.unauth_users = request.form.get("unauth_users", db_guild.unauth_users) in [
-        "true",
-        True,
-    ]
-    db_guild.visitor_view = request.form.get("visitor_view", db_guild.visitor_view) in [
-        "true",
-        True,
-    ]
-    db_guild.webhook_messages = request.form.get(
-        "webhook_messages", db_guild.webhook_messages
-    ) in [
-        "true",
-        True,
-    ]
-    db_guild.chat_links = request.form.get("chat_links", db_guild.chat_links) in [
-        "true",
-        True,
-    ]
-    db_guild.bracket_links = request.form.get("bracket_links", db_guild.bracket_links) in [
-        "true",
-        True,
-    ]
-    db_guild.mentions_limit = request.form.get("mentions_limit", db_guild.mentions_limit)
-    db_guild.unauth_captcha = request.form.get("unauth_captcha", db_guild.unauth_captcha) in [
-        "true",
-        True,
-    ]
+
+    true = ["true", True]
+    db_guild.unauth_users = (
+        request.form.get("unauth_users", db_guild.unauth_users) in true
+    )
+    db_guild.visitor_view = (
+        request.form.get("visitor_view", db_guild.visitor_view) in true
+    )
+    db_guild.webhook_messages = (
+        request.form.get("webhook_messages", db_guild.webhook_messages) in true
+    )
+    db_guild.chat_links = request.form.get("chat_links", db_guild.chat_links) in true
+    db_guild.bracket_links = (
+        request.form.get("bracket_links", db_guild.bracket_links) in true
+    )
+    db_guild.mentions_limit = request.form.get(
+        "mentions_limit", db_guild.mentions_limit
+    )
+    db_guild.unauth_captcha = (
+        request.form.get("unauth_captcha", db_guild.unauth_captcha) in true
+    )
     db_guild.post_timeout = request.form.get("post_timeout", db_guild.post_timeout)
     db_guild.max_message_length = request.form.get(
         "max_message_length", db_guild.max_message_length
     )
-    db_guild.banned_words_enabled = request.form.get(
-        "banned_words_enabled", db_guild.banned_words_enabled
-    ) in [
-        "true",
-        True,
-    ]
-    db_guild.banned_words_global_included = request.form.get(
-        "banned_words_global_included", db_guild.banned_words_global_included
-    ) in ["true", True]
+    db_guild.banned_words_enabled = (
+        request.form.get("banned_words_enabled", db_guild.banned_words_enabled) in true
+    )
+    db_guild.banned_words_global_included = (
+        request.form.get(
+            "banned_words_global_included", db_guild.banned_words_global_included
+        )
+        in true
+    )
     db_guild.autorole_unauth = request.form.get(
         "autorole_unauth", db_guild.autorole_unauth, type=int
     )
     db_guild.autorole_discord = request.form.get(
         "autorole_discord", db_guild.autorole_discord, type=int
     )
-    db_guild.file_upload = request.form.get("file_upload", db_guild.file_upload) in [
-        "true",
-        True,
-    ]
-    db_guild.send_rich_embed = request.form.get("send_rich_embed", db_guild.send_rich_embed) in [
-        "true",
-        True,
-    ]
+    db_guild.file_upload = request.form.get("file_upload", db_guild.file_upload) in true
+    db_guild.send_rich_embed = (
+        request.form.get("send_rich_embed", db_guild.send_rich_embed) in true
+    )
 
     invite_link = request.form.get("invite_link", db_guild.invite_link)
     if invite_link != None and invite_link.strip() == "":
@@ -450,10 +454,7 @@ def update_administrate_guild(guild_id):
 
     banned_word = request.form.get("banned_word", None)
     if banned_word:
-        delete_banned_word = request.form.get("delete_banned_word", False) in [
-            "true",
-            True,
-        ]
+        delete_banned_word = request.form.get("delete_banned_word", False) in true
         banned_words = set(json.loads(db_guild.banned_words))
         if delete_banned_word:
             banned_words.discard(banned_word)
@@ -472,6 +473,7 @@ def update_administrate_guild(guild_id):
         room="GUILD_" + guild_id,
         namespace="/gateway",
     )
+
     return jsonify(
         guild_id=db_guild.guild_id,
         unauth_users=db_guild.unauth_users,
@@ -509,8 +511,7 @@ def add_bot(guild_id):
 def prepare_guild_members_list(members, bans):
     all_users = []
     ip_pool = []
-    members = sorted(members, key=lambda k: k.id, reverse=True)
-    for member in members:
+    for member in sorted(members, key=lambda k: k.id, reverse=True):
         user = {
             "id": member.id,
             "username": member.username,
@@ -524,6 +525,7 @@ def prepare_guild_members_list(members, bans):
             "ban_lifted_by": None,
             "aliases": [],
         }
+
         for banned in bans:
             if banned.ip_address == member.ip_address:
                 if banned.lifter_id is None:
@@ -540,10 +542,11 @@ def prepare_guild_members_list(members, bans):
         else:
             for usr in all_users:
                 if user["ip"] == usr["ip"]:
-                    alias = user["username"] + "#" + str(user["discrim"])
+                    alias = f'{user["username"]}#{user["discrim"]}'
                     if len(usr["aliases"]) < 5 and alias not in usr["aliases"]:
                         usr["aliases"].append(alias)
                     continue
+
     return all_users
 
 
@@ -555,7 +558,7 @@ def ban_unauthenticated_user():
     reason = request.form.get("reason", None)
 
     if guild_id in list_disabled_guilds():
-        return ("", 423)
+        return "", 423
 
     if reason is not None:
         reason = reason.strip()
@@ -576,9 +579,9 @@ def ban_unauthenticated_user():
         .order_by(UnauthenticatedUsers.id.desc())
         .first()
     )
-
     if db_user is None:
         abort(404)
+
     db_ban = (
         db.session.query(UnauthenticatedBans)
         .filter(
@@ -591,6 +594,7 @@ def ban_unauthenticated_user():
         if db_ban.lifter_id is None:
             abort(409)
         db.session.delete(db_ban)
+
     db_ban = UnauthenticatedBans(
         guild_id,
         db_user.ip_address,
@@ -601,7 +605,8 @@ def ban_unauthenticated_user():
     )
     db.session.add(db_ban)
     db.session.commit()
-    return ("", 204)
+
+    return "", 204
 
 
 @user.route("/ban", methods=["DELETE"])
@@ -628,6 +633,7 @@ def unban_unauthenticated_user():
     )
     if db_user is None:
         abort(404)
+
     db_ban = (
         db.session.query(UnauthenticatedBans)
         .filter(
@@ -640,9 +646,11 @@ def unban_unauthenticated_user():
         abort(404)
     if db_ban.lifter_id is not None:
         abort(409)
+
     db_ban.liftBan(session["user_id"])
     db.session.commit()
-    return ("", 204)
+
+    return "", 204
 
 
 @user.route("/revoke", methods=["POST"])
@@ -673,279 +681,5 @@ def revoke_unauthenticated_user():
         abort(409)
     db_user.revokeUser()
     db.session.commit()
-    return ("", 204)
 
-
-@user.route("/donate", methods=["GET"])
-@discord_users_only()
-def donate_get():
-    cosmetics = (
-        db.session.query(Cosmetics).filter(Cosmetics.user_id == session["user_id"]).first()
-    )
-    return render_template("donate.html.j2", cosmetics=cosmetics)
-
-
-def get_paypal_api():
-    return paypalrestsdk.Api(
-        {
-            "mode": "sandbox" if app.config["DEBUG"] else "live",
-            "client_id": config["paypal-client-id"],
-            "client_secret": config["paypal-client-secret"],
-        }
-    )
-
-
-@user.route("/donate", methods=["POST"])
-@discord_users_only()
-def donate_post():
-    donation_amount = request.form.get("amount")
-    if not donation_amount:
-        abort(402)
-
-    donation_amount = float(donation_amount)
-    if donation_amount < 5 or donation_amount > 100:
-        abort(412)
-
-    donation_amount = "{0:.2f}".format(donation_amount)
-    payer = {"payment_method": "paypal"}
-    items = [
-        {
-            "name": "TitanEmbeds Donation",
-            "price": donation_amount,
-            "currency": "USD",
-            "quantity": "1",
-        }
-    ]
-    amount = {"total": donation_amount, "currency": "USD"}
-    description = "Donate and support TitanEmbeds development."
-    redirect_urls = {
-        "return_url": url_for(
-            "user.donate_confirm", success="true", _external=True, _scheme="https"
-        ),
-        "cancel_url": url_for("index", _external=True, _scheme="https"),
-    }
-    payment = paypalrestsdk.Payment(
-        {
-            "intent": "sale",
-            "payer": payer,
-            "redirect_urls": redirect_urls,
-            "transactions": [
-                {
-                    "item_list": {"items": items},
-                    "amount": amount,
-                    "description": description,
-                }
-            ],
-        },
-        api=get_paypal_api(),
-    )
-    if payment.create():
-        for link in payment.links:
-            if link["method"] == "REDIRECT":
-                return redirect(link["href"])
-    return redirect(url_for("index"))
-
-
-@user.route("/donate/confirm")
-@discord_users_only()
-def donate_confirm():
-    if not request.args.get("success"):
-        return redirect(url_for("index"))
-
-    payment = paypalrestsdk.Payment.find(request.args.get("paymentId"), api=get_paypal_api())
-    if payment.execute({"payer_id": request.args.get("PayerID")}):
-        trans_id = str(payment.transactions[0]["related_resources"][0]["sale"]["id"])
-        amount = float(payment.transactions[0]["amount"]["total"])
-        tokens = int(amount * 100)
-        action = "PAYPAL {}".format(trans_id)
-        set_titan_token(session["user_id"], tokens, action)
-        session["tokens"] = get_titan_token(session["user_id"])
-        add_badge(session["user_id"], "supporter")
-        db.session.commit()
-        return redirect(url_for("user.donate_thanks", transaction=trans_id))
-    else:
-        return redirect(url_for("index"))
-
-
-@user.route("/donate/thanks")
-@discord_users_only()
-def donate_thanks():
-    tokens = get_titan_token(session["user_id"])
-    transaction = request.args.get("transaction")
-    return render_template("donate_thanks.html.j2", tokens=tokens, transaction=transaction)
-
-
-@user.route("/donate", methods=["PATCH"])
-@discord_users_only()
-def donate_patch():
-    item = request.form.get("item")
-    amount = int(request.form.get("amount"))
-    if amount <= 0:
-        abort(400)
-    subtract_amt = 0
-    entry = db.session.query(Cosmetics).filter(Cosmetics.user_id == session["user_id"]).first()
-    if item == "custom_css_slots":
-        subtract_amt = 100
-    if item == "guest_icon":
-        subtract_amt = 300
-        if entry is not None and entry.guest_icon:
-            abort(400)
-    if item == "send_rich_embed":
-        subtract_amt = 300
-        if entry is not None and entry.send_rich_embed:
-            abort(400)
-    amt_change = -1 * subtract_amt * amount
-    subtract = set_titan_token(session["user_id"], amt_change, "BUY " + item + " x" + str(amount))
-    if not subtract:
-        return ("", 402)
-    session["tokens"] += amt_change
-    if item == "custom_css_slots":
-        if not entry:
-            entry = Cosmetics(session["user_id"])
-            entry.css_limit = 0
-        entry.css = True
-        entry.css_limit += amount
-    if item == "guest_icon":
-        if not entry:
-            entry = Cosmetics(session["user_id"])
-        entry.guest_icon = True
-    if item == "send_rich_embed":
-        if not entry:
-            entry = Cosmetics(session["user_id"])
-        entry.send_rich_embed = True
-    db.session.add(entry)
-    db.session.commit()
-    return ("", 204)
-
-
-@user.route("/patreon")
-@discord_users_only()
-def patreon_landing():
-    return render_template(
-        "patreon.html.j2", pclient_id=config["patreon-client-id"], state="initial"
-    )
-
-
-@user.route("/patreon/callback")
-@discord_users_only()
-def patreon_callback():
-    patreon_oauth_client = patreon.OAuth(
-        config["patreon-client-id"], config["patreon-client-secret"]
-    )
-    tokens = patreon_oauth_client.get_tokens(
-        request.args.get("code"),
-        url_for("user.patreon_callback", _external=True, _scheme="https"),
-    )
-    if "error" in tokens:
-        if "patreon" in session:
-            del session["patreon"]
-        return redirect(url_for("user.patreon_landing"))
-    session["patreon"] = tokens
-    return redirect(url_for("user.patreon_sync_get"))
-
-
-def format_patreon_user(user):
-    pledges = []
-    for pledge in user.relationship("pledges"):
-        pledges.append(
-            {
-                "id": pledge.id(),
-                "attributes": pledge.attributes(),
-            }
-        )
-    usrobj = {
-        "id": user.id(),
-        "attributes": user.attributes(),
-        "pledges": pledges,
-        "titan": {
-            "eligible_tokens": 0,
-            "total_cents_synced": 0,
-            "total_cents_pledged": 0,
-        },
-    }
-    if usrobj["pledges"]:
-        usrobj["titan"]["total_cents_pledged"] = usrobj["pledges"][0]["attributes"][
-            "total_historical_amount_cents"
-        ]
-    dbpatreon = db.session.query(Patreon).filter(Patreon.user_id == user.id()).first()
-    if dbpatreon:
-        usrobj["titan"]["total_cents_synced"] = dbpatreon.total_synced
-    usrobj["titan"]["eligible_tokens"] = (
-        usrobj["titan"]["total_cents_pledged"] - usrobj["titan"]["total_cents_synced"]
-    )
-    return usrobj
-
-
-@user.route("/patreon/sync", methods=["GET"])
-@discord_users_only()
-def patreon_sync_get():
-    if "patreon" not in session:
-        return redirect(url_for("user.patreon_landing"))
-    api_client = patreon.API(session["patreon"]["access_token"])
-    user_response = api_client.fetch_user(
-        None,
-        {
-            "pledge": [
-                "amount_cents",
-                "total_historical_amount_cents",
-                "declined_since",
-                "created_at",
-                "pledge_cap_cents",
-                "patron_pays_fees",
-                "outstanding_payment_amount_cents",
-            ]
-        },
-    )
-    user = user_response.data()
-    if not (user):
-        del session["patreon"]
-        return redirect(url_for("user.patreon_landing"))
-    return render_template("patreon.html.j2", state="prepare", user=format_patreon_user(user))
-
-
-@user.route("/patreon/sync", methods=["POST"])
-@discord_users_only()
-def patreon_sync_post():
-    if "patreon" not in session:
-        abort(401)
-    api_client = patreon.API(session["patreon"]["access_token"])
-    user_response = api_client.fetch_user(
-        None,
-        {
-            "pledge": [
-                "amount_cents",
-                "total_historical_amount_cents",
-                "declined_since",
-                "created_at",
-                "pledge_cap_cents",
-                "patron_pays_fees",
-                "outstanding_payment_amount_cents",
-            ]
-        },
-    )
-    user = user_response.data()
-    if not (user):
-        abort(403)
-    usr = format_patreon_user(user)
-    if usr["titan"]["eligible_tokens"] <= 0:
-        return ("", 402)
-    dbpatreon = db.session.query(Patreon).filter(Patreon.user_id == usr["id"]).first()
-    if not dbpatreon:
-        dbpatreon = Patreon(usr["id"])
-    dbpatreon.total_synced = usr["titan"]["total_cents_pledged"]
-    db.session.add(dbpatreon)
-    set_titan_token(
-        session["user_id"],
-        usr["titan"]["eligible_tokens"],
-        "PATREON {} [{}]".format(usr["attributes"]["full_name"], usr["id"]),
-    )
-    add_badge(session["user_id"], "supporter")
-    session["tokens"] = get_titan_token(session["user_id"])
-    db.session.commit()
-    return ("", 204)
-
-
-@user.route("/patreon/thanks")
-@discord_users_only()
-def patreon_thanks():
-    return render_template("patreon.html.j2", state="thanks")
+    return "", 204

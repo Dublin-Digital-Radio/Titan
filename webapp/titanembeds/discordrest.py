@@ -3,6 +3,8 @@ import json
 import time
 
 import requests
+
+from config import config
 from titanembeds.redisqueue import redis_store
 
 _DISCORD_API_BASE = "https://discordapp.com/api/v6"
@@ -57,10 +59,15 @@ class DiscordREST:
         for tries in range(5):
             curepoch = time.time()
             if self._get_bucket("global_limited") == "True":
-                time.sleep(int(float(self._get_bucket("global_limit_expire"))) - curepoch)
+                time.sleep(
+                    int(float(self._get_bucket("global_limit_expire"))) - curepoch
+                )
                 curepoch = time.time()
 
-            if self._bucket_contains(url) and float(int(self._get_bucket(url))) > curepoch:
+            if (
+                self._bucket_contains(url)
+                and float(int(self._get_bucket(url))) > curepoch
+            ):
                 time.sleep(int(self._get_bucket(url)) - curepoch)
 
             url_formatted = _DISCORD_API_BASE + url
@@ -228,3 +235,6 @@ class DiscordREST:
     def delete_webhook(self, webhook_id, webhook_token):
         _endpoint = f"/webhooks/{webhook_id}/{webhook_token}"
         return self.request("DELETE", _endpoint)
+
+
+discord_api = DiscordREST(config["bot-token"])

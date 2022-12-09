@@ -32,7 +32,7 @@ from titanembeds.database import (
     set_titan_token,
 )
 from titanembeds.oauth import generate_guild_icon_url
-from titanembeds.utils import get_online_embed_user_keys
+from titanembeds.redisqueue import get_online_embed_user_keys
 from titanembeds import redisqueue
 
 admin = Blueprint("admin", __name__)
@@ -229,7 +229,9 @@ def administrate_guild(guild_id):
 
     session["redirect"] = None
     cosmetics = (
-        db.session.query(Cosmetics).filter(Cosmetics.user_id == session["user_id"]).first()
+        db.session.query(Cosmetics)
+        .filter(Cosmetics.user_id == session["user_id"])
+        .first()
     )
 
     permissions = []
@@ -286,75 +288,64 @@ def administrate_guild(guild_id):
 @admin.route("/administrate_guild/<guild_id>", methods=["POST"])
 @is_admin
 def update_administrate_guild(guild_id):
-    db_guild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
-    db_guild.unauth_users = request.form.get("unauth_users", db_guild.unauth_users) in [
-        "true",
-        True,
-    ]
-    db_guild.visitor_view = request.form.get("visitor_view", db_guild.visitor_view) in [
-        "true",
-        True,
-    ]
-    db_guild.webhook_messages = request.form.get(
-        "webhook_messages", db_guild.webhook_messages
-    ) in ["true", True]
-    db_guild.chat_links = request.form.get("chat_links", db_guild.chat_links) in ["true", True]
-    db_guild.bracket_links = request.form.get("bracket_links", db_guild.bracket_links) in [
-        "true",
-        True,
-    ]
-    db_guild.mentions_limit = request.form.get("mentions_limit", db_guild.mentions_limit)
-    db_guild.unauth_captcha = request.form.get("unauth_captcha", db_guild.unauth_captcha) in [
-        "true",
-        True,
-    ]
-    db_guild.post_timeout = request.form.get("post_timeout", db_guild.post_timeout)
-    db_guild.max_message_length = request.form.get(
-        "max_message_length", db_guild.max_message_length
-    )
-    db_guild.banned_words_enabled = request.form.get(
-        "banned_words_enabled", db_guild.banned_words_enabled
-    ) in ["true", True]
-    db_guild.banned_words_global_included = request.form.get(
-        "banned_words_global_included", db_guild.banned_words_global_included
-    ) in ["true", True]
-    db_guild.autorole_unauth = request.form.get(
-        "autorole_unauth", db_guild.autorole_unauth, type=int
-    )
-    db_guild.autorole_discord = request.form.get(
-        "autorole_discord", db_guild.autorole_discord, type=int
-    )
-    db_guild.file_upload = request.form.get("file_upload", db_guild.file_upload) in [
-        "true",
-        True,
-    ]
-    db_guild.send_rich_embed = request.form.get("send_rich_embed", db_guild.send_rich_embed) in [
-        "true",
-        True,
-    ]
-    invite_link = request.form.get("invite_link", db_guild.invite_link)
+    true = ["true", True]
 
-    if invite_link != None and invite_link.strip() == "":
+    guild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+    guild.unauth_users = request.form.get("unauth_users", guild.unauth_users) in true
+    guild.visitor_view = request.form.get("visitor_view", guild.visitor_view) in true
+    guild.webhook_messages = (
+        request.form.get("webhook_messages", guild.webhook_messages) in true
+    )
+
+    guild.chat_links = request.form.get("chat_links", guild.chat_links) in true
+    guild.bracket_links = request.form.get("bracket_links", guild.bracket_links) in true
+    guild.mentions_limit = request.form.get("mentions_limit", guild.mentions_limit)
+    guild.unauth_captcha = (
+        request.form.get("unauth_captcha", guild.unauth_captcha) in true
+    )
+    guild.post_timeout = request.form.get("post_timeout", guild.post_timeout)
+    guild.max_message_length = request.form.get(
+        "max_message_length", guild.max_message_length
+    )
+    guild.banned_words_enabled = (
+        request.form.get("banned_words_enabled", guild.banned_words_enabled) in true
+    )
+    guild.banned_words_global_included = (
+        request.form.get(
+            "banned_words_global_included", guild.banned_words_global_included
+        )
+        in true
+    )
+    guild.autorole_unauth = request.form.get(
+        "autorole_unauth", guild.autorole_unauth, type=int
+    )
+    guild.autorole_discord = request.form.get(
+        "autorole_discord", guild.autorole_discord, type=int
+    )
+    guild.file_upload = request.form.get("file_upload", guild.file_upload) in true
+    guild.send_rich_embed = (
+        request.form.get("send_rich_embed", guild.send_rich_embed) in true
+    )
+    invite_link = request.form.get("invite_link", guild.invite_link)
+
+    if invite_link is not None and invite_link.strip() == "":
         invite_link = None
 
-    db_guild.invite_link = invite_link
-    guest_icon = request.form.get("guest_icon", db_guild.guest_icon)
-    if guest_icon != None and guest_icon.strip() == "":
+    guild.invite_link = invite_link
+    guest_icon = request.form.get("guest_icon", guild.guest_icon)
+    if guest_icon is not None and guest_icon.strip() == "":
         guest_icon = None
-    db_guild.guest_icon = guest_icon
+    guild.guest_icon = guest_icon
 
     banned_word = request.form.get("banned_word", None)
     if banned_word:
-        delete_banned_word = request.form.get("delete_banned_word", False) in [
-            "true",
-            True,
-        ]
-        banned_words = set(json.loads(db_guild.banned_words))
+        delete_banned_word = request.form.get("delete_banned_word", False) in true
+        banned_words = set(json.loads(guild.banned_words))
         if delete_banned_word:
             banned_words.discard(banned_word)
         else:
             banned_words.add(banned_word)
-        db_guild.banned_words = json.dumps(list(banned_words))
+        guild.banned_words = json.dumps(list(banned_words))
 
     db.session.commit()
 
@@ -370,25 +361,25 @@ def update_administrate_guild(guild_id):
     )
 
     return jsonify(
-        guild_id=db_guild.guild_id,
-        unauth_users=db_guild.unauth_users,
-        visitor_view=db_guild.visitor_view,
-        webhook_messages=db_guild.webhook_messages,
-        chat_links=db_guild.chat_links,
-        bracket_links=db_guild.bracket_links,
-        mentions_limit=db_guild.mentions_limit,
-        invite_link=db_guild.invite_link,
-        guest_icon=db_guild.guest_icon,
-        unauth_captcha=db_guild.unauth_captcha,
-        post_timeout=db_guild.post_timeout,
-        max_message_length=db_guild.max_message_length,
-        banned_words_enabled=db_guild.banned_words_enabled,
-        banned_words_global_included=db_guild.banned_words_global_included,
-        banned_words=json.loads(db_guild.banned_words),
-        autorole_unauth=db_guild.autorole_unauth,
-        autorole_discord=db_guild.autorole_discord,
-        file_upload=db_guild.file_upload,
-        send_rich_embed=db_guild.send_rich_embed,
+        guild_id=guild.guild_id,
+        unauth_users=guild.unauth_users,
+        visitor_view=guild.visitor_view,
+        webhook_messages=guild.webhook_messages,
+        chat_links=guild.chat_links,
+        bracket_links=guild.bracket_links,
+        mentions_limit=guild.mentions_limit,
+        invite_link=guild.invite_link,
+        guest_icon=guild.guest_icon,
+        unauth_captcha=guild.unauth_captcha,
+        post_timeout=guild.post_timeout,
+        max_message_length=guild.max_message_length,
+        banned_words_enabled=guild.banned_words_enabled,
+        banned_words_global_included=guild.banned_words_global_included,
+        banned_words=json.loads(guild.banned_words),
+        autorole_unauth=guild.autorole_unauth,
+        autorole_discord=guild.autorole_discord,
+        file_upload=guild.file_upload,
+        send_rich_embed=guild.send_rich_embed,
     )
 
 
@@ -478,7 +469,9 @@ def patch_titan_tokens():
 @admin.route("/disabled_guilds", methods=["GET"])
 @is_admin
 def get_disabled_guilds():
-    return render_template("admin_disabled_guilds.html.j2", guilds=list_disabled_guilds())
+    return render_template(
+        "admin_disabled_guilds.html.j2", guilds=list_disabled_guilds()
+    )
 
 
 @admin.route("/disabled_guilds", methods=["POST"])
@@ -502,7 +495,11 @@ def delete_disabled_guilds():
     if guild_id not in list_disabled_guilds():
         abort(409)
 
-    guild = db.session.query(DisabledGuilds).filter(DisabledGuilds.guild_id == guild_id).first()
+    guild = (
+        db.session.query(DisabledGuilds)
+        .filter(DisabledGuilds.guild_id == guild_id)
+        .first()
+    )
     db.session.delete(guild)
     db.session.commit()
 
@@ -527,7 +524,9 @@ def edit_custom_css_get(css_id):
     if variables:
         variables = json.loads(variables)
 
-    return render_template("usercss.html.j2", new=False, css=css, variables=variables, admin=True)
+    return render_template(
+        "usercss.html.j2", new=False, css=css, variables=variables, admin=True
+    )
 
 
 @admin.route("/custom_css/edit/<css_id>", methods=["POST"])
@@ -654,9 +653,10 @@ def voting_get():
         if action == "upvote":
             overall_votes[uid] = overall_votes[uid] + 1
 
-    sorted_overall_votes = []
-    for uid, votes in sorted(overall_votes.items(), key=operator.itemgetter(1), reverse=True):
-        sorted_overall_votes.append(uid)
+    sorted_overall_votes = [
+        u[0]
+        for u in sorted(overall_votes.items(), key=operator.itemgetter(1), reverse=True)
+    ]
 
     overall = []
     for uid in sorted_overall_votes:
@@ -675,9 +675,9 @@ def voting_get():
             referrer[refer] = 0
         referrer[refer] = referrer[refer] + 1
 
-    sorted_referrers = []
-    for uid, votes in sorted(referrer.items(), key=operator.itemgetter(1), reverse=True):
-        sorted_referrers.append(uid)
+    sorted_referrers = [
+        u[0] for u in sorted(referrer.items(), key=operator.itemgetter(1), reverse=True)
+    ]
 
     referrals = []
     for uid in sorted_referrers:

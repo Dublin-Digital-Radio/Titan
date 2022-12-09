@@ -29,18 +29,16 @@ from titanembeds.decorators import (
     valid_session_required,
 )
 from titanembeds.oauth import generate_avatar_url
-from titanembeds.redisqueue import redis_store
+from titanembeds.redisqueue import redis_store, get_online_embed_user_keys
 from titanembeds.utils import (
     channel_ratelimit_key,
     check_guild_existance,
     check_user_in_guild,
     checkUserBanned,
-    discord_api,
     get_client_ipaddr,
     get_forced_role,
     get_guild_channels,
     get_member_roles,
-    get_online_embed_user_keys,
     guild_accepts_visitors,
     guild_query_unauth_users_bool,
     guild_ratelimit_key,
@@ -52,6 +50,7 @@ from titanembeds.utils import (
     update_user_status,
     user_unauthenticated,
 )
+from titanembeds.discordrest import discord_api
 
 log = logging.getLogger(__name__)
 api = Blueprint("api", __name__)
@@ -81,21 +80,13 @@ def before_request():
             log.error(f"Could not JSON decode auth header value")
 
 
-def parse_emoji(textToParse, guild_id):
-    guild_emojis = get_guild_emojis(guild_id)
-    for gemoji in guild_emojis:
-        emoji_name = gemoji["name"]
-        emoji_id = gemoji["id"]
-        emoji_animated = gemoji.get("animated", False)
-        if emoji_animated:
-            textToParse = textToParse.replace(
-                ":{}:".format(emoji_name), "<a:{}:{}>".format(emoji_name, emoji_id)
-            )
-        else:
-            textToParse = textToParse.replace(
-                ":{}:".format(emoji_name), "<:{}:{}>".format(emoji_name, emoji_id)
-            )
-    return textToParse
+def parse_emoji(text_to_parse, guild_id):
+    for emoj in get_guild_emojis(guild_id):
+        animated = "a" if emoj.get("animated") else ""
+        text_to_parse = text_to_parse.replace(
+            f":{emoj['name']}:", f"<{animated}:{emoj['name']}:{emoj['id']}>"
+        )
+    return text_to_parse
 
 
 def format_post_content(guild_id, channel_id, message, dbUser):
@@ -315,7 +306,9 @@ def get_all_users(guild_id):
             {
                 "id": str(u["id"]),
                 "avatar": u["avatar"],
-                "avatar_url": generate_avatar_url(u["id"], u["avatar"], u["discriminator"], True),
+                "avatar_url": generate_avatar_url(
+                    u["id"], u["avatar"], u["discriminator"], True
+                ),
                 "username": u["username"],
                 "nickname": u["nick"],
                 "discriminator": u["discriminator"],
@@ -348,7 +341,9 @@ def fetch():
         if not chan.get("read") or chan["channel"]["type"] != "text":
             status_code = 401
         else:
-            messages = redisqueue.get_channel_messages(guild_id, channel_id, after_snowflake)
+            messages = redisqueue.get_channel_messages(
+                guild_id, channel_id, after_snowflake
+            )
             status_code = 200
     response = jsonify(messages=messages, status=status)
     response.status_code = status_code
@@ -371,7 +366,9 @@ def fetch_visitor():
     if not chan.get("read") or chan["channel"]["type"] != "text":
         status_code = 401
     else:
-        messages = redisqueue.get_channel_messages(guild_id, channel_id, after_snowflake)
+        messages = redisqueue.get_channel_messages(
+            guild_id, channel_id, after_snowflake
+        )
         status_code = 200
     response = jsonify(messages=messages)
     response.status_code = status_code
@@ -471,7 +468,11 @@ def post():
                         _external=True,
                         _scheme="https",
                     )
-                    dbguild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+                    dbguild = (
+                        db.session.query(Guilds)
+                        .filter(Guilds.guild_id == guild_id)
+                        .first()
+                    )
                     if dbguild:
                         icon = dbguild.guest_icon
                         if icon:
@@ -499,7 +500,9 @@ def post():
                 )
                 delete_webhook_if_too_much(webhook)
             else:
-                message = discord_api.create_message(channel_id, content, file, rich_embed)
+                message = discord_api.create_message(
+                    channel_id, content, file, rich_embed
+                )
             status_code = message["code"]
 
     db.session.commit()
@@ -520,7 +523,9 @@ def verify_captcha_request(captcha_response, ip_address):
     }
     if app.config["DEBUG"]:
         del payload["remoteip"]
-    r = requests.post("https://www.google.com/recaptcha/api/siteverify", data=payload).json()
+    r = requests.post(
+        "https://www.google.com/recaptcha/api/siteverify", data=payload
+    ).json()
     return r["success"]
 
 
@@ -544,7 +549,9 @@ def create_unauthenticated_user():
         abort(401)
 
     if guild_unauthcaptcha_enabled(guild_id):
-        if not verify_captcha_request(request.form["captcha_response"], request.remote_addr):
+        if not verify_captcha_request(
+            request.form["captcha_response"], request.remote_addr
+        ):
             abort(412)
 
     if not checkUserBanned(guild_id, ip_address):
@@ -628,12 +635,20 @@ def change_unauthenticated_username():
 
 
 def get_guild_guest_icon(guild_id):
-    guest_icon = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first().guest_icon
-    return guest_icon if guest_icon else url_for("static", filename="img/titanembeds_square.png")
+    guest_icon = (
+        db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first().guest_icon
+    )
+    return (
+        guest_icon
+        if guest_icon
+        else url_for("static", filename="img/titanembeds_square.png")
+    )
 
 
 def process_query_guild(guild_id, visitor=False):
-    channels = get_guild_channels(guild_id, visitor, forced_role=(get_forced_role(guild_id)))
+    channels = get_guild_channels(
+        guild_id, visitor, forced_role=(get_forced_role(guild_id))
+    )
 
     # Discord members & embed members listed here is moved to its own api endpoint
     if visitor:
@@ -1026,7 +1041,9 @@ def bot_revoke():
     dbuser.revoked = True
     db.session.commit()
     return jsonify(
-        success="Successfully kicked **{}#{}**!".format(dbuser.username, dbuser.discriminator)
+        success="Successfully kicked **{}#{}**!".format(
+            dbuser.username, dbuser.discriminator
+        )
     )
 
 

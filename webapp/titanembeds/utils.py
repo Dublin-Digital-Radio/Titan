@@ -20,12 +20,8 @@ from titanembeds.database import (
     UnauthenticatedUsers,
     db,
 )
-from titanembeds.discordrest import DiscordREST
-from titanembeds.redisqueue import redis_store
 
 log = logging.getLogger(__name__)
-
-discord_api = DiscordREST(config["bot-token"])
 
 serializer = URLSafeSerializer(config["app-secret"])
 
@@ -42,7 +38,9 @@ def get_client_ipaddr():
 def generate_session_key():
     sess = session.get("sessionunique", None)
     if not sess:
-        rand_str = lambda n: "".join([random.choice(string.ascii_lowercase) for i in range(n)])
+        rand_str = lambda n: "".join(
+            [random.choice(string.ascii_lowercase) for i in range(n)]
+        )
         session["sessionunique"] = rand_str(25)
         sess = session["sessionunique"]
     return sess  # Totally unique
@@ -194,7 +192,9 @@ def update_user_status(guild_id, username, user_key=None):
                 UnauthenticatedUsers.user_key == user_key,
             )
         ).first()
-        bump_user_presence_timestamp(guild_id, "UnauthenticatedUsers", user_key)
+        redisqueue.bump_user_presence_timestamp(
+            guild_id, "UnauthenticatedUsers", user_key
+        )
         if dbUser.username != username or dbUser.ip_address != ip_address:
             dbUser.username = username
             dbUser.ip_address = ip_address
@@ -217,28 +217,10 @@ def update_user_status(guild_id, username, user_key=None):
         dbMember = redisqueue.get_guild_member(guild_id, status["user_id"])
         if dbMember:
             status["nickname"] = dbMember["nick"]
-        bump_user_presence_timestamp(guild_id, "AuthenticatedUsers", status["user_id"])
+        redisqueue.bump_user_presence_timestamp(
+            guild_id, "AuthenticatedUsers", status["user_id"]
+        )
     return status
-
-
-def bump_user_presence_timestamp(guild_id, user_type, client_key):
-    redis_key = "MemberPresence/{}/{}/{}".format(guild_id, user_type, client_key)
-    redis_store.set(redis_key, "", 60)
-
-
-def get_online_embed_user_keys(guild_id="*", user_type=None):
-    if not user_type:
-        user_type = ["AuthenticatedUsers", "UnauthenticatedUsers"]
-    else:
-        user_type = [user_type]
-    usrs = {}
-    for utype in user_type:
-        usrs[utype] = []
-        keys = redis_store.keys("MemberPresence/{}/{}/*".format(guild_id, utype))
-        for key in keys:
-            client_key = key.split("/")[-1]
-            usrs[utype].append(client_key)
-    return usrs
 
 
 def check_user_in_guild(guild_id):
@@ -277,7 +259,7 @@ def get_member_roles(guild_id, user_id):
 
 def get_guild_channels(guild_id, force_everyone=False, forced_role=0):
     if user_unauthenticated() or force_everyone:
-        member_roles = [guild_id]  # equivilant to @everyone role
+        member_roles = [guild_id]  # equivalent to @everyone role
     else:
         member_roles = get_member_roles(guild_id, session["user_id"])
         if guild_id not in member_roles:
@@ -320,7 +302,11 @@ def get_guild_channels(guild_id, force_everyone=False, forced_role=0):
                 result["write"] = False
             if not bot_result["mention_everyone"]:
                 result["mention_everyone"] = False
-            if not bot_result["attach_files"] or not db_guild.file_upload or not result["write"]:
+            if (
+                not bot_result["attach_files"]
+                or not db_guild.file_upload
+                or not result["write"]
+            ):
                 result["attach_files"] = False
             if (
                 not bot_result["embed_links"]
