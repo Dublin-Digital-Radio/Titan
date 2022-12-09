@@ -257,8 +257,12 @@
 
     <div id="recaptchamodal" class="modal">
       <div class="modal-content">
-        <h4 class="center-align">{{ _("Just one more step...") }}</h4>
-        <div id="google-recaptcha" class="g-recaptcha" data-sitekey="{{ recaptcha_site_key }}" data-callback="submit_unauthenticated_captcha"></div>
+        <h4 class="center-align">
+          {{ _("Just one more step...") }}
+        </h4>
+        <div id="google-recaptcha" class="g-recaptcha" data-sitekey="{{ recaptcha_site_key }}"
+              data-callback="submit_unauthenticated_captcha">
+        </div>
         <input type="hidden" id="submit-unauthenticated-captcha-btn" />
       </div>
     </div>
