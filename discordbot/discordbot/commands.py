@@ -15,17 +15,20 @@ class Commands:
             )
             return
 
-        content = message.content.strip()
-        if len(content.split()) == 2:
+        content = message.content.strip().split()
+        if len(content) == 2:
             await message.channel.send(
                 message.author.mention
                 + " Please provide a username-query (or optionally a discriminator) to ban a guest user.\nExample: `ban Titan#0001`"
             )
             return
 
-        content = content.split()
-        username = content[2][: content[2].find("#")] if "#" in content[2] else content[2]
-        discriminator = int(content[2][content[2].find("#") + 1 :]) if "#" in content[2] else None
+        username = (
+            content[2][: content[2].find("#")] if "#" in content[2] else content[2]
+        )
+        discriminator = (
+            int(content[2][content[2].find("#") + 1 :]) if "#" in content[2] else None
+        )
         headers = {"Authorization": self.config["titan-web-app-secret"]}
         payload = {
             "guild_id": message.guild.id,
@@ -42,12 +45,15 @@ class Commands:
                 j = await resp.json()
                 if "error" in j:
                     await message.channel.send(
-                        message.author.mention + " Ban error! " + j["error"]
+                        f"{message.author.mention} Ban error! {j['error']}"
                     )
                     return
                 if "success" in j:
-                    await message.channel.send(message.author.mention + " " + j["success"])
+                    await message.channel.send(
+                        f'{message.author.mention} {j["success"]}'
+                    )
                     return
+
         await message.channel.send("Unhandled webservice error in banning guest user!")
 
     async def unban(self, message):
@@ -58,17 +64,20 @@ class Commands:
             )
             return
 
-        content = message.content.strip()
-        if len(content.split()) == 2:
+        content = message.content.strip().split()
+        if len(content) == 2:
             await message.channel.send(
                 message.author.mention
                 + " Please provide a username-query (or optionally a discriminator) to unban a guest user.\nExample: `unban Titan#0001`"
             )
             return
 
-        content = content.split()
-        username = content[2][: content[2].find("#")] if "#" in content[2] else content[2]
-        discriminator = int(content[2][content[2].find("#") + 1 :]) if "#" in content[2] else None
+        username = (
+            content[2][: content[2].find("#")] if "#" in content[2] else content[2]
+        )
+        discriminator = (
+            int(content[2][content[2].find("#") + 1 :]) if "#" in content[2] else None
+        )
         headers = {"Authorization": self.config["titan-web-app-secret"]}
         payload = {
             "guild_id": message.guild.id,
@@ -85,14 +94,18 @@ class Commands:
                 j = await resp.json()
                 if "error" in j:
                     await message.channel.send(
-                        message.author.mention + " Unban error! " + j["error"]
+                        f"{message.author.mention} Unban error! {j['error']}"
                     )
                     return
                 if "success" in j:
-                    await message.channel.send(message.author.mention + " " + j["success"])
+                    await message.channel.send(
+                        f"{message.author.mention} {j['success']}"
+                    )
                     return
 
-        await message.channel.send("Unhandled webservice error in unbanning guest user!")
+        await message.channel.send(
+            "Unhandled webservice error in unbanning guest user!"
+        )
 
     async def kick(self, message):
         if not message.author.guild_permissions.kick_members:
@@ -102,17 +115,20 @@ class Commands:
             )
             return
 
-        content = message.content.strip()
-        if len(content.split()) == 2:
+        content = message.content.strip().split()
+        if len(content) == 2:
             await message.channel.send(
                 message.author.mention
                 + " Please provide a username-query (or optionally a discriminator) to kick a guest user.\nExample: `kick Titan#0001`"
             )
             return
 
-        content = content.split()
-        username = content[2][: content[2].find("#")] if "#" in content[2] else content[2]
-        discriminator = int(content[2][content[2].find("#") + 1 :]) if "#" in content[2] else None
+        username = (
+            content[2][: content[2].find("#")] if "#" in content[2] else content[2]
+        )
+        discriminator = (
+            int(content[2][content[2].find("#") + 1 :]) if "#" in content[2] else None
+        )
         headers = {"Authorization": self.config["titan-web-app-secret"]}
         payload = {"guild_id": message.guild.id, "username": username}
         if discriminator:
@@ -124,11 +140,13 @@ class Commands:
                 j = await resp.json()
                 if "error" in j:
                     await message.channel.send(
-                        message.author.mention + " Kick error! " + j["error"]
+                        f"{message.author.mention} Kick error! {j['error']}"
                     )
                     return
                 if "success" in j:
-                    await message.channel.send(message.author.mention + " " + j["success"])
+                    await message.channel.send(
+                        f"{message.author.mention} {j['success']}"
+                    )
                     return
 
         await message.channel.send("Unhandled webservice error in kicking guest user!")
@@ -145,9 +163,7 @@ class Commands:
 
     async def shard(self, message):
         await message.channel.send(
-            "This instance of Titan Embeds Discord Bot is running on shard **{}**. There are **{}** shards in total.".format(
-                message.guild.shard_id, self.client.shard_count
-            )
+            f"This instance of Titan Embeds Discord Bot is running on shard **{message.guild.shard_id}**. There are **{self.client.shard_count}** shards in total."
         )
 
     async def help(self, message):
@@ -174,12 +190,13 @@ class Commands:
             count = 1
             for user in users["authenticated"]:
                 server_user = message.guild.get_member(int(user["id"]))
-                embed_description = embed_description + "**{}.** {}#{}".format(
-                    count, server_user.name, server_user.discriminator
+                embed_description = (
+                    embed_description
+                    + f"**{count}.** {server_user.name}#{server_user.discriminator}"
                 )
                 if server_user.nick:
-                    embed_description = embed_description + " ({})".format(server_user.nick)
-                embed_description = embed_description + " {}\n".format(server_user.mention)
+                    embed_description = embed_description + f" ({server_user.nick})"
+                embed_description = embed_description + f" {server_user.mention}\n"
                 count = count + 1
 
         if users["unauthenticated"]:
@@ -188,23 +205,27 @@ class Commands:
             embed_description = embed_description + "__(Guest)__\n"
             count = 1
             for user in users["unauthenticated"]:
-                embed_description = embed_description + "**{}.** {}#{}\n".format(
-                    count, user["username"], user["discriminator"]
+                embed_description = (
+                    embed_description
+                    + f"**{count}.** {user['username']}#{user['discriminator']}\n"
                 )
                 count = count + 1
 
         if users["authenticated"] or users["unauthenticated"]:
             embed_description = embed_description + "\n"
 
-        embed_description = embed_description + "**Total Members Online: __{}__**".format(
-            len(users["authenticated"]) + len(users["unauthenticated"])
+        embed_description = (
+            embed_description
+            + f"**Total Members Online: __{len(users['authenticated']) + len(users['unauthenticated'])}__**"
         )
+
         embed = discord.Embed(
             title="Currently Online Embed Members",
             url="https://ddr-titan.fly.dev/",
             color=7964363,
             description=embed_description,
         )
+
         if message.guild.me.permissions_in(message.channel).embed_links:
             await message.channel.send(embed=embed)
         else:

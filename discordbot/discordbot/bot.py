@@ -120,21 +120,17 @@ class Titan(discord.AutoShardedClient):
     async def on_message(self, message):
         await self.socketio.on_message(message)
         await self.redisqueue.push_message(message)
-        msg_arr = message.content.split()  # split the message
+        msg = message.content.split()  # split the message
 
-        self.log.info("received message:\n%s\n%s", message, msg_arr)
+        self.log.info("received message:\n%s\n%s", message, msg)
 
-        if len(msg_arr) <= 1:
-            self.log.info(
-                "Could not read message - too few content members\n%s", pformat(msg_arr)
-            )
+        if len(msg) <= 1:
+            self.log.info("Could not read message - too short\n%s", pformat(msg))
             return
 
-        msg_cmd = msg_arr[1].lower()
+        msg_cmd = msg[1].lower()
         if msg_cmd == "__init__":
-            self.log.info(
-                "Could not read message - command is '__init__'\n%s", pformat(msg_arr)
-            )
+            self.log.info("Skipping message - command is '__init__'\n%s", pformat(msg))
             return
 
         # making sure there is actually stuff in the message and have arguments
@@ -142,7 +138,7 @@ class Titan(discord.AutoShardedClient):
         if (
             message.guild
             # make sure it is mention
-            and (msg_arr[0] in [f"<@{self.user.id}>", f"<@!{self.user.id}>"])
+            and (msg[0] in [f"<@{self.user.id}>", f"<@!{self.user.id}>"])
             and getattr(self.command, msg_cmd, None)
         ):
             self.log.info("running message %s", msg_cmd)
@@ -150,7 +146,7 @@ class Titan(discord.AutoShardedClient):
                 # actually run cmd, passing in msg obj
                 await getattr(self.command, msg_cmd)(message)
         else:
-            self.log.info("Could not run message %s\n%s", msg_cmd, pformat(msg_arr))
+            self.log.info("Could not run message %s\n%s", msg_cmd, pformat(msg))
 
     async def on_message_edit(self, message_before, message_after):
         await self.redisqueue.update_message(message_after)
@@ -234,10 +230,7 @@ class Titan(discord.AutoShardedClient):
 
     async def on_guild_emojis_update(self, guild, before, after):
         await self.redisqueue.update_guild(guild)
-        if len(after) == 0:
-            await self.socketio.on_guild_emojis_update(before)
-        else:
-            await self.socketio.on_guild_emojis_update(after)
+        await self.socketio.on_guild_emojis_update(after if len(after) else before)
 
     # async def on_webhooks_update(self, channel):
     #     await self.redisqueue.update_guild(channel.guild)
@@ -266,13 +259,10 @@ class Titan(discord.AutoShardedClient):
         await self.process_raw_message_delete(int(message_id), int(channel_id))
 
     async def raw_bulk_message_delete(self, payload):
-        message_ids = payload.message_ids
-        channel_id = payload.channel_id
         await asyncio.sleep(1)
-        for msgid in message_ids:
-            msgid = int(msgid)
-            if not self.in_messages_cache(msgid):
-                await self.process_raw_message_delete(msgid, int(channel_id))
+        for msg_id in [int(x) for x in payload.message_ids]:
+            if not self.in_messages_cache(msg_id):
+                await self.process_raw_message_delete(msg_id, int(payload.channel_id))
 
     async def process_raw_message_delete(self, msg_id, channel_id):
         if msg_id in self.delete_list:
@@ -346,12 +336,7 @@ class Titan(discord.AutoShardedClient):
         await self.on_reaction_clear(message, [])
 
     async def on_socket_response(self, msg):
-        if not (
-            "op" in msg
-            and "t" in msg
-            and msg["op"] == 0
-            and msg["t"] == "WEBHOOKS_UPDATE"
-        ):
+        if not (msg.get("op") == 0 and msg.get("t") == "WEBHOOKS_UPDATE"):
             return
 
         guild_id = int(msg["d"]["guild_id"])
