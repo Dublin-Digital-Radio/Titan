@@ -38,7 +38,7 @@ config = {
     "paypal-client-secret": env.get("PAYPAL_CLIENT_SECRET"),
     # V2 reCAPTCHA from https://www.google.com/recaptcha/admin
     "recaptcha-site-key": env.get("RECAPTCHA_V2_SITE_KEY"),
-    "recaptcha-secret-key": "",
+    "recaptcha-secret-key": env.get("RECAPTCHA_V2_SECRET_KEY"),
     # Patreon from https://www.patreon.com/portal
     "patreon-client-id": "",
     "patreon-client-secret": "",
