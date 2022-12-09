@@ -7,7 +7,7 @@ from flask import abort, request, session, url_for
 from flask_socketio import disconnect
 from oauthlib.oauth2.rfc6749.errors import InvalidGrantError
 from requests_oauthlib import OAuth2Session
-from titanembeds.redisqueue import redis_store
+from titanembeds import redisqueue
 from titanembeds.utils import make_user_cache_key
 
 log = logging.getLogger(__name__)
@@ -67,7 +67,7 @@ def user_has_permission(permission, index):
 def get_user_guilds():
     cache_key = f"OAUTH/USERGUILDS/{make_user_cache_key()}"
 
-    cache = redis_store.get(cache_key)
+    cache = redisqueue.redis_store.get(cache_key)
     if cache:
         log.info("got user guilds from cache: '%s'", pformat(json.loads(cache)))
         return json.loads(cache)
@@ -81,7 +81,7 @@ def get_user_guilds():
         abort(req.status_code)
 
     result = req.json()
-    redis_store.set(cache_key, json.dumps(result), 250)
+    redisqueue.redis_store.set(cache_key, json.dumps(result), 250)
 
     log.info("get_user_guilds - type '%s' - value: '%s'", type(result), pformat(result))
     return result
@@ -111,7 +111,10 @@ def check_user_can_administrate_guild(guild_id):
 def check_user_permission(guild_id, permission_id):
     for guild in get_user_managed_servers():
         if guild["id"] == guild_id:
-            return user_has_permission(guild["permissions"], permission_id) or guild["owner"]
+            return (
+                user_has_permission(guild["permissions"], permission_id)
+                or guild["owner"]
+            )
 
     return False
 

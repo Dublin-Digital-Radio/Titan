@@ -18,8 +18,8 @@ from titanembeds.database import (
     set_titan_token,
     get_titan_token,
     add_badge,
-    Patreon,
 )
+from titanembeds.database.patreon import Patreon
 from titanembeds.decorators import discord_users_only
 
 

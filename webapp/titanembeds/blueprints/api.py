@@ -29,7 +29,7 @@ from titanembeds.decorators import (
     valid_session_required,
 )
 from titanembeds.oauth import generate_avatar_url
-from titanembeds.redisqueue import redis_store, get_online_embed_user_keys
+from titanembeds import redisqueue
 from titanembeds.utils import (
     channel_ratelimit_key,
     check_guild_existance,
@@ -45,7 +45,6 @@ from titanembeds.utils import (
     guild_unauthcaptcha_enabled,
     guild_webhooks_enabled,
     rate_limiter,
-    redisqueue,
     serializer,
     update_user_status,
     user_unauthenticated,
@@ -193,7 +192,7 @@ def get_online_discord_users(guild_id, embed):
 
 
 def get_online_embed_users(guild_id):
-    usrs = get_online_embed_user_keys(guild_id)
+    usrs = redisqueue.get_online_embed_user_keys(guild_id)
     unauths = (
         db.session.query(UnauthenticatedUsers)
         .filter(
@@ -821,7 +820,7 @@ def user_info(guild_id, user_id):
                 if gr["id"] == r:
                     usr["roles"].append(gr)
         usr["badges"] = get_badges(user_id)
-        if redis_store.get("DiscordBotsOrgVoted/" + str(member["id"])):
+        if redisqueue.redis_store.get("DiscordBotsOrgVoted/" + str(member["id"])):
             usr["badges"].append("discordbotsorgvoted")
 
     return jsonify(usr)
@@ -849,7 +848,7 @@ def webhook_discordbotsorg_vote():
     vote_type = str(incoming.get("type"))
     params = dict(parse_qsl(urlsplit(incoming.get("query", "")).query))
     if vote_type == "upvote":
-        redis_store.set("DiscordBotsOrgVoted/" + user_id, "voted", 86400)
+        redisqueue.redis_store.set("DiscordBotsOrgVoted/" + user_id, "voted", 86400)
     referrer = None
     if "referrer" in params:
         try:

@@ -81,7 +81,7 @@ COPY --from=build-webapp /home/titan/venv /home/titan/venv
 
 COPY webapp webapp/
 
-RUN cd webapp && /home/titan/venv/bin/python bin/tr_compile.py
+RUN cd webapp && python bin/tr_compile.py
 
 USER titan
 WORKDIR /home/titan/Titan/webapp

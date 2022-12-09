@@ -5,7 +5,7 @@ import logging
 from flask import session
 from flask_socketio import Namespace, disconnect, emit, join_room, leave_room
 from titanembeds.database import db
-from titanembeds.redisqueue import redis_store
+from titanembeds import redisqueue
 from titanembeds.utils import (
     check_user_in_guild,
     get_client_ipaddr,
@@ -266,7 +266,7 @@ class Gateway(Namespace):
                 ] = f"https://cdn.discordapp.com/avatars/{usr['id']}/{usr['avatar']}.png"
             usr["roles"] = member["roles"]
             usr["discordbotsorgvoted"] = bool(
-                redis_store.get("DiscordBotsOrgVoted/" + str(member["id"]))
+                redisqueue.redis_store.get("DiscordBotsOrgVoted/" + str(member["id"]))
             )
         else:
             member = redisqueue.get_guild_member_named(guild_id, name)
@@ -282,7 +282,9 @@ class Gateway(Namespace):
                     ] = f"https://cdn.discordapp.com/avatars/{usr['id']}/{usr['avatar']}.png"
                 usr["roles"] = member["roles"]
                 usr["discordbotsorgvoted"] = bool(
-                    redis_store.get("DiscordBotsOrgVoted/" + str(member["id"]))
+                    redisqueue.redis_store.get(
+                        "DiscordBotsOrgVoted/" + str(member["id"])
+                    )
                 )
 
         emit("lookup_user_info", usr)

@@ -7,6 +7,7 @@ from datetime import timedelta
 from config import config
 from werkzeug.middleware.proxy_fix import ProxyFix
 
+
 try:
     import uwsgi
     from gevent import monkey
@@ -23,7 +24,7 @@ except:
         monkey.patch_all()
 
 import titanembeds.constants as constants
-from flask import Flask, render_template, request, session
+from flask import Flask, render_template, request
 from flask_sslify import SSLify
 from titanembeds.database import (
     get_administrators_list,
@@ -40,7 +41,7 @@ from .discordrest import discord_api
 
 from .blueprints import admin, api, embed, gateway, user
 from .database import db
-from .redisqueue import redis_store
+from .redisqueue import init_redis
 
 
 class Error(Exception):
@@ -60,9 +61,7 @@ if __name__ != "__main__":
     app.logger.handlers = gunicorn_logger.handlers
     app.logger.setLevel(gunicorn_logger.level)
     for handler in app.logger.handlers:
-        handler.setFormatter(
-            logging.Formatter("%(name)s - %(levelname)s - %(message)s")
-        )
+        handler.setFormatter(logging.Formatter(" %(levelname)s %(name)s: %(message)s"))
 
 app.config["SQLALCHEMY_DATABASE_URI"] = config["database-uri"]
 # Suppress the warning/no need this on for now.
@@ -99,7 +98,10 @@ socketio.init_app(
     async_mode=config.get("websockets-mode", None),
 )
 babel.init_app(app)
-redis_store.init_app(app)
+init_redis(config["redis-uri"])
+with app.app_context():
+    init_application_settings()
+    discord_api.init_discordrest()
 
 app.register_blueprint(api.api, url_prefix="/api", template_folder="/templates")
 app.register_blueprint(admin.admin, url_prefix="/admin", template_folder="/templates")
@@ -148,12 +150,6 @@ def global_banned_words():
     return render_template("global_banned_words.html.j2")
 
 
-@app.before_first_request
-def before_first_request():
-    init_application_settings()
-    discord_api.init_discordrest()
-
-
 @app.context_processor
 def context_processor():
     return {
@@ -164,8 +160,6 @@ def context_processor():
         "constants": constants,
         "af_mode_enabled": datetime.datetime.now().date()
         == datetime.date(datetime.datetime.now().year, 4, 1),
-        "dbl_voted": not session.get("unauthenticated", True)
-        and bool(redis_store.get(f"DiscordBotsOrgVoted/{session.get('user_id', -1)}")),
         "app_start_stamp": app_start_stamp,
     }
 

@@ -5,7 +5,7 @@ import time
 import requests
 
 from config import config
-from titanembeds.redisqueue import redis_store
+from titanembeds import redisqueue
 
 _DISCORD_API_BASE = "https://discordapp.com/api/v6"
 
@@ -29,16 +29,16 @@ class DiscordREST:
             self._set_bucket("global_limit_expire", 0)
 
     def _get_bucket(self, key):
-        value = redis_store.get(self.global_redis_prefix + key)
+        value = redisqueue.redis_store.get(self.global_redis_prefix + key)
         if value:
             value = value
         return value
 
     def _set_bucket(self, key, value):
-        return redis_store.set(self.global_redis_prefix + key, value)
+        return redisqueue.redis_store.set(self.global_redis_prefix + key, value)
 
     def _bucket_contains(self, key):
-        return redis_store.exists(self.global_redis_prefix + key)
+        return redisqueue.redis_store.exists(self.global_redis_prefix + key)
 
     def request(self, verb, url, **kwargs):
         headers = {

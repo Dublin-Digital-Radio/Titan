@@ -472,7 +472,7 @@ def is_int(specimen):
 
 
 rate_limiter = Limiter(key_func=get_client_ipaddr)  # Default limit by ip address
-socketio = SocketIO(engineio_logger=config.get("engineio-logging", False))
+socketio = SocketIO(logger=log, engineio_logger=log)
 babel = Babel()
 # sentry = Sentry(dsn=config.get("sentry-dsn", None))
 
