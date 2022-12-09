@@ -89,7 +89,6 @@
 **/.ropeproject
 
 # Project specifc
-**/alembic.ini
 **/.idea
 
 # flyctl launch added from .idea/.gitignore

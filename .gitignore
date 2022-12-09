@@ -88,5 +88,4 @@ ENV/
 .ropeproject
 
 # Project specifc
-alembic.ini
 .idea
