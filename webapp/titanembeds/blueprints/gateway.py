@@ -4,11 +4,12 @@ import logging
 
 from flask import session
 from flask_socketio import Namespace, disconnect, emit, join_room, leave_room
-from titanembeds.database import db
 from titanembeds import redisqueue
+from titanembeds.cache_keys import get_client_ipaddr
+from titanembeds.database import db
+from titanembeds.discord_rest import discord_api
 from titanembeds.utils import (
     check_user_in_guild,
-    get_client_ipaddr,
     get_forced_role,
     get_guild_channels,
     guild_accepts_visitors,
@@ -17,7 +18,6 @@ from titanembeds.utils import (
     serializer,
     update_user_status,
 )
-from titanembeds.discordrest import discord_api
 
 log = logging.getLogger(__name__)
 
@@ -50,9 +50,7 @@ class Gateway(Namespace):
         session["socket_guild_id"] = guild_id
         forced_role = get_forced_role(guild_id)
         if guild_accepts_visitors(guild_id) and not check_user_in_guild(guild_id):
-            channels = get_guild_channels(
-                guild_id, force_everyone=True, forced_role=forced_role
-            )
+            channels = get_guild_channels(guild_id, force_everyone=True, forced_role=forced_role)
         else:
             channels = get_guild_channels(guild_id, forced_role=forced_role)
 
@@ -61,9 +59,7 @@ class Gateway(Namespace):
             if chan["read"]:
                 join_room("CHANNEL_" + chan["channel"]["id"])
 
-        if session.get("unauthenticated", True) and guild_id in session.get(
-            "user_keys", {}
-        ):
+        if session.get("unauthenticated", True) and guild_id in session.get("user_keys", {}):
             join_room("IP_" + get_client_ipaddr())
         elif not session.get("unauthenticated", True):
             join_room("USER_" + str(session["user_id"]))
@@ -81,9 +77,9 @@ class Gateway(Namespace):
                     room="GUILD_" + guild_id,
                 )
             else:
-                nickname = redisqueue.get_guild_member(
-                    guild_id, session["user_id"]
-                ).get("nickname")
+                nickname = redisqueue.get_guild_member(guild_id, session["user_id"]).get(
+                    "nickname"
+                )
                 emit(
                     "embed_user_connect",
                     {
@@ -124,11 +120,7 @@ class Gateway(Namespace):
             if len(username) > 19:
                 username = username[:19]
 
-            d = (
-                session["user_id"]
-                if session["unauthenticated"]
-                else session["discriminator"]
-            )
+            d = session["user_id"] if session["unauthenticated"] else session["discriminator"]
             name = f"[Titan] {username}#{d}"
 
             for webhook in guild_webhooks:
@@ -224,9 +216,7 @@ class Gateway(Namespace):
                 roles.append(role)
 
         color = None
-        for role in [
-            x for x in sorted(roles, key=lambda k: k["position"]) if x["color"] != 0
-        ]:
+        for role in [x for x in sorted(roles, key=lambda k: k["position"]) if x["color"] != 0]:
             color = f"{role['color']:02x}"
             while len(color) < 6:
                 color = "0" + color
@@ -282,9 +272,7 @@ class Gateway(Namespace):
                     ] = f"https://cdn.discordapp.com/avatars/{usr['id']}/{usr['avatar']}.png"
                 usr["roles"] = member["roles"]
                 usr["discordbotsorgvoted"] = bool(
-                    redisqueue.redis_store.get(
-                        "DiscordBotsOrgVoted/" + str(member["id"])
-                    )
+                    redisqueue.redis_store.get("DiscordBotsOrgVoted/" + str(member["id"]))
                 )
 
         emit("lookup_user_info", usr)

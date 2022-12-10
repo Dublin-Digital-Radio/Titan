@@ -11,7 +11,7 @@ redis_store = None
 
 def init_redis(url):
     global redis_store
-    redis_store = redis.Redis.from_url(url, charset="utf-8", decode_responses=True)
+    redis_store = redis.Redis.from_url(url, decode_responses=True)
 
 
 def get(key, resource, params, *, data_type="str"):

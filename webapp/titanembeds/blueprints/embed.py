@@ -17,8 +17,9 @@ from flask import (
 )
 from flask_babel import gettext
 from titanembeds.database import Guilds, UserCSS, db, list_disabled_guilds
-from titanembeds.oauth import generate_guild_icon_url
+from titanembeds.redisqueue import get_online_embed_user_keys
 from titanembeds.utils import (
+    generate_guild_icon_url,
     guild_accepts_visitors,
     guild_query_unauth_users_bool,
     guild_unauthcaptcha_enabled,
@@ -26,7 +27,6 @@ from titanembeds.utils import (
     redisqueue,
     serializer,
 )
-from titanembeds.redisqueue import get_online_embed_user_keys
 
 log = logging.getLogger(__name__)
 
@@ -172,10 +172,7 @@ def cookietest1():
 @embed.route("/cookietest2")
 def cookietest2():
     js = "window._3rd_party_test_step2_loaded("
-    if (
-        "third_party_c_t" in request.cookies
-        and request.cookies["third_party_c_t"] == "works"
-    ):
+    if "third_party_c_t" in request.cookies and request.cookies["third_party_c_t"] == "works":
         js = js + "true"
     else:
         js = js + "false"

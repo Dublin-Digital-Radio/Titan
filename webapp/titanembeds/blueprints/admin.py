@@ -14,6 +14,7 @@ from flask import (
     url_for,
 )
 from flask_socketio import emit
+from titanembeds import redisqueue
 from titanembeds.database import (
     ApplicationSettings,
     Cosmetics,
@@ -31,9 +32,8 @@ from titanembeds.database import (
     list_disabled_guilds,
     set_titan_token,
 )
-from titanembeds.oauth import generate_guild_icon_url
 from titanembeds.redisqueue import get_online_embed_user_keys
-from titanembeds import redisqueue
+from titanembeds.utils import generate_guild_icon_url
 
 admin = Blueprint("admin", __name__)
 
@@ -229,9 +229,7 @@ def administrate_guild(guild_id):
 
     session["redirect"] = None
     cosmetics = (
-        db.session.query(Cosmetics)
-        .filter(Cosmetics.user_id == session["user_id"])
-        .first()
+        db.session.query(Cosmetics).filter(Cosmetics.user_id == session["user_id"]).first()
     )
 
     permissions = []
@@ -293,39 +291,27 @@ def update_administrate_guild(guild_id):
     guild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
     guild.unauth_users = request.form.get("unauth_users", guild.unauth_users) in true
     guild.visitor_view = request.form.get("visitor_view", guild.visitor_view) in true
-    guild.webhook_messages = (
-        request.form.get("webhook_messages", guild.webhook_messages) in true
-    )
+    guild.webhook_messages = request.form.get("webhook_messages", guild.webhook_messages) in true
 
     guild.chat_links = request.form.get("chat_links", guild.chat_links) in true
     guild.bracket_links = request.form.get("bracket_links", guild.bracket_links) in true
     guild.mentions_limit = request.form.get("mentions_limit", guild.mentions_limit)
-    guild.unauth_captcha = (
-        request.form.get("unauth_captcha", guild.unauth_captcha) in true
-    )
+    guild.unauth_captcha = request.form.get("unauth_captcha", guild.unauth_captcha) in true
     guild.post_timeout = request.form.get("post_timeout", guild.post_timeout)
-    guild.max_message_length = request.form.get(
-        "max_message_length", guild.max_message_length
-    )
+    guild.max_message_length = request.form.get("max_message_length", guild.max_message_length)
     guild.banned_words_enabled = (
         request.form.get("banned_words_enabled", guild.banned_words_enabled) in true
     )
     guild.banned_words_global_included = (
-        request.form.get(
-            "banned_words_global_included", guild.banned_words_global_included
-        )
+        request.form.get("banned_words_global_included", guild.banned_words_global_included)
         in true
     )
-    guild.autorole_unauth = request.form.get(
-        "autorole_unauth", guild.autorole_unauth, type=int
-    )
+    guild.autorole_unauth = request.form.get("autorole_unauth", guild.autorole_unauth, type=int)
     guild.autorole_discord = request.form.get(
         "autorole_discord", guild.autorole_discord, type=int
     )
     guild.file_upload = request.form.get("file_upload", guild.file_upload) in true
-    guild.send_rich_embed = (
-        request.form.get("send_rich_embed", guild.send_rich_embed) in true
-    )
+    guild.send_rich_embed = request.form.get("send_rich_embed", guild.send_rich_embed) in true
     invite_link = request.form.get("invite_link", guild.invite_link)
 
     if invite_link is not None and invite_link.strip() == "":
@@ -469,9 +455,7 @@ def patch_titan_tokens():
 @admin.route("/disabled_guilds", methods=["GET"])
 @is_admin
 def get_disabled_guilds():
-    return render_template(
-        "admin_disabled_guilds.html.j2", guilds=list_disabled_guilds()
-    )
+    return render_template("admin_disabled_guilds.html.j2", guilds=list_disabled_guilds())
 
 
 @admin.route("/disabled_guilds", methods=["POST"])
@@ -495,11 +479,7 @@ def delete_disabled_guilds():
     if guild_id not in list_disabled_guilds():
         abort(409)
 
-    guild = (
-        db.session.query(DisabledGuilds)
-        .filter(DisabledGuilds.guild_id == guild_id)
-        .first()
-    )
+    guild = db.session.query(DisabledGuilds).filter(DisabledGuilds.guild_id == guild_id).first()
     db.session.delete(guild)
     db.session.commit()
 
@@ -524,9 +504,7 @@ def edit_custom_css_get(css_id):
     if variables:
         variables = json.loads(variables)
 
-    return render_template(
-        "usercss.html.j2", new=False, css=css, variables=variables, admin=True
-    )
+    return render_template("usercss.html.j2", new=False, css=css, variables=variables, admin=True)
 
 
 @admin.route("/custom_css/edit/<css_id>", methods=["POST"])
@@ -654,8 +632,7 @@ def voting_get():
             overall_votes[uid] = overall_votes[uid] + 1
 
     sorted_overall_votes = [
-        u[0]
-        for u in sorted(overall_votes.items(), key=operator.itemgetter(1), reverse=True)
+        u[0] for u in sorted(overall_votes.items(), key=operator.itemgetter(1), reverse=True)
     ]
 
     overall = []

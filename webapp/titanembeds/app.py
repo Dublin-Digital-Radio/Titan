@@ -7,7 +7,6 @@ from datetime import timedelta
 from config import config
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-
 try:
     import uwsgi
     from gevent import monkey
@@ -31,16 +30,11 @@ from titanembeds.database import (
     get_application_settings,
     init_application_settings,
 )
-from titanembeds.utils import (
-    babel,
-    language_code_list,
-    rate_limiter,
-    socketio,
-)
-from .discordrest import discord_api
+from titanembeds.utils import babel, language_code_list, rate_limiter, socketio
 
 from .blueprints import admin, api, embed, gateway, user
 from .database import db
+from .discord_rest import discord_api
 from .redisqueue import init_redis
 
 
