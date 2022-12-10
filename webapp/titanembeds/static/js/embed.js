@@ -793,47 +793,13 @@ var passedCookieTest = true; // If passed cross origin test
                 prepare_guild(data);
                 $('#loginmodal').modal('close');
                 unlock_login_fields();
-                setTimeout(displayDblAdvert, 1500);
             });
         } else {
             switch_to_default_channel(guildobj.channels);
             prepare_guild(guildobj);
             $('#loginmodal').modal('close');
             unlock_login_fields();
-            setTimeout(displayDblAdvert, 1500);
         }
-    }
-
-    function displayDblAdvert() {
-        var hideDblUntil = "";
-        if (localstorage_avaliable) {
-            hideDblUntil = localStorage.getItem("hideDiscordBotsOrgVoteAdUntil");
-        }
-        var now = moment();
-        var hideDblUntilMoment = null;
-        if (hideDblUntil) {
-            hideDblUntilMoment = moment(hideDblUntil);
-            if (hideDblUntilMoment.isValid() && hideDblUntilMoment > now) {
-                return;
-            }
-        }
-        var dblAdContents = "<i class=\"material-icons right\">close</i></span><span id=\"dblBalloon\"><h6>Loving the Titan, the Discord server widget?</h6><br>Show your appreciation <em>by voting for Titan daily</em> on <a href=\"https://titanembeds.com/vote\" target=\"_blank\">Discord Bot List</a> and get a <span class=\"yellow-text\">golden</span> name and other rewards!";
-        $(".brand-logo").showBalloon({
-            html: true,
-            position: "bottom",
-            contents: dblAdContents,
-            classname: "dblballoon",
-            showComplete: function () {
-                $(".dblballoon").css("top", $(".brand-logo").outerHeight() + "px").css("position", "fixed");
-                $(".dblballoon").find("i").click(function (event) {
-                    event.preventDefault();
-                    $(".brand-logo").hideBalloon();
-                    if (localstorage_avaliable) {
-                        localStorage.setItem("hideDiscordBotsOrgVoteAdUntil", now.add(3, "days").toISOString());
-                    }
-                }).css("cursor", "pointer");
-            }
-        });
     }
 
     function switch_to_default_channel(guildchannels) {
