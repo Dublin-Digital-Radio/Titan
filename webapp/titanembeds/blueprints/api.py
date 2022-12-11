@@ -219,7 +219,8 @@ def get_online_embed_users(guild_id):
                 "discriminator": user.discriminator,
             }
             for user in unauths
-        ]
+        ],
+        "authenticated": [],
     }
 
     auths = (
