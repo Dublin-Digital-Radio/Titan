@@ -707,8 +707,6 @@ def query_guild_visitor():
 @abort_if_guild_disabled()
 @valid_session_required(api=True)
 def server_members():
-    abort(404)
-
     guild_id = request.args.get("guild_id", None)
 
     if not check_guild_existance(guild_id):
