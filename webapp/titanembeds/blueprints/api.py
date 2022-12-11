@@ -294,14 +294,12 @@ def delete_webhook_if_too_much(webhook):
         return
 
     guild = redisqueue.get_guild(guild_id)
-    guild_webhooks = guild["webhooks"]
-    total_wh_cnt = len(guild_webhooks)
-    titan_wh_cnt = 0
 
-    for wh in guild_webhooks:
-        if wh["name"].startswith("[Titan] "):
-            titan_wh_cnt = titan_wh_cnt + 1
-    if titan_wh_cnt > 0 and total_wh_cnt >= 8:
+    titan_wh_cnt = len(
+        [wh for wh in guild["webhooks"] if wh["name"].startswith("[Titan] ")]
+    )
+
+    if titan_wh_cnt > 0 and len(guild["webhooks"]) >= 8:
         try:
             discord_api.delete_webhook(webhook["id"], webhook["token"])
         except:
@@ -427,7 +425,6 @@ def post():
     content = request.form.get("content", "")
 
     file = getattr(request.files.get("file"), "filename", None) or None
-
     rich_embed = json.loads(request.form.get("richembed", "{}"))
 
     db_user = (
