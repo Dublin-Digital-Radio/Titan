@@ -218,7 +218,7 @@ QUERY_PARAMETERS = [
             },
             {
                 "name": "IceWyvern",
-                "default": False,
+                "default": True,
             },
             {
                 "name": "MetroEdge",
