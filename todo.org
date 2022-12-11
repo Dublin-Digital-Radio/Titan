@@ -1,5 +1,5 @@
 * TODO
-*** TODO update python version
+*** DONE update python version
     + 3.10 - needs gunicorn release
     + 3.11 - ???
 *** DONE bot: reconnect to redis automatically
