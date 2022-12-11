@@ -205,7 +205,7 @@ def prepare_guild_members_list(members, bans):
         else:
             for usr in all_users:
                 if user["ip"] == usr["ip"]:
-                    alias = user["username"] + "#" + str(user["discrim"])
+                    alias = f"{user['username']}#{user['discrim']}"
                     if len(usr["aliases"]) < 5 and alias not in usr["aliases"]:
                         usr["aliases"].append(alias)
                     continue
@@ -373,10 +373,8 @@ def update_administrate_guild(guild_id):
 @is_admin
 def guilds():
     guilds = []
-    dbguilds = db.session.query(Guilds).all()
-    for guild in dbguilds:
-        rguild = redisqueue.get_guild(guild.guild_id)
-        if not rguild:
+    for guild in db.session.query(Guilds).all():
+        if not (rguild := redisqueue.get_guild(guild.guild_id)):
             continue
         guilds.append(
             {"guild_id": guild.guild_id, "name": rguild["name"], "icon": rguild["icon"]}
@@ -500,9 +498,7 @@ def edit_custom_css_get(css_id):
     if not css:
         abort(404)
 
-    variables = css.css_variables
-    if variables:
-        variables = json.loads(variables)
+    variables = json.loads(css.css_variables) if css.css_variables else None
 
     return render_template("usercss.html.j2", new=False, css=css, variables=variables, admin=True)
 
@@ -514,28 +510,15 @@ def edit_custom_css_post(css_id):
     if not dbcss:
         abort(404)
 
-    name = request.form.get("name", None)
-    user_id = request.form.get("user_id", None)
-    css = request.form.get("css", None)
-    variables = request.form.get("variables", None)
-    variables_enabled = request.form.get("variables_enabled", False) in ["true", True]
-
+    name = request.form.get("name", "").strip() or None
     if not name:
         abort(400)
-    else:
-        name = name.strip()
-        css = css.strip()
-
-    if not user_id:
-        user_id = dbcss.user_id
-    if len(css) == 0:
-        css = None
 
     dbcss.name = name
-    dbcss.user_id = user_id
-    dbcss.css = css
-    dbcss.css_variables = variables
-    dbcss.css_var_bool = variables_enabled
+    dbcss.user_id = request.form.get("user_id", None) or dbcss.user_id
+    dbcss.css = request.form.get("css", "").strip() or None
+    dbcss.css_variables = request.form.get("variables", None)
+    dbcss.css_var_bool = request.form.get("variables_enabled", False) in ["true", True]
     db.session.commit()
 
     return jsonify({"id": dbcss.id})
@@ -563,29 +546,22 @@ def new_custom_css_get():
 @admin.route("/custom_css/new", methods=["POST"])
 @is_admin
 def new_custom_css_post():
-    name = request.form.get("name", None)
+    name = request.form.get("name", None).strip()
     user_id = request.form.get("user_id", None)
-    css = request.form.get("css", None)
-    variables = request.form.get("variables", None)
-    variables_enabled = request.form.get("variables_enabled", False) in ["true", True]
-
-    if not name:
-        abort(400)
-    else:
-        name = name.strip()
-        css = css.strip()
-
-    if not user_id:
+    if not name or not user_id:
         abort(400)
 
-    if len(css) == 0:
-        css = None
-
-    css = UserCSS(name, user_id, variables_enabled, variables, css)
-    db.session.add(css)
+    db_css = UserCSS(
+        name,
+        user_id,
+        request.form.get("variables_enabled", False) in ["true", True],
+        request.form.get("variables", None),
+        request.form.get("css", "").strip() or None,
+    )
+    db.session.add(db_css)
     db.session.commit()
 
-    return jsonify({"id": css.id})
+    return jsonify({"id": db_css.id})
 
 
 @admin.route("/voting", methods=["GET"])
@@ -678,14 +654,17 @@ def voting_get():
 @admin.route("/app_settings", methods=["GET"])
 @is_admin
 def application_settings_get():
-    settings = db.session.query(ApplicationSettings).first()
-    return render_template("admin_application_settings.html.j2", settings=settings)
+    return render_template(
+        "admin_application_settings.html.j2",
+        settings=(db.session.query(ApplicationSettings).first()),
+    )
 
 
 @admin.route("/app_settings", methods=["POST"])
 @is_admin
 def application_settings_post():
     settings = db.session.query(ApplicationSettings).first()
+
     if "donation_goal_progress" in request.form:
         donation_goal_progress = request.form.get("donation_goal_progress")
         settings.donation_goal_progress = int(donation_goal_progress)

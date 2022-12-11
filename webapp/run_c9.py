@@ -8,7 +8,8 @@ if __name__ == "__main__":
 
 import os
 
-from run import app, init_debug, socketio
+from run import app, init_debug
+from titanembeds.app import socketio
 
 if __name__ == "__main__":
     init_debug()

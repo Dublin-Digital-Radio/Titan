@@ -3,14 +3,10 @@ import logging
 
 from config import config
 from flask import session
-from flask_babel import Babel
-from flask_limiter import Limiter
-from flask_socketio import SocketIO, disconnect
 from itsdangerous import URLSafeSerializer
 from sqlalchemy import and_
 from titanembeds import redisqueue
 from titanembeds.cache_keys import get_client_ipaddr
-from titanembeds.constants import LANGUAGES
 from titanembeds.database import (
     AuthenticatedUsers,
     Guilds,
@@ -400,10 +396,6 @@ def guild_unauthcaptcha_enabled(guild_id):
     return dbguild.unauth_captcha
 
 
-def language_code_list():
-    return [lang["code"] for lang in LANGUAGES]
-
-
 def is_int(specimen):
     try:
         int(specimen)
@@ -412,15 +404,14 @@ def is_int(specimen):
         return False
 
 
-rate_limiter = Limiter(key_func=get_client_ipaddr)  # Default limit by ip address
-socketio = SocketIO(logger=log, engineio_logger=log)
-babel = Babel()
+def int_or_none(num):
+    try:
+        return int(num)
+    except (TypeError, ValueError):
+        return None
+
+
 # sentry = Sentry(dsn=config.get("sentry-dsn", None))
-
-
-@socketio.on_error_default  # disconnect on all errors
-def default_socketio_error_handler(e):
-    disconnect()
 
 
 def generate_avatar_url(id, av, discrim="0000", allow_animate=False):

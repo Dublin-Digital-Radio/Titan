@@ -50,3 +50,15 @@ class UnauthenticatedUsers(db.Model):
     def revokeUser(self):
         self.revoked = True
         return self.revoked
+
+
+def query_unauthenticated_users_like(username, guild_id, discriminator):
+    query = (
+        db.session.query(UnauthenticatedUsers)
+        .filter(UnauthenticatedUsers.guild_id == str(guild_id))
+        .filter(UnauthenticatedUsers.username.ilike(f"%{username}%"))
+    )
+    if discriminator:
+        query = query.filter(UnauthenticatedUsers.discriminator == discriminator)
+    dbuser = query.order_by(UnauthenticatedUsers.id.desc()).first()
+    return dbuser

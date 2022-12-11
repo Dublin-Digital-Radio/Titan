@@ -14,7 +14,10 @@ from .guilds import Guilds
 from .titan_tokens import TitanTokens, get_titan_token
 from .token_transactions import TokenTransactions
 from .unauthenticated_bans import UnauthenticatedBans
-from .unauthenticated_users import UnauthenticatedUsers
+from .unauthenticated_users import (
+    UnauthenticatedUsers,
+    query_unauthenticated_users_like,
+)
 from .user_css import UserCSS
 
 

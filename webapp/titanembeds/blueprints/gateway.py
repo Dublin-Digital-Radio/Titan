@@ -4,7 +4,6 @@ import logging
 
 from flask import session
 from flask_socketio import Namespace, disconnect, emit, join_room, leave_room
-from titanembeds import redisqueue
 from titanembeds.cache_keys import get_client_ipaddr
 from titanembeds.database import db
 from titanembeds.discord_rest import discord_api
@@ -32,8 +31,7 @@ class Gateway(Namespace):
         emit("hello", {"gateway_identifier": gateway_identifier})
 
     def on_identify(self, data):
-        authorization = data.get("session", None)
-        if authorization:
+        if authorization := data.get("session", None):
             try:
                 data = serializer.loads(authorization)
                 session.update(data)
@@ -48,6 +46,7 @@ class Gateway(Namespace):
             return
 
         session["socket_guild_id"] = guild_id
+
         forced_role = get_forced_role(guild_id)
         if guild_accepts_visitors(guild_id) and not check_user_in_guild(guild_id):
             channels = get_guild_channels(guild_id, force_everyone=True, forced_role=forced_role)
@@ -60,9 +59,9 @@ class Gateway(Namespace):
                 join_room("CHANNEL_" + chan["channel"]["id"])
 
         if session.get("unauthenticated", True) and guild_id in session.get("user_keys", {}):
-            join_room("IP_" + get_client_ipaddr())
+            join_room(f"IP_{get_client_ipaddr()}")
         elif not session.get("unauthenticated", True):
-            join_room("USER_" + str(session["user_id"]))
+            join_room(f"USER_{session['user_id']}")
 
         visitor_mode = data["visitor_mode"]
         if not visitor_mode:
