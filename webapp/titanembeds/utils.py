@@ -1,18 +1,12 @@
 # from raven.contrib.flask import Sentry
-import random
-import string
-import hashlib
 import logging
 
 from config import config
-from flask import request, session
-from flask_babel import Babel
-from flask_limiter import Limiter
-from flask_socketio import SocketIO, disconnect
+from flask import session
 from itsdangerous import URLSafeSerializer
 from sqlalchemy import and_
 from titanembeds import redisqueue
-from titanembeds.constants import LANGUAGES
+from titanembeds.cache_keys import get_client_ipaddr
 from titanembeds.database import (
     AuthenticatedUsers,
     Guilds,
@@ -20,69 +14,19 @@ from titanembeds.database import (
     UnauthenticatedUsers,
     db,
 )
+from titanembeds.discord_rest.oauth import (
+    AVATAR_BASE_URL,
+    BOT_PERMISSIONS,
+    GUILD_ICON_URL,
+)
+from titanembeds.discord_rest.user import (
+    check_user_can_administrate_guild,
+    user_has_permission,
+)
 
 log = logging.getLogger(__name__)
 
 serializer = URLSafeSerializer(config["app-secret"])
-
-
-def get_client_ipaddr():
-    if request.headers.getlist("X-Forwarded-For"):
-        ip = request.headers.getlist("X-Forwarded-For")[0]
-    else:
-        ip = request.remote_addr
-
-    return hashlib.sha512((config["app-secret"] + ip).encode("utf-8")).hexdigest()[:15]
-
-
-def generate_session_key():
-    sess = session.get("sessionunique", None)
-    if not sess:
-        rand_str = lambda n: "".join(
-            [random.choice(string.ascii_lowercase) for i in range(n)]
-        )
-        session["sessionunique"] = rand_str(25)
-        sess = session["sessionunique"]
-    return sess  # Totally unique
-
-
-def make_cache_key(*args, **kwargs):
-    path = request.path
-    args = str(hash(frozenset(request.args.items())))
-    ip = get_client_ipaddr()
-    sess = generate_session_key()
-    return path + args + sess + ip
-
-
-def make_user_cache_key(*args, **kwargs):
-    ip = get_client_ipaddr()
-    sess = generate_session_key()
-    return sess + ip
-
-
-def make_guilds_cache_key():
-    sess = generate_session_key()
-    ip = get_client_ipaddr()
-    return sess + ip + "user_guilds"
-
-
-def make_guildchannels_cache_key():
-    guild_id = request.values.get("guild_id", "0")
-    sess = generate_session_key()
-    ip = get_client_ipaddr()
-    return sess + ip + guild_id + "user_guild_channels"
-
-
-def channel_ratelimit_key():  # Generate a bucket with given channel & unique session key
-    sess = generate_session_key()
-    channel_id = request.values.get("channel_id", "0")
-    return sess + channel_id
-
-
-def guild_ratelimit_key():
-    ip = get_client_ipaddr()
-    guild_id = request.values.get("guild_id", "0")
-    return ip + guild_id
 
 
 def get_guild(guild_id):
@@ -164,9 +108,6 @@ def checkUserBanned(guild_id, ip_address=None):
     return banned
 
 
-from titanembeds.oauth import check_user_can_administrate_guild, user_has_permission
-
-
 def update_user_status(guild_id, username, user_key=None):
     if user_unauthenticated():
         ip_address = get_client_ipaddr()
@@ -192,9 +133,7 @@ def update_user_status(guild_id, username, user_key=None):
                 UnauthenticatedUsers.user_key == user_key,
             )
         ).first()
-        redisqueue.bump_user_presence_timestamp(
-            guild_id, "UnauthenticatedUsers", user_key
-        )
+        redisqueue.bump_user_presence_timestamp(guild_id, "UnauthenticatedUsers", user_key)
         if dbUser.username != username or dbUser.ip_address != ip_address:
             dbUser.username = username
             dbUser.ip_address = ip_address
@@ -217,9 +156,7 @@ def update_user_status(guild_id, username, user_key=None):
         dbMember = redisqueue.get_guild_member(guild_id, status["user_id"])
         if dbMember:
             status["nickname"] = dbMember["nick"]
-        redisqueue.bump_user_presence_timestamp(
-            guild_id, "AuthenticatedUsers", status["user_id"]
-        )
+        redisqueue.bump_user_presence_timestamp(guild_id, "AuthenticatedUsers", status["user_id"])
     return status
 
 
@@ -302,11 +239,7 @@ def get_guild_channels(guild_id, force_everyone=False, forced_role=0):
                 result["write"] = False
             if not bot_result["mention_everyone"]:
                 result["mention_everyone"] = False
-            if (
-                not bot_result["attach_files"]
-                or not db_guild.file_upload
-                or not result["write"]
-            ):
+            if not bot_result["attach_files"] or not db_guild.file_upload or not result["write"]:
                 result["attach_files"] = False
             if (
                 not bot_result["embed_links"]
@@ -429,11 +362,13 @@ def get_forced_role(guild_id):
 def bot_can_create_webhooks(guild):
     perm = 0
     guild_roles = guild["roles"]
+
     # @everyone
     for role in guild_roles:
         if role["id"] == guild["id"]:
             perm |= role["permissions"]
             continue
+
     member_roles = get_member_roles(guild["id"], config["client-id"])
     # User Guild Roles
     for m_role in member_roles:
@@ -441,8 +376,10 @@ def bot_can_create_webhooks(guild):
             if g_role["id"] == m_role:
                 perm |= g_role["permissions"]
                 continue
+
     if user_has_permission(perm, 3):  # Admin perms override yes
         return True
+
     return user_has_permission(perm, 29)
 
 
@@ -459,10 +396,6 @@ def guild_unauthcaptcha_enabled(guild_id):
     return dbguild.unauth_captcha
 
 
-def language_code_list():
-    return [lang["code"] for lang in LANGUAGES]
-
-
 def is_int(specimen):
     try:
         int(specimen)
@@ -471,12 +404,29 @@ def is_int(specimen):
         return False
 
 
-rate_limiter = Limiter(key_func=get_client_ipaddr)  # Default limit by ip address
-socketio = SocketIO(logger=log, engineio_logger=log)
-babel = Babel()
+def int_or_none(num):
+    try:
+        return int(num)
+    except (TypeError, ValueError):
+        return None
+
+
 # sentry = Sentry(dsn=config.get("sentry-dsn", None))
 
 
-@socketio.on_error_default  # disconnect on all errors
-def default_socketio_error_handler(e):
-    disconnect()
+def generate_avatar_url(id, av, discrim="0000", allow_animate=False):
+    if av:
+        suf = "gif" if allow_animate and str(av).startswith("a_") else "png"
+        return f"{AVATAR_BASE_URL}{id}/{av}.{suf}"
+
+    default_av = [0, 1, 2, 3, 4]
+    avatar_no = default_av[int(discrim) % len(default_av)]
+    return f"https://cdn.discordapp.com/embed/avatars/{avatar_no}.png"
+
+
+def generate_guild_icon_url(id, hash):
+    return f"{GUILD_ICON_URL}{id}/{hash}.png"
+
+
+def generate_bot_invite_url(guild_id):
+    return f"https://discordapp.com/oauth2/authorize?&client_id={config['client-id']}&scope=bot&permissions={BOT_PERMISSIONS}&guild_id={guild_id}"

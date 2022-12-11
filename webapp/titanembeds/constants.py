@@ -1120,3 +1120,6 @@ GLOBAL_BANNED_WORDS = [
     "xrated",
     "xxx",
 ]
+
+
+LANGUAGE_CODE_LIST = [lang["code"] for lang in LANGUAGES]

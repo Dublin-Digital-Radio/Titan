@@ -11,7 +11,7 @@ redis_store = None
 
 def init_redis(url):
     global redis_store
-    redis_store = redis.Redis.from_url(url, charset="utf-8", decode_responses=True)
+    redis_store = redis.Redis.from_url(url, decode_responses=True)
 
 
 def get(key, resource, params, *, data_type="str"):
@@ -113,9 +113,7 @@ def get_guild_member(guild_id, user_id):
 
 def get_guild_member_named(guild_id, query):
     key = f"/custom/guilds/{guild_id}/member_named/{query}"
-    guild_member_id = get(
-        key, "get_guild_member_named", {"guild_id": guild_id, "query": query}
-    )
+    guild_member_id = get(key, "get_guild_member_named", {"guild_id": guild_id, "query": query})
     if guild_member_id:
         return get_guild_member(guild_id, guild_member_id["user_id"])
     return None
@@ -159,14 +157,11 @@ def bump_user_presence_timestamp(guild_id, user_type, client_key):
 
 
 def get_online_embed_user_keys(guild_id="*", user_type=None):
-    user_type = (
-        [user_type] if user_type else ["AuthenticatedUsers", "UnauthenticatedUsers"]
-    )
+    user_type = [user_type] if user_type else ["AuthenticatedUsers", "UnauthenticatedUsers"]
 
     return {
         utype: [
-            k.split("/")[-1]
-            for k in redis_store.keys(f"MemberPresence/{guild_id}/{utype}/*")
+            k.split("/")[-1] for k in redis_store.keys(f"MemberPresence/{guild_id}/{utype}/*")
         ]
         for utype in user_type
     }

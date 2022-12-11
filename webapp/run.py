@@ -1,8 +1,8 @@
 #!/usr/bin/env python2
 import subprocess
 
-from titanembeds.app import app, socketio
 from config import config
+from titanembeds.app import app, socketio
 
 
 def init_debug():

@@ -17,16 +17,16 @@ from flask import (
 )
 from flask_babel import gettext
 from titanembeds.database import Guilds, UserCSS, db, list_disabled_guilds
-from titanembeds.oauth import generate_guild_icon_url
+from titanembeds.redisqueue import get_online_embed_user_keys
 from titanembeds.utils import (
+    generate_guild_icon_url,
     guild_accepts_visitors,
     guild_query_unauth_users_bool,
     guild_unauthcaptcha_enabled,
-    is_int,
+    int_or_none,
     redisqueue,
     serializer,
 )
-from titanembeds.redisqueue import get_online_embed_user_keys
 
 log = logging.getLogger(__name__)
 
@@ -48,12 +48,9 @@ def get_logingreeting():
 
 
 def get_custom_css():
-    css = request.args.get("css", None)
-    if not is_int(css):
-        css = None
-    if css:
-        css = db.session.query(UserCSS).filter(UserCSS.id == css).first()
-    return css
+    if not (css_id := int_or_none(request.args.get("css"))):
+        return None
+    return db.session.query(UserCSS).filter(UserCSS.id == css_id).first()
 
 
 def parse_css_variable(css):
@@ -114,7 +111,9 @@ def guild_embed(guild_id):
         "invite_domain": parse_url_domain(dbguild.invite_link),
         "post_timeout": dbguild.post_timeout,
     }
+
     customcss = get_custom_css()
+
     return render_template(
         "embed.html.j2",
         disabled=str(guild_id) in list_disabled_guilds(),
@@ -138,9 +137,10 @@ def guild_embed(guild_id):
 
 @embed.route("/signin_complete")
 def signin_complete():
-    session_copy = copy.deepcopy(dict(session))
-    sess = serializer.dumps(session_copy)
-    return render_template("signin_complete.html.j2", session=sess)
+    return render_template(
+        "signin_complete.html.j2",
+        session=(serializer.dumps(copy.deepcopy(dict(session)))),
+    )
 
 
 @embed.route("/login_discord")
@@ -162,27 +162,28 @@ def noscript():
 def cookietest1():
     js = "window._3rd_party_test_step1_loaded();"
     response = make_response(js, 200, {"Content-Type": "application/javascript"})
+
     if not config.get("disable-samesite-cookie-flag", False):
         response.set_cookie("third_party_c_t", "works", max_age=30, samesite="None")
     else:
         response.set_cookie("third_party_c_t", "works", max_age=30)
+
     return response
 
 
 @embed.route("/cookietest2")
 def cookietest2():
-    js = "window._3rd_party_test_step2_loaded("
-    if (
-        "third_party_c_t" in request.cookies
-        and request.cookies["third_party_c_t"] == "works"
-    ):
-        js = js + "true"
+    if "third_party_c_t" in request.cookies and request.cookies["third_party_c_t"] == "works":
+        res = "true"
     else:
-        js = js + "false"
-    js = js + ");"
+        res = "false"
+    js = f"window._3rd_party_test_step2_loaded({res})"
+
     response = make_response(js, 200, {"Content-Type": "application/javascript"})
+
     if not config.get("disable-samesite-cookie-flag", False):
         response.set_cookie("third_party_c_t", "", expires=0, samesite="None")
     else:
         response.set_cookie("third_party_c_t", "", expires=0)
+
     return response

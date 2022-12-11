@@ -14,6 +14,12 @@ from flask import jsonify, request, session, url_for
 from flask_socketio import emit
 from itsdangerous.exc import BadSignature
 from sqlalchemy import and_
+from titanembeds import rate_limiter, redisqueue
+from titanembeds.cache_keys import (
+    channel_ratelimit_key,
+    get_client_ipaddr,
+    guild_ratelimit_key,
+)
 from titanembeds.database import (
     AuthenticatedUsers,
     DiscordBotsOrgTransactions,
@@ -22,34 +28,33 @@ from titanembeds.database import (
     UnauthenticatedUsers,
     db,
     get_badges,
+    query_unauthenticated_users_like,
 )
 from titanembeds.decorators import (
     abort_if_guild_disabled,
     discord_users_only,
     valid_session_required,
 )
-from titanembeds.oauth import generate_avatar_url
-from titanembeds import redisqueue
+from titanembeds.discord_rest import discord_api
 from titanembeds.utils import (
-    channel_ratelimit_key,
     check_guild_existance,
     check_user_in_guild,
     checkUserBanned,
-    get_client_ipaddr,
+    generate_avatar_url,
     get_forced_role,
     get_guild_channels,
     get_member_roles,
     guild_accepts_visitors,
     guild_query_unauth_users_bool,
-    guild_ratelimit_key,
     guild_unauthcaptcha_enabled,
     guild_webhooks_enabled,
-    rate_limiter,
+    int_or_none,
     serializer,
     update_user_status,
     user_unauthenticated,
 )
-from titanembeds.discordrest import discord_api
+
+CLEVERBOT_URL = "http://www.cleverbot.com/getreply"
 
 log = logging.getLogger(__name__)
 api = Blueprint("api", __name__)
@@ -62,21 +67,22 @@ def after_request(response):
         data = response.get_json()
         data["session"] = serializer.dumps(session_copy)
         response.set_data(json.dumps(data))
+
     return response
 
 
 @api.before_request
 def before_request():
-    authorization = request.headers.get("authorization", None)
+    if not (authorization := request.headers.get("authorization", None)):
+        return
 
-    if authorization:
-        try:
-            data = serializer.loads(authorization)
-            session.update(data)
-        except BadSignature:
-            log.error(f"Bad signature in auth header value")
-        except json.JSONDecodeError:
-            log.error(f"Could not JSON decode auth header value")
+    try:
+        data = serializer.loads(authorization)
+        session.update(data)
+    except BadSignature:
+        log.error(f"Bad signature in auth header value")
+    except json.JSONDecodeError:
+        log.error(f"Could not JSON decode auth header value")
 
 
 def parse_emoji(text_to_parse, guild_id):
@@ -123,6 +129,7 @@ def format_post_content(guild_id, channel_id, message, dbUser):
         illegal_reasons.append(
             "Mentions is capped at the following limit: " + str(dbguild.mentions_limit)
         )
+
     for match in all_mentions:
         mention = "<@" + match[2 : len(match) - 1] + ">"
         message = message.replace(match, mention, 1)
@@ -131,9 +138,9 @@ def format_post_content(guild_id, channel_id, message, dbUser):
         banned_words = set(json.loads(dbguild.banned_words))
         if dbguild.banned_words_global_included:
             banned_words = banned_words.union(set(constants.GLOBAL_BANNED_WORDS))
+
         for word in banned_words:
-            word_boundaried = r"\b%s\b" % word
-            regex = re.compile(word_boundaried, re.IGNORECASE)
+            regex = re.compile(rf"\b{word}\b", re.IGNORECASE)
             if regex.search(message):
                 illegal_post = True
                 illegal_reasons.append("The following word is prohibited: " + word)
@@ -143,12 +150,12 @@ def format_post_content(guild_id, channel_id, message, dbUser):
             message = f"**[{session['username']}#{session['user_id']}]** {message}"
         else:
             username = session["username"]
-            if dbUser:
-                if dbUser["nick"]:
-                    username = dbUser["nick"]
-            message = "**<{}#{}>** {}".format(
-                username, session["discriminator"], message
-            )  # I would like to do a @ mention, but i am worried about notify spam
+            if dbUser and dbUser["nick"]:
+                username = dbUser["nick"]
+
+            # I would like to do a @ mention, but i am worried about notify spam
+            message = f"**<{username}#{session['discriminator']}>** {message}"
+
     return message, illegal_post, illegal_reasons
 
 
@@ -158,36 +165,30 @@ def format_everyone_mention(channel, content):
             content = content.replace("@everyone", "@\u200Beveryone")
         if "@here" in content:
             content = content.replace("@here", "@\u200Bhere")
+
     return content
 
 
 def filter_guild_channel(guild_id, channel_id, force_everyone=False):
-    forced_role = get_forced_role(guild_id)
-    channels = get_guild_channels(guild_id, force_everyone, forced_role)
-    for chan in channels:
+    for chan in get_guild_channels(guild_id, force_everyone, get_forced_role(guild_id)):
         if chan["channel"]["id"] == channel_id:
             return chan
+
     return None
 
 
 def get_online_discord_users(guild_id, embed):
-    apimembers = redisqueue.list_guild_members(guild_id)
-    apimembers_filtered = {}
-    for member in apimembers:
-        apimembers_filtered[int(member["id"])] = member
-    guild_roles = redisqueue.get_guild(guild_id)["roles"]
-    guildroles_filtered = {}
-    for role in guild_roles:
-        guildroles_filtered[role["id"]] = role
+    apimembers_filtered = {int(m["id"]): m for m in redisqueue.list_guild_members(guild_id)}
+
     for member in embed["members"]:
-        apimem = apimembers_filtered.get(int(member["id"]))
         member["hoist-role"] = None
         member["color"] = None
-        if apimem:
+        if apimem := apimembers_filtered.get(int(member["id"])):
             member["hoist-role"] = apimem["hoist-role"]
             member["color"] = apimem["color"]
             member["avatar"] = apimem["avatar"]
             member["avatar_url"] = apimem["avatar_url"]
+
     return embed["members"]
 
 
@@ -251,16 +252,19 @@ def get_guild_roles(guild_id):
 def get_channel_webhook_url(guild_id, channel_id):
     if not guild_webhooks_enabled(guild_id):
         return None
+
     guild = redisqueue.get_guild(guild_id)
     guild_webhooks = guild["webhooks"]
     name = "[Titan] "
     username = session["username"]
     if len(username) > 19:
         username = username[:19]
+
     if user_unauthenticated():
         name = name + username + "#" + str(session["user_id"])
     else:
         name = name + username + "#" + str(session["discriminator"])
+
     for webhook in guild_webhooks:
         if channel_id == webhook["channel_id"] and webhook["name"] == name:
             return {
@@ -270,11 +274,9 @@ def get_channel_webhook_url(guild_id, channel_id):
                 "guild_id": webhook.get("guild_id"),
                 "channel_id": webhook.get("channel_id"),
             }
+
     webhook = discord_api.create_webhook(channel_id, name)
-    if webhook and "content" in webhook:
-        return webhook["content"]
-    else:
-        return None
+    return webhook.get("content") if webhook else None
 
 
 def delete_webhook_if_too_much(webhook):
@@ -302,21 +304,19 @@ def delete_webhook_if_too_much(webhook):
 
 
 def get_all_users(guild_id):
-    users = redisqueue.list_guild_members(guild_id)
     mem = []
-    for u in users:
+    for u in redisqueue.list_guild_members(guild_id):
         mem.append(
             {
                 "id": str(u["id"]),
                 "avatar": u["avatar"],
-                "avatar_url": generate_avatar_url(
-                    u["id"], u["avatar"], u["discriminator"], True
-                ),
+                "avatar_url": generate_avatar_url(u["id"], u["avatar"], u["discriminator"], True),
                 "username": u["username"],
                 "nickname": u["nick"],
                 "discriminator": u["discriminator"],
             }
         )
+
     return mem
 
 
@@ -330,6 +330,7 @@ def fetch():
     after_snowflake = request.args.get("after", 0, type=int)
     key = session["user_keys"][guild_id] if user_unauthenticated() else None
     status = update_user_status(guild_id, session["username"], key)
+
     messages = {}
 
     if status["banned"] or status["revoked"]:
@@ -338,18 +339,18 @@ def fetch():
             session["user_keys"].pop(guild_id, None)
             session.modified = True
     else:
-        chan = filter_guild_channel(guild_id, channel_id)
-        if not chan:
+        if not (chan := filter_guild_channel(guild_id, channel_id)):
             abort(404)
+
         if not chan.get("read") or chan["channel"]["type"] != "text":
             status_code = 401
         else:
-            messages = redisqueue.get_channel_messages(
-                guild_id, channel_id, after_snowflake
-            )
+            messages = redisqueue.get_channel_messages(guild_id, channel_id, after_snowflake)
             status_code = 200
+
     response = jsonify(messages=messages, status=status)
     response.status_code = status_code
+
     return response
 
 
@@ -360,49 +361,48 @@ def fetch_visitor():
     guild_id = request.args.get("guild_id")
     channel_id = request.args.get("channel_id")
     after_snowflake = request.args.get("after", 0, type=int)
+
     if not guild_accepts_visitors(guild_id):
         abort(403)
-    messages = {}
-    chan = filter_guild_channel(guild_id, channel_id, True)
-    if not chan:
+
+    if not (chan := filter_guild_channel(guild_id, channel_id, True)):
         abort(404)
+
     if not chan.get("read") or chan["channel"]["type"] != "text":
+        messages = {}
         status_code = 401
     else:
-        messages = redisqueue.get_channel_messages(
-            guild_id, channel_id, after_snowflake
-        )
+        messages = redisqueue.get_channel_messages(guild_id, channel_id, after_snowflake)
         status_code = 200
+
     response = jsonify(messages=messages)
     response.status_code = status_code
+
     return response
 
 
 def get_guild_specific_post_limit():
-    guild_id = request.form.get("guild_id", None)
-    try:
-        guild_id = int(guild_id)
-    except ValueError:
-        guild_id = None
-    seconds = 5
-    if guild_id:
-        dbguild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
-        if dbguild:
-            seconds = dbguild.post_timeout
-    return "1 per {} second".format(seconds)
+    guild_id = int_or_none(request.form.get("guild_id", None))
+
+    if guild_id and (
+        db_guild := db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+    ):
+        seconds = db_guild.post_timeout
+    else:
+        seconds = 5
+
+    return f"1 per {seconds} second"
 
 
 def get_post_content_max_len(guild_id):
-    try:
-        guild_id = int(guild_id)
-    except ValueError:
-        guild_id = None
-    length = 350
-    if guild_id:
-        dbguild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
-        if dbguild:
-            length = dbguild.max_message_length
-    return length
+    guild_id = int_or_none(guild_id)
+
+    if guild_id and (
+        db_guild := db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+    ):
+        return db_guild.max_message_length
+
+    return 350
 
 
 @api.route("/post", methods=["POST"])
@@ -414,35 +414,26 @@ def post():
     channel_id = request.form.get("channel_id")
     content = request.form.get("content", "")
 
-    file = None
-    if "file" in request.files:
-        file = request.files["file"]
-    if file and file.filename == "":
-        file = None
+    file = getattr(request.files.get("file"), "filename", None) or None
 
-    rich_embed = request.form.get("richembed", None)
-    if rich_embed:
-        rich_embed = json.loads(rich_embed)
+    rich_embed = json.loads(request.form.get("richembed", "{}"))
 
-    if "user_id" in session:
-        dbUser = redisqueue.get_guild_member(guild_id, session["user_id"])
-    else:
-        dbUser = None
+    db_user = (
+        redisqueue.get_guild_member(guild_id, session["user_id"])
+        if "user_id" in session
+        else None
+    )
 
-    if user_unauthenticated():
-        key = session["user_keys"][guild_id]
-    else:
-        key = None
+    key = session["user_keys"][guild_id] if user_unauthenticated() else None
 
     content, illegal_post, illegal_reasons = format_post_content(
-        guild_id, channel_id, content, dbUser
+        guild_id, channel_id, content, db_user
     )
     status = update_user_status(guild_id, session["username"], key)
     message = {}
 
     if illegal_post:
         status_code = 417
-
     if status["banned"] or status["revoked"]:
         status_code = 401
     else:
@@ -454,44 +445,39 @@ def post():
         ):
             status_code = 406
         elif not illegal_post:
-            userid = session["user_id"]
             content = format_everyone_mention(chan, content)
-            webhook = get_channel_webhook_url(guild_id, channel_id)
+
             # if userid in get_administrators_list():
             #     content = "(Titan Dev) " + content
-            if webhook:
+            if webhook := get_channel_webhook_url(guild_id, channel_id):
                 if session["unauthenticated"]:
-                    username = session["username"]
-                    if len(username) > 25:
-                        username = username[:25]
-                    username = username + "#" + str(session["user_id"])
-                    avatar = url_for(
-                        "static",
-                        filename="img/titanembeds_square.png",
-                        _external=True,
-                        _scheme="https",
-                    )
-                    dbguild = (
-                        db.session.query(Guilds)
+                    username = f"{session['username'][:25]}#{session['user_id']}"
+
+                    if (
+                        db_guild := db.session.query(Guilds)
                         .filter(Guilds.guild_id == guild_id)
                         .first()
-                    )
-                    if dbguild:
-                        icon = dbguild.guest_icon
-                        if icon:
-                            avatar = icon
+                    ) and db_guild.guest_icon:
+                        avatar = db_guild.guest_icon
+                    else:
+                        avatar = url_for(
+                            "static",
+                            filename="img/titanembeds_square.png",
+                            _external=True,
+                            _scheme="https",
+                        )
                 else:
-                    username = session["username"]
-                    if dbUser:
-                        if dbUser["nick"]:
-                            username = dbUser["nick"]
+                    username = (
+                        db_user["nick"] if db_user and db_user["nick"] else session["username"]
+                    )
+
                     # if content.startswith("(Titan Dev) "):
                     #     content = content[12:]
                     #     username = "(Titan Dev) " + username
-                    if len(username) > 25:
-                        username = username[:25]
-                    username = username + "#" + str(session["discriminator"])
+
+                    username = f"{username[:25]}#{session['discriminator']}"
                     avatar = session["avatar"]
+
                 message = discord_api.execute_webhook(
                     webhook.get("id"),
                     webhook.get("token"),
@@ -503,9 +489,8 @@ def post():
                 )
                 delete_webhook_if_too_much(webhook)
             else:
-                message = discord_api.create_message(
-                    channel_id, content, file, rich_embed
-                )
+                message = discord_api.create_message(channel_id, content, file, rich_embed)
+
             status_code = message["code"]
 
     db.session.commit()
@@ -526,9 +511,9 @@ def verify_captcha_request(captcha_response, ip_address):
     }
     if app.config["DEBUG"]:
         del payload["remoteip"]
-    r = requests.post(
-        "https://www.google.com/recaptcha/api/siteverify", data=payload
-    ).json()
+
+    r = requests.post("https://www.google.com/recaptcha/api/siteverify", data=payload).json()
+
     return r["success"]
 
 
@@ -552,9 +537,7 @@ def create_unauthenticated_user():
         abort(401)
 
     if guild_unauthcaptcha_enabled(guild_id):
-        if not verify_captcha_request(
-            request.form["captcha_response"], request.remote_addr
-        ):
+        if not verify_captcha_request(request.form["captcha_response"], request.remote_addr):
             abort(412)
 
     if not checkUserBanned(guild_id, ip_address):
@@ -592,6 +575,7 @@ def change_unauthenticated_username():
     guild_id = request.form["guild_id"]
     ip_address = get_client_ipaddr()
     username = username.strip()
+
     if len(username) < 2 or len(username) > 32:
         abort(406)
     if not all(x.isalnum() or x.isspace() or "-" == x or "_" == x for x in username):
@@ -600,7 +584,7 @@ def change_unauthenticated_username():
         abort(404)
     if not guild_query_unauth_users_bool(guild_id):
         abort(401)
-    final_response = None
+
     if not checkUserBanned(guild_id, ip_address):
         if (
             "user_keys" not in session
@@ -608,6 +592,7 @@ def change_unauthenticated_username():
             or not session["unauthenticated"]
         ):
             abort(424)
+
         emitmsg = {
             "unauthenticated": True,
             "username": session["username"],
@@ -616,11 +601,13 @@ def change_unauthenticated_username():
         session["username"] = username
         if "user_id" not in session or len(str(session["user_id"])) > 4:
             session["user_id"] = random.randint(0, 9999)
+
         user = UnauthenticatedUsers(guild_id, username, session["user_id"], ip_address)
         db.session.add(user)
         key = user.user_key
         session["user_keys"][guild_id] = key
         status = update_user_status(guild_id, username, key)
+
         emit(
             "embed_user_disconnect",
             emitmsg,
@@ -633,25 +620,18 @@ def change_unauthenticated_username():
         response = jsonify(status=status)
         response.status_code = 403
         final_response = response
+
     db.session.commit()
     return final_response
 
 
 def get_guild_guest_icon(guild_id):
-    guest_icon = (
-        db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first().guest_icon
-    )
-    return (
-        guest_icon
-        if guest_icon
-        else url_for("static", filename="img/titanembeds_square.png")
-    )
+    guest_icon = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first().guest_icon
+    return guest_icon if guest_icon else url_for("static", filename="img/titanembeds_square.png")
 
 
 def process_query_guild(guild_id, visitor=False):
-    channels = get_guild_channels(
-        guild_id, visitor, forced_role=(get_forced_role(guild_id))
-    )
+    channels = get_guild_channels(guild_id, visitor, forced_role=(get_forced_role(guild_id)))
 
     # Discord members & embed members listed here is moved to its own api endpoint
     if visitor:
@@ -689,11 +669,13 @@ def query_guild():
 @abort_if_guild_disabled()
 def query_guild_visitor():
     guild_id = request.args.get("guild_id")
-    if check_guild_existance(guild_id):
-        if not guild_accepts_visitors(guild_id):
-            abort(403)
-        return process_query_guild(guild_id, True)
-    abort(404)
+
+    if not check_guild_existance(guild_id):
+        abort(404)
+    if not guild_accepts_visitors(guild_id):
+        abort(403)
+
+    return process_query_guild(guild_id, True)
 
 
 @api.route("/server_members", methods=["GET"])
@@ -701,13 +683,15 @@ def query_guild_visitor():
 @valid_session_required(api=True)
 def server_members():
     abort(404)
+
     guild_id = request.args.get("guild_id", None)
+
     if not check_guild_existance(guild_id):
         abort(404)
     if not check_user_in_guild(guild_id):
         abort(403)
-    members = query_server_members(guild_id)
-    return jsonify(members)
+
+    return jsonify(query_server_members(guild_id))
 
 
 @api.route("/server_members_visitor", methods=["GET"])
@@ -715,12 +699,13 @@ def server_members():
 def server_members_visitor():
     abort(404)
     guild_id = request.args.get("guild_id", None)
+
     if not check_guild_existance(guild_id):
         abort(404)
     if not guild_accepts_visitors(guild_id):
         abort(403)
-    members = query_server_members(guild_id)
-    return jsonify(members)
+
+    return jsonify(query_server_members(guild_id))
 
 
 def query_server_members(guild_id):
@@ -738,10 +723,10 @@ def query_server_members(guild_id):
             }
         ]
         widgetenabled = False
-    embedmembers = get_online_embed_users(guild_id)
+
     return {
         "discordmembers": discordmembers,
-        "embedmembers": embedmembers,
+        "embedmembers": get_online_embed_users(guild_id),
         "widgetenabled": widgetenabled,
     }
 
@@ -750,12 +735,12 @@ def query_server_members(guild_id):
 @discord_users_only(api=True)
 @abort_if_guild_disabled()
 def create_authenticated_user():
-    guild_id = request.form.get("guild_id")
     if session["unauthenticated"]:
         response = jsonify(error=True)
         response.status_code = 401
         return response
 
+    guild_id = request.form.get("guild_id")
     if not check_guild_existance(guild_id):
         abort(404)
 
@@ -766,12 +751,12 @@ def create_authenticated_user():
         if not add_member["success"]:
             discord_status_code = add_member["content"].get("code", 0)
             if discord_status_code == 40007:  # user banned from server
-                status = {"banned": True}
-                response = jsonify(status=status)
+                response = jsonify(status={"banned": True})
                 response.status_code = 403
             else:
                 response = jsonify(add_member)
                 response.status_code = 422
+
             return response
 
     db_user = (
@@ -817,14 +802,13 @@ def user_info(guild_id, user_id):
         usr["avatar_url"] = generate_avatar_url(
             usr["id"], usr["avatar"], usr["discriminator"], True
         )
+
         roles = get_member_roles(guild_id, user_id)
         guild_roles = redisqueue.get_guild(guild_id)["roles"]
-        for r in roles:
-            for gr in guild_roles:
-                if gr["id"] == r:
-                    usr["roles"].append(gr)
+        usr["roles"] = [gr for gr in guild_roles for r in roles if gr["id"] == r]
+
         usr["badges"] = get_badges(user_id)
-        if redisqueue.redis_store.get("DiscordBotsOrgVoted/" + str(member["id"])):
+        if redisqueue.redis_store.get(f"DiscordBotsOrgVoted/{member['id']}"):
             usr["badges"].append("discordbotsorgvoted")
 
     return jsonify(usr)
@@ -841,61 +825,49 @@ def list_users(guild_id):
 def webhook_discordbotsorg_vote():
     incoming = request.get_json()
     client_id = incoming.get("bot")
+
     if str(config["client-id"]) != str(client_id):
         abort(401)
+
     if str(request.headers.get("Authorization", "")) != str(
         config.get("discordbotsorg-webhook-secret", "")
     ):
         abort(403)
 
-    user_id = str(incoming.get("user"))
-    vote_type = str(incoming.get("type"))
+    user_id = incoming.get("user")
     params = dict(parse_qsl(urlsplit(incoming.get("query", "")).query))
-    if vote_type == "upvote":
-        redisqueue.redis_store.set("DiscordBotsOrgVoted/" + user_id, "voted", 86400)
-    referrer = None
-    if "referrer" in params:
-        try:
-            referrer = int(params["referrer"])
-        except ValueError:
-            pass
 
-    DBLTrans = DiscordBotsOrgTransactions(int(user_id), vote_type, referrer)
+    vote_type = str(incoming.get("type"))
+    if vote_type == "upvote":
+        redisqueue.redis_store.set(f"DiscordBotsOrgVoted/{user_id}", "voted", 86400)
+
+    DBLTrans = DiscordBotsOrgTransactions(
+        int(user_id), vote_type, int_or_none(params.get("referrer"))
+    )
     db.session.add(DBLTrans)
     db.session.commit()
-    return ("", 204)
+
+    return "", 204
 
 
 @api.route("/bot/ban", methods=["POST"])
 def bot_ban():
     if request.headers.get("Authorization", "") != config.get("app-secret", ""):
         return jsonify(error="Authorization header does not match."), 403
+
     incoming = request.get_json()
     guild_id = incoming.get("guild_id", None)
     placer_id = incoming.get("placer_id", None)
     username = incoming.get("username", None)
     discriminator = incoming.get("discriminator", None)
+
     if not guild_id or not placer_id or not username:
         return jsonify(error="Missing required parameters."), 400
-    if discriminator:
-        dbuser = (
-            db.session.query(UnauthenticatedUsers)
-            .filter(UnauthenticatedUsers.guild_id == str(guild_id))
-            .filter(UnauthenticatedUsers.username.ilike("%" + username + "%"))
-            .filter(UnauthenticatedUsers.discriminator == discriminator)
-            .order_by(UnauthenticatedUsers.id.desc())
-            .first()
-        )
-    else:
-        dbuser = (
-            db.session.query(UnauthenticatedUsers)
-            .filter(UnauthenticatedUsers.guild_id == str(guild_id))
-            .filter(UnauthenticatedUsers.username.ilike("%" + username + "%"))
-            .order_by(UnauthenticatedUsers.id.desc())
-            .first()
-        )
+
+    dbuser = query_unauthenticated_users_like(username, guild_id, discriminator)
     if not dbuser:
         return jsonify(error="Guest user cannot be found."), 404
+
     dbban = (
         db.session.query(UnauthenticatedBans)
         .filter(UnauthenticatedBans.guild_id == str(guild_id))
@@ -907,13 +879,12 @@ def bot_ban():
         if dbban.lifter_id is None:
             return (
                 jsonify(
-                    error="Guest user, **{}#{}**, has already been banned.".format(
-                        dbban.last_username, dbban.last_discriminator
-                    )
+                    error=f"Guest user, **{dbban.last_username}#{dbban.last_discriminator}**, has already been banned."
                 ),
                 409,
             )
         db.session.delete(dbban)
+
     dbban = UnauthenticatedBans(
         str(guild_id),
         dbuser.ip_address,
@@ -925,9 +896,7 @@ def bot_ban():
     db.session.add(dbban)
     db.session.commit()
     return jsonify(
-        success="Guest user, **{}#{}**, has successfully been added to the ban list!".format(
-            dbban.last_username, dbban.last_discriminator
-        )
+        success=f"Guest user, **{dbban.last_username}#{dbban.last_discriminator}**, has successfully been added to the ban list!"
     )
 
 
@@ -935,6 +904,7 @@ def bot_ban():
 def bot_unban():
     if request.headers.get("Authorization", "") != config.get("app-secret", ""):
         return jsonify(error="Authorization header does not match."), 403
+
     incoming = request.get_json()
     guild_id = incoming.get("guild_id", None)
     lifter_id = incoming.get("lifter_id", None)
@@ -944,23 +914,7 @@ def bot_unban():
     if not guild_id or not lifter_id or not username:
         return jsonify(error="Missing required parameters."), 400
 
-    if discriminator:
-        dbuser = (
-            db.session.query(UnauthenticatedUsers)
-            .filter(UnauthenticatedUsers.guild_id == str(guild_id))
-            .filter(UnauthenticatedUsers.username.ilike("%" + username + "%"))
-            .filter(UnauthenticatedUsers.discriminator == discriminator)
-            .order_by(UnauthenticatedUsers.id.desc())
-            .first()
-        )
-    else:
-        dbuser = (
-            db.session.query(UnauthenticatedUsers)
-            .filter(UnauthenticatedUsers.guild_id == str(guild_id))
-            .filter(UnauthenticatedUsers.username.ilike("%" + username + "%"))
-            .order_by(UnauthenticatedUsers.id.desc())
-            .first()
-        )
+    dbuser = query_unauthenticated_users_like(username, guild_id, discriminator)
     if not dbuser:
         return jsonify(error="Guest user cannot be found."), 404
 
@@ -973,9 +927,7 @@ def bot_unban():
     if dbban is None:
         return (
             jsonify(
-                error="Guest user **{}#{}** has not been banned.".format(
-                    dbuser.username, dbuser.discriminator
-                )
+                error=f"Guest user **{dbuser.username}#{dbuser.discriminator}** has not been banned."
             ),
             404,
         )
@@ -983,9 +935,7 @@ def bot_unban():
     if dbban.lifter_id is not None:
         return (
             jsonify(
-                error="Guest user **{}#{}** ban has already been removed.".format(
-                    dbuser.username, dbuser.discriminator
-                )
+                error=f"Guest user **{dbuser.username}#{dbuser.discriminator}** ban has already been removed."
             ),
             409,
         )
@@ -994,9 +944,7 @@ def bot_unban():
     db.session.commit()
 
     return jsonify(
-        success="Guest user, **{}#{}**, has successfully been removed from the ban list!".format(
-            dbuser.username, dbuser.discriminator
-        )
+        success=f"Guest user, **{dbuser.username}#{dbuser.discriminator}**, has successfully been removed from the ban list!"
     )
 
 
@@ -1008,62 +956,41 @@ def bot_revoke():
     guild_id = incoming.get("guild_id", None)
     username = incoming.get("username", None)
     discriminator = incoming.get("discriminator", None)
+
     if not guild_id or not username:
         return jsonify(error="Missing required parameters."), 400
 
-    if discriminator:
-        dbuser = (
-            db.session.query(UnauthenticatedUsers)
-            .filter(UnauthenticatedUsers.guild_id == str(guild_id))
-            .filter(UnauthenticatedUsers.username.ilike("%" + username + "%"))
-            .filter(UnauthenticatedUsers.discriminator == discriminator)
-            .order_by(UnauthenticatedUsers.id.desc())
-            .first()
-        )
-    else:
-        dbuser = (
-            db.session.query(UnauthenticatedUsers)
-            .filter(UnauthenticatedUsers.guild_id == str(guild_id))
-            .filter(UnauthenticatedUsers.username.ilike("%" + username + "%"))
-            .order_by(UnauthenticatedUsers.id.desc())
-            .first()
-        )
-
+    dbuser = query_unauthenticated_users_like(username, guild_id, discriminator)
     if not dbuser:
         return jsonify(error="Guest user cannot be found."), 404
     elif dbuser.revoked:
         return (
             jsonify(
-                error="Guest user **{}#{}** has already been kicked!".format(
-                    dbuser.username, dbuser.discriminator
-                )
+                error=f"Guest user **{dbuser.username}#{dbuser.discriminator}** has already been kicked!"
             ),
             409,
         )
 
     dbuser.revoked = True
     db.session.commit()
-    return jsonify(
-        success="Successfully kicked **{}#{}**!".format(
-            dbuser.username, dbuser.discriminator
-        )
-    )
+    return jsonify(success=f"Successfully kicked **{dbuser.username}#{dbuser.discriminator}**!")
 
 
 @api.route("/bot/members")
 def bot_members():
     if request.headers.get("Authorization", "") != config.get("app-secret", ""):
         return jsonify(error="Authorization header does not match."), 403
-    guild_id = request.args.get("guild_id")
-    members = get_online_embed_users(guild_id)
-    return jsonify(members)
+
+    return jsonify(get_online_embed_users(request.args.get("guild_id")))
 
 
 @api.route("/af/direct_message", methods=["POST"])
 def af_direct_message_post():
-    cs = request.form.get("cs", None)
-    input = request.form.get("input")
-    cleverbot_url = "http://www.cleverbot.com/getreply"
-    payload = {"key": config["cleverbot-api-key"], "cs": cs, "input": input}
-    r = requests.get(cleverbot_url, params=payload)
+    payload = {
+        "key": config["cleverbot-api-key"],
+        "cs": request.form.get("cs", None),
+        "input": request.form.get("input"),
+    }
+    r = requests.get(CLEVERBOT_URL, params=payload)
+
     return jsonify(r.json())

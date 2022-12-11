@@ -5,8 +5,11 @@ import datetime
 from datetime import timedelta
 
 from config import config
+from flask_babel import Babel
+from flask_socketio import SocketIO, disconnect
 from werkzeug.middleware.proxy_fix import ProxyFix
 
+from .constants import LANGUAGE_CODE_LIST
 
 try:
     import uwsgi
@@ -31,16 +34,11 @@ from titanembeds.database import (
     get_application_settings,
     init_application_settings,
 )
-from titanembeds.utils import (
-    babel,
-    language_code_list,
-    rate_limiter,
-    socketio,
-)
-from .discordrest import discord_api
 
+from . import rate_limiter
 from .blueprints import admin, api, embed, gateway, user
 from .database import db
+from .discord_rest import discord_api
 from .redisqueue import init_redis
 
 
@@ -62,6 +60,8 @@ if __name__ != "__main__":
     app.logger.setLevel(gunicorn_logger.level)
     for handler in app.logger.handlers:
         handler.setFormatter(logging.Formatter(" %(levelname)s %(name)s: %(message)s"))
+
+log = logging.getLogger(__name__)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = config["database-uri"]
 # Suppress the warning/no need this on for now.
@@ -90,14 +90,23 @@ if config["enable-ssl"]:
 if config["https-proxy"]:
     app.wsgi_app = ProxyFix(app.wsgi_app)
 
-
+socketio = SocketIO(logger=log, engineio_logger=log)
 socketio.init_app(
     app,
     message_queue=config["redis-uri"],
     path="gateway",
     async_mode=config.get("websockets-mode", None),
 )
+
+
+@socketio.on_error_default  # disconnect on all errors
+def default_socketio_error_handler(e):
+    disconnect()
+
+
+babel = Babel()
 babel.init_app(app)
+
 init_redis(config["redis-uri"])
 with app.app_context():
     init_application_settings()
@@ -113,9 +122,9 @@ socketio.on_namespace(gateway.Gateway("/gateway"))
 @babel.localeselector
 def get_locale():
     param_lang = request.args.get("lang", None)
-    if param_lang in language_code_list():
+    if param_lang in LANGUAGE_CODE_LIST:
         return param_lang
-    return request.accept_languages.best_match(language_code_list())
+    return request.accept_languages.best_match(LANGUAGE_CODE_LIST)
 
 
 @app.route("/")

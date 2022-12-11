@@ -2,11 +2,17 @@ import json
 import logging
 from pprint import pformat
 
-from config import config
-from flask import Blueprint, abort
-from flask import jsonify, redirect, render_template, request, session, url_for
+from flask import (
+    Blueprint,
+    abort,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 from flask_socketio import emit
-
 from titanembeds.database import (
     Cosmetics,
     Guilds,
@@ -18,22 +24,25 @@ from titanembeds.database import (
     list_disabled_guilds,
 )
 from titanembeds.decorators import discord_users_only
-from titanembeds.oauth import (
-    authorize_url,
+from titanembeds.discord_rest.oauth import (
+    PERMISSION_BAN,
+    PERMISSION_KICK,
+    PERMISSION_MANAGE,
+    get_authorization_url,
+    get_token,
+)
+from titanembeds.discord_rest.user import (
     check_user_can_administrate_guild,
     check_user_permission,
+    get_current_authenticated_user,
+    get_user_managed_servers,
+)
+from titanembeds.utils import (
     generate_avatar_url,
     generate_bot_invite_url,
     generate_guild_icon_url,
-    get_current_authenticated_user,
-    get_user_managed_servers,
-    make_authenticated_session,
-    token_url,
-    PERMISSION_KICK,
-    PERMISSION_MANAGE,
-    PERMISSION_BAN,
+    redisqueue,
 )
-from titanembeds.utils import redisqueue
 
 log = logging.getLogger(__name__)
 user = Blueprint("user", __name__)
@@ -43,12 +52,7 @@ user = Blueprint("user", __name__)
 def login_authenticated():
     session["redirect"] = request.args.get("redirect")
     scope = ["identify", "guilds", "guilds.join"]
-    discord = make_authenticated_session(scope=scope)
-    authorization_url, state = discord.authorization_url(
-        authorize_url,
-        access_type="offline",
-        prompt="none",
-    )
+    authorization_url, state = get_authorization_url(scope)
     session["oauth2_state"] = state
     return redirect(authorization_url)
 
@@ -67,12 +71,7 @@ def callback():
             )
         )
 
-    discord = make_authenticated_session(state=state)
-    discord_token = discord.fetch_token(
-        token_url,
-        client_secret=config["client-secret"],
-        authorization_response=request.url,
-    )
+    discord_token = get_token(state)
     if not discord_token:
         return redirect(url_for("user.logout", error="discord_user_token_fetch_error"))
 
@@ -84,9 +83,7 @@ def callback():
     session["user_id"] = int(user["id"])
     session["username"] = user["username"]
     session["discriminator"] = user["discriminator"]
-    session["avatar"] = generate_avatar_url(
-        user["id"], user["avatar"], user["discriminator"]
-    )
+    session["avatar"] = generate_avatar_url(user["id"], user["avatar"], user["discriminator"])
     session["tokens"] = get_titan_token(session["user_id"])
 
     if session["tokens"] == -1:
@@ -117,9 +114,7 @@ def logout():
 
 
 def count_user_premium_css():
-    css_list = (
-        db.session.query(UserCSS).filter(UserCSS.user_id == session["user_id"]).all()
-    )
+    css_list = db.session.query(UserCSS).filter(UserCSS.user_id == session["user_id"]).all()
     return len([css for css in css_list if css.css is not None])
 
 
@@ -134,9 +129,7 @@ def dashboard():
         return redirect(redir)
 
     cosmetics = (
-        db.session.query(Cosmetics)
-        .filter(Cosmetics.user_id == session["user_id"])
-        .first()
+        db.session.query(Cosmetics).filter(Cosmetics.user_id == session["user_id"]).first()
     )
     css_list = None
     if cosmetics and cosmetics.css:
@@ -162,9 +155,7 @@ def dashboard():
 @discord_users_only()
 def new_custom_css_get():
     cosmetics = (
-        db.session.query(Cosmetics)
-        .filter(Cosmetics.user_id == session["user_id"])
-        .first()
+        db.session.query(Cosmetics).filter(Cosmetics.user_id == session["user_id"]).first()
     )
     if not cosmetics or not cosmetics.css:
         abort(403)
@@ -182,9 +173,7 @@ def new_custom_css_get():
 @discord_users_only()
 def new_custom_css_post():
     cosmetics = (
-        db.session.query(Cosmetics)
-        .filter(Cosmetics.user_id == session["user_id"])
-        .first()
+        db.session.query(Cosmetics).filter(Cosmetics.user_id == session["user_id"]).first()
     )
     if not cosmetics or not cosmetics.css:
         abort(403)
@@ -213,9 +202,7 @@ def new_custom_css_post():
 @discord_users_only()
 def edit_custom_css_get(css_id):
     cosmetics = (
-        db.session.query(Cosmetics)
-        .filter(Cosmetics.user_id == session["user_id"])
-        .first()
+        db.session.query(Cosmetics).filter(Cosmetics.user_id == session["user_id"]).first()
     )
     if not cosmetics or not cosmetics.css:
         abort(403)
@@ -245,9 +232,7 @@ def edit_custom_css_get(css_id):
 @discord_users_only()
 def edit_custom_css_post(css_id):
     cosmetics = (
-        db.session.query(Cosmetics)
-        .filter(Cosmetics.user_id == session["user_id"])
-        .first()
+        db.session.query(Cosmetics).filter(Cosmetics.user_id == session["user_id"]).first()
     )
     if not cosmetics or not cosmetics.css:
         abort(403)
@@ -283,9 +268,7 @@ def edit_custom_css_post(css_id):
 @discord_users_only()
 def edit_custom_css_delete(css_id):
     cosmetics = (
-        db.session.query(Cosmetics)
-        .filter(Cosmetics.user_id == session["user_id"])
-        .first()
+        db.session.query(Cosmetics).filter(Cosmetics.user_id == session["user_id"]).first()
     )
     if not cosmetics or not cosmetics.css:
         abort(403)
@@ -333,9 +316,7 @@ def administrate_guild(guild_id):
         permissions.append("Kick Members")
 
     cosmetics = (
-        db.session.query(Cosmetics)
-        .filter(Cosmetics.user_id == session["user_id"])
-        .first()
+        db.session.query(Cosmetics).filter(Cosmetics.user_id == session["user_id"]).first()
     )
     all_members = (
         db.session.query(UnauthenticatedUsers)
@@ -399,25 +380,15 @@ def update_administrate_guild(guild_id):
         abort(403)
 
     true = ["true", True]
-    db_guild.unauth_users = (
-        request.form.get("unauth_users", db_guild.unauth_users) in true
-    )
-    db_guild.visitor_view = (
-        request.form.get("visitor_view", db_guild.visitor_view) in true
-    )
+    db_guild.unauth_users = request.form.get("unauth_users", db_guild.unauth_users) in true
+    db_guild.visitor_view = request.form.get("visitor_view", db_guild.visitor_view) in true
     db_guild.webhook_messages = (
         request.form.get("webhook_messages", db_guild.webhook_messages) in true
     )
     db_guild.chat_links = request.form.get("chat_links", db_guild.chat_links) in true
-    db_guild.bracket_links = (
-        request.form.get("bracket_links", db_guild.bracket_links) in true
-    )
-    db_guild.mentions_limit = request.form.get(
-        "mentions_limit", db_guild.mentions_limit
-    )
-    db_guild.unauth_captcha = (
-        request.form.get("unauth_captcha", db_guild.unauth_captcha) in true
-    )
+    db_guild.bracket_links = request.form.get("bracket_links", db_guild.bracket_links) in true
+    db_guild.mentions_limit = request.form.get("mentions_limit", db_guild.mentions_limit)
+    db_guild.unauth_captcha = request.form.get("unauth_captcha", db_guild.unauth_captcha) in true
     db_guild.post_timeout = request.form.get("post_timeout", db_guild.post_timeout)
     db_guild.max_message_length = request.form.get(
         "max_message_length", db_guild.max_message_length
@@ -426,9 +397,7 @@ def update_administrate_guild(guild_id):
         request.form.get("banned_words_enabled", db_guild.banned_words_enabled) in true
     )
     db_guild.banned_words_global_included = (
-        request.form.get(
-            "banned_words_global_included", db_guild.banned_words_global_included
-        )
+        request.form.get("banned_words_global_included", db_guild.banned_words_global_included)
         in true
     )
     db_guild.autorole_unauth = request.form.get(
