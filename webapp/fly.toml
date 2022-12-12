@@ -6,6 +6,8 @@ kill_timeout = 5
 processes = []
 
 [env]
+TITAN_BOT_ADDR="ddr-discord-bot.internal"
+TITAN_BOT_IPV6="True"
 TITAN_CDN_DOMAIN="https://titan-git-master-dublin-digital-radio.vercel.app"
 
 [experimental]
@@ -18,6 +20,7 @@ TITAN_CDN_DOMAIN="https://titan-git-master-dublin-digital-radio.vercel.app"
   processes = ["app"]
   protocol = "tcp"
   script_checks = []
+
   [services.concurrency]
     hard_limit = 25
     soft_limit = 20

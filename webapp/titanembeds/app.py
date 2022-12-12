@@ -1,8 +1,7 @@
 import time
 import random
 import logging
-import datetime
-from datetime import timedelta
+from datetime import date, datetime, timedelta
 from urllib.parse import urlparse
 
 from config import config
@@ -40,8 +39,8 @@ from . import rate_limiter
 from .blueprints import admin, api, embed, gateway, user
 from .database import db
 from .discord_rest import discord_api
-from .redisqueue import init_redis
 from .flask_cdn import CDN
+from .redis_cache import init_redis
 
 
 class Error(Exception):
@@ -201,8 +200,8 @@ def context_processor():
         "devs": get_administrators_list(),
         "sentry_js_dsn": config.get("sentry-js-dsn", None),
         "constants": constants,
-        "af_mode_enabled": datetime.datetime.now().date()
-        == datetime.date(datetime.datetime.now().year, 4, 1),
+        "af_mode_enabled": datetime.now().date()
+        == date(datetime.now().year, 4, 1),
         "app_start_stamp": app_start_stamp,
     }
 

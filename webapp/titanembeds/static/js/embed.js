@@ -1759,12 +1759,9 @@ function pathJoin(parts, sep){
     }
 
     function fill_discord_messages(messages, jumpscroll, replace) {
-        if (replace === undefined) {
-            replace = null;
-        }
-        if (messages.length === 0) {
-            return last_message_id;
-        }
+        if (messages.length === 0) return last_message_id;
+
+        if (replace === undefined) replace = null;
 
         var last = 0;
         var template = $('#mustache_usermessage').html();
