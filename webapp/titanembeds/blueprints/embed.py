@@ -20,6 +20,7 @@ from flask import (
 from flask_babel import gettext
 from titanembeds import redisqueue
 from titanembeds.database import Guilds, UserCSS, db, list_disabled_guilds
+from titanembeds.redis_cache import get_online_embed_user_keys
 from titanembeds.utils import (
     generate_guild_icon_url,
     guild_accepts_visitors,
@@ -87,7 +88,7 @@ def parse_url_domain(url):
 
 
 def is_peak(guild_id):
-    usrs = redisqueue.get_online_embed_user_keys(guild_id)
+    usrs = get_online_embed_user_keys(guild_id)
     return (
         len(usrs["AuthenticatedUsers"]) + len(usrs["UnauthenticatedUsers"])
     ) > 10

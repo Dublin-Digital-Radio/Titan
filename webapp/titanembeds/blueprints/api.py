@@ -15,7 +15,7 @@ from flask import jsonify, request, session, url_for
 from flask_socketio import emit
 from itsdangerous.exc import BadSignature
 from sqlalchemy import and_
-from titanembeds import rate_limiter, redisqueue
+from titanembeds import rate_limiter, redis_cache, redisqueue
 from titanembeds.cache_keys import (
     channel_ratelimit_key,
     get_client_ipaddr,
@@ -214,7 +214,7 @@ def get_online_discord_users(guild_id, embed):
 
 
 def get_online_embed_users(guild_id):
-    usrs = redisqueue.get_online_embed_user_keys(guild_id)
+    usrs = redis_cache.get_online_embed_user_keys(guild_id)
 
     unauths = (
         db.session.query(UnauthenticatedUsers)
@@ -407,6 +407,7 @@ def get_all_users(guild_id):
 # GET
 # 	https://ddr-titan.fly.dev/api/fetch?guild_id=1022123131948769430&channel_id=1022123131948769436&after=
 def fetch():
+    log.info("fetch")
     guild_id = request.args.get("guild_id")
     channel_id = request.args.get("channel_id")
     after_snowflake = request.args.get("after", 0, type=int)
@@ -893,7 +894,7 @@ def user_info(guild_id, user_id):
         ]
 
         usr["badges"] = get_badges(user_id)
-        if redisqueue.redis_store.get(f"DiscordBotsOrgVoted/{member['id']}"):
+        if redis_cache.redis_store.get(f"DiscordBotsOrgVoted/{member['id']}"):
             usr["badges"].append("discordbotsorgvoted")
 
     return jsonify(usr)
@@ -922,7 +923,7 @@ def webhook_discordbotsorg_vote():
 
     vote_type = str(incoming.get("type"))
     if vote_type == "upvote":
-        redisqueue.redis_store.set(
+        redis_cache.redis_store.set(
             f"DiscordBotsOrgVoted/{user_id}", "voted", 86400
         )
 

@@ -4,7 +4,7 @@ import time
 
 import requests
 from config import config
-from titanembeds import redisqueue
+from titanembeds import redis_cache, redisqueue
 
 _DISCORD_API_BASE = "https://discordapp.com/api/v6"
 
@@ -28,16 +28,18 @@ class DiscordREST:
             self._set_bucket("global_limit_expire", 0)
 
     def _get_bucket(self, key):
-        value = redisqueue.redis_store.get(self.global_redis_prefix + key)
+        value = redis_cache.redis_store.get(self.global_redis_prefix + key)
         if value:
             value = value
         return value
 
     def _set_bucket(self, key, value):
-        return redisqueue.redis_store.set(self.global_redis_prefix + key, value)
+        return redis_cache.redis_store.set(
+            self.global_redis_prefix + key, value
+        )
 
     def _bucket_contains(self, key):
-        return redisqueue.redis_store.exists(self.global_redis_prefix + key)
+        return redis_cache.redis_store.exists(self.global_redis_prefix + key)
 
     def request(self, verb, url, **kwargs):
         headers = {
@@ -202,7 +204,7 @@ class DiscordREST:
         payload = {"name": name}
         if avatar:
             payload["avatar"] = avatar
-        redisqueue.guild_clear_cache(guild_id)
+        redis_cache.guild_clear_cache(guild_id)
         return self.request("POST", _endpoint, data=payload, json=True)
 
     def execute_webhook(
@@ -249,7 +251,7 @@ class DiscordREST:
         return self.request("POST", _endpoint, data=payload, json=is_json)
 
     def delete_webhook(self, webhook_id, webhook_token, guild_id):
-        redisqueue.guild_clear_cache(guild_id)
+        redis_cache.guild_clear_cache(guild_id)
         _endpoint = f"/webhooks/{webhook_id}/{webhook_token}"
         return self.request("DELETE", _endpoint)
 
