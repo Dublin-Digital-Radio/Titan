@@ -102,6 +102,7 @@ socketio.init_app(
 @socketio.on_error_default  # disconnect on all errors
 def default_socketio_error_handler(e):
     disconnect()
+    log.error("Socketio error", exc_info=(type(e), e, e.__traceback__))
 
 
 babel = Babel()
