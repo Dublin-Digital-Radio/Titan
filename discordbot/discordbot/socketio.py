@@ -2,12 +2,12 @@ import discord
 import socketio
 
 from discordbot.utils import (
-    get_formatted_channel,
-    get_formatted_emojis,
-    get_formatted_guild,
-    get_formatted_message,
-    get_formatted_role,
-    get_formatted_user,
+    format_channel,
+    format_formatted_emojis,
+    format_guild,
+    format_message,
+    format_role,
+    format_user,
 )
 
 
@@ -21,7 +21,7 @@ class SocketIOInterface:
 
         await self.io.emit(
             action,
-            data=get_formatted_message(message),
+            data=format_message(message),
             room=f"CHANNEL_{message.channel.id}",
             namespace="/gateway",
         )
@@ -47,7 +47,7 @@ class SocketIOInterface:
     async def on_guild_member(self, message, member):
         await self.io.emit(
             message,
-            data=get_formatted_user(member),
+            data=format_user(member),
             room=f"GUILD_{member.guild.id}",
             namespace="/gateway",
         )
@@ -67,7 +67,7 @@ class SocketIOInterface:
 
         await self.io.emit(
             "GUILD_EMOJIS_UPDATE",
-            data=get_formatted_emojis(emojis),
+            data=format_formatted_emojis(emojis),
             room=f"GUILD_{emojis[0].guild.id}",
             namespace="/gateway",
         )
@@ -78,7 +78,7 @@ class SocketIOInterface:
 
         await self.io.emit(
             message,
-            data=get_formatted_channel(channel),
+            data=format_channel(channel),
             room=f"GUILD_{channel.guild.id}",
             namespace="/gateway",
         )
@@ -97,7 +97,7 @@ class SocketIOInterface:
 
         await self.io.emit(
             "CHANNEL_UPDATE",
-            data=get_formatted_channel(channel),
+            data=format_channel(channel),
             room=f"GUILD_{channel.guild.id}",
             namespace="/gateway",
         )
@@ -105,7 +105,7 @@ class SocketIOInterface:
     async def on_guild_update(self, guild):
         await self.io.emit(
             "GUILD_UPDATE",
-            data=get_formatted_guild(guild),
+            data=format_guild(guild),
             room=f"GUILD_{guild.id}",
             namespace="/gateway",
         )
@@ -113,7 +113,7 @@ class SocketIOInterface:
     async def on_guild_role(self, role, message):
         await self.io.emit(
             message,
-            data=get_formatted_role(role),
+            data=format_role(role),
             room=f"GUILD_{role.guild.id}",
             namespace="/gateway",
         )

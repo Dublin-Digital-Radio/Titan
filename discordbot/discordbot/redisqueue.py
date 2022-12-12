@@ -14,11 +14,7 @@ from redis.asyncio.retry import Retry
 from redis.backoff import ConstantBackoff
 from redis.exceptions import ConnectionError, TimeoutError
 
-from discordbot.utils import (
-    get_formatted_guild,
-    get_formatted_message,
-    get_formatted_user,
-)
+from discordbot.utils import format_guild, format_message, format_user
 
 log = logging.getLogger(__name__)
 
@@ -137,7 +133,7 @@ class RedisQueue:
         messages = []
         if channel.permissions_for(me).read_messages:
             async for message in channel.history(limit=50):
-                messages.append(json.dumps(get_formatted_message(message), separators=(",", ":")))
+                messages.append(json.dumps(format_message(message), separators=(",", ":")))
 
         await self.connection.sadd(key, "", *messages)
 
@@ -149,7 +145,7 @@ class RedisQueue:
         if not await self.connection.exists(key):
             return
 
-        message = get_formatted_message(message)
+        message = format_message(message)
         await self.connection.sadd(key, json.dumps(message, separators=(",", ":")))
 
     async def delete_message(self, message):
@@ -182,7 +178,7 @@ class RedisQueue:
 
             member = members[0]
 
-        user = get_formatted_user(member)
+        user = format_user(member)
         await self.connection.set(key, json.dumps(user, separators=(",", ":")))
         await self.enforce_expiring_key(key)
 
@@ -268,7 +264,7 @@ class RedisQueue:
         else:
             server_webhooks = []
 
-        guild_fmtted = get_formatted_guild(guild, server_webhooks)
+        guild_fmtted = format_guild(guild, server_webhooks)
         await self.connection.set(key, json.dumps(guild_fmtted, separators=(",", ":")))
         await self.enforce_expiring_key(key)
 

@@ -9,7 +9,7 @@ def format_datetime(datetimeobj):
     return emailutils.format_datetime(datetimeobj)
 
 
-def get_formatted_message(message):
+def format_message(message):
     edit_ts = message.edited_at
     edit_ts = None if not edit_ts else format_datetime(edit_ts)
 
@@ -19,18 +19,18 @@ def get_formatted_message(message):
         "id": str(message.id),
         "channel_id": str(message.channel.id),
         "content": message.content,
-        "author": get_message_author(message),
+        "author": format_message_author(message),
         "timestamp": format_datetime(message.created_at),
         "edited_timestamp": edit_ts,
         "type": msg_type,
     }
 
     if hasattr(message, "mentions"):
-        msg["mentions"] = get_message_mentions(message.mentions)
+        msg["mentions"] = format_message_mentions(message.mentions)
     if hasattr(message, "attachments"):
-        msg["attachments"] = get_attachments_list(message.attachments)
+        msg["attachments"] = format_attachments_list(message.attachments)
     if hasattr(message, "embeds"):
-        msg["embeds"] = get_embeds_list(message.embeds)
+        msg["embeds"] = format_embeds_list(message.embeds)
     if hasattr(message, "author"):
         nickname = None
         if hasattr(message.author, "nick") and message.author.nick:
@@ -43,12 +43,12 @@ def get_formatted_message(message):
             if member:
                 mention["nickname"] = member.nick
     if hasattr(message, "reactions"):
-        msg["reactions"] = get_message_reactions(message.reactions)
+        msg["reactions"] = format_message_reactions(message.reactions)
 
     return msg
 
 
-def get_formatted_user(user):
+def format_user(user):
     userobj = {
         "avatar": user.avatar.key if user.avatar else None,
         "avatar_url": str(user.avatar.replace(static_format="png", size=512))
@@ -88,7 +88,7 @@ def get_formatted_user(user):
     return userobj
 
 
-def get_message_author(message):
+def format_message_author(message):
     if not hasattr(message, "author"):
         return {}
 
@@ -101,7 +101,7 @@ def get_message_author(message):
     }
 
 
-def get_formatted_emojis(emojis):
+def format_formatted_emojis(emojis):
     emotes = []
     for emo in emojis:
         emotes.append(
@@ -110,14 +110,14 @@ def get_formatted_emojis(emojis):
                 "managed": emo.managed,
                 "name": emo.name,
                 "require_colons": emo.require_colons,
-                "roles": get_roles_list(emo.roles),
+                "roles": format_roles_list(emo.roles),
                 "url": str(emo.url),
             }
         )
     return emotes
 
 
-def get_formatted_guild(guild, webhooks=None):
+def format_guild(guild, webhooks=None):
     if webhooks is None:
         webhooks = []
 
@@ -127,21 +127,21 @@ def get_formatted_guild(guild, webhooks=None):
         "icon": guild.icon.key if guild.icon else None,
         "icon_url": str(guild.icon),
         "owner_id": guild.owner_id,
-        "roles": get_roles_list(guild.roles),
-        "channels": get_channels_list(guild.channels),
-        "webhooks": get_webhooks_list(webhooks),
-        "emojis": get_emojis_list(guild.emojis),
+        "roles": format_roles_list(guild.roles),
+        "channels": format_channels_list(guild.channels),
+        "webhooks": format_webhooks_list(webhooks),
+        "emojis": format_emojis_list(guild.emojis),
     }
 
 
-def get_formatted_channel(channel):
+def format_channel(channel):
     return {
         "id": str(channel.id),
         "guild_id": str(channel.guild.id),
     }
 
 
-def get_formatted_role(role):
+def format_role(role):
     return {
         "id": str(role.id),
         "guild_id": str(role.guild.id),
@@ -153,7 +153,7 @@ def get_formatted_role(role):
     }
 
 
-def get_message_mentions(mentions):
+def format_message_mentions(mentions):
     ments = []
     for author in mentions:
         ments.append(
@@ -168,7 +168,7 @@ def get_message_mentions(mentions):
     return ments
 
 
-def get_webhooks_list(guild_webhooks):
+def format_webhooks_list(guild_webhooks):
     webhooks = []
     for webhook in guild_webhooks:
         if not webhook.channel or not webhook.guild:
@@ -187,7 +187,7 @@ def get_webhooks_list(guild_webhooks):
     return webhooks
 
 
-def get_emojis_list(guildemojis):
+def format_emojis_list(guildemojis):
     emojis = []
 
     for emote in guildemojis:
@@ -205,7 +205,7 @@ def get_emojis_list(guildemojis):
     return emojis
 
 
-def get_roles_list(guildroles):
+def format_roles_list(guildroles):
     roles = []
     for role in guildroles:
         roles.append(
@@ -221,7 +221,7 @@ def get_roles_list(guildroles):
     return roles
 
 
-def get_channels_list(guildchannels):
+def format_channels_list(guildchannels):
     channels = []
     for channel in guildchannels:
         if not (isinstance(channel, TextChannel) or isinstance(channel, CategoryChannel)):
@@ -258,7 +258,7 @@ def get_channels_list(guildchannels):
     return channels
 
 
-def get_attachments_list(attachments):
+def format_attachments_list(attachments):
     attr = []
     for attach in attachments:
         a = {
@@ -276,11 +276,11 @@ def get_attachments_list(attachments):
     return attr
 
 
-def get_embeds_list(embeds):
+def format_embeds_list(embeds):
     return [e.to_dict() for e in embeds]
 
 
-def get_message_reactions(reactions):
+def format_message_reactions(reactions):
     reacts = []
     for reaction in reactions:
         reacts.append({"emoji": get_partial_emoji(reaction.emoji), "count": reaction.count})
