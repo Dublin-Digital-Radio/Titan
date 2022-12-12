@@ -18,6 +18,8 @@ from titanembeds.utils import (
     update_user_status,
 )
 
+DISCORDAPP_AVATARS_URL = "https://cdn.discordapp.com/avatars/"
+
 log = logging.getLogger(__name__)
 
 
@@ -47,18 +49,23 @@ class Gateway(Namespace):
 
         session["socket_guild_id"] = guild_id
 
-        forced_role = get_forced_role(guild_id)
-        if guild_accepts_visitors(guild_id) and not check_user_in_guild(guild_id):
-            channels = get_guild_channels(guild_id, force_everyone=True, forced_role=forced_role)
-        else:
-            channels = get_guild_channels(guild_id, forced_role=forced_role)
+        force_everyone = guild_accepts_visitors(guild_id) and not check_user_in_guild(
+            guild_id
+        )
+        channels = get_guild_channels(
+            guild_id,
+            force_everyone=force_everyone,
+            forced_role=get_forced_role(guild_id),
+        )
 
         join_room("GUILD_" + guild_id)
         for chan in channels:
             if chan["read"]:
                 join_room("CHANNEL_" + chan["channel"]["id"])
 
-        if session.get("unauthenticated", True) and guild_id in session.get("user_keys", {}):
+        if session.get("unauthenticated", True) and guild_id in session.get(
+            "user_keys", {}
+        ):
             join_room(f"IP_{get_client_ipaddr()}")
         elif not session.get("unauthenticated", True):
             join_room(f"USER_{session['user_id']}")
@@ -66,31 +73,24 @@ class Gateway(Namespace):
         visitor_mode = data["visitor_mode"]
         if not visitor_mode:
             if session["unauthenticated"]:
-                emit(
-                    "embed_user_connect",
-                    {
-                        "unauthenticated": True,
-                        "username": session["username"],
-                        "discriminator": session["user_id"],
-                    },
-                    room="GUILD_" + guild_id,
-                )
+                data = {
+                    "unauthenticated": True,
+                    "username": session["username"],
+                    "discriminator": session["user_id"],
+                }
             else:
-                nickname = redisqueue.get_guild_member(guild_id, session["user_id"]).get(
-                    "nickname"
-                )
-                emit(
-                    "embed_user_connect",
-                    {
-                        "unauthenticated": False,
-                        "id": str(session["user_id"]),
-                        "nickname": nickname,
-                        "username": session["username"],
-                        "discriminator": session["discriminator"],
-                        "avatar_url": session["avatar"],
-                    },
-                    room="GUILD_" + guild_id,
-                )
+                nickname = redisqueue.get_guild_member(
+                    guild_id, session["user_id"]
+                ).get("nickname")
+                data = {
+                    "unauthenticated": False,
+                    "id": str(session["user_id"]),
+                    "nickname": nickname,
+                    "username": session["username"],
+                    "discriminator": session["discriminator"],
+                    "avatar_url": session["avatar"],
+                }
+            emit("embed_user_connect", data, room="GUILD_" + guild_id)
 
         emit("identified")
         self.teardown_db_session()
@@ -115,16 +115,15 @@ class Gateway(Namespace):
         if guild_webhooks_enabled(guild_id):  # Delete webhooks
             guild_webhooks = redisqueue.get_guild(guild_id)["webhooks"]
 
-            username = session["username"]
-            if len(username) > 19:
-                username = username[:19]
+            d = (
+                session["user_id"]
+                if session["unauthenticated"]
+                else session["discriminator"]
+            )
+            name = f"[Titan] {session['username'][:19]}#{d}"
 
-            d = session["user_id"] if session["unauthenticated"] else session["discriminator"]
-            name = f"[Titan] {username}#{d}"
-
-            for webhook in guild_webhooks:
-                if webhook["name"] == name:
-                    discord_api.delete_webhook(webhook["id"], webhook["token"])
+            for webhook in [w for w in guild_webhooks if w["name"] == name]:
+                discord_api.delete_webhook(webhook["id"], webhook["token"])
 
         self.teardown_db_session()
 
@@ -188,12 +187,12 @@ class Gateway(Namespace):
 
         guild_id = data["guild_id"]
         if "user_keys" in session and not session["unauthenticated"]:
-            dbMember = redisqueue.get_guild_member(guild_id, session["user_id"])
+            db_member = redisqueue.get_guild_member(guild_id, session["user_id"])
             usr = {
                 "avatar": session["avatar"],
-                "username": dbMember.get("username"),
-                "nickname": dbMember.get("nickname"),
-                "discriminator": dbMember.get("discriminator"),
+                "username": db_member.get("username"),
+                "nickname": db_member.get("nickname"),
+                "discriminator": db_member.get("discriminator"),
                 "user_id": str(session["user_id"]),
             }
             emit("current_user_info", usr)
@@ -201,21 +200,18 @@ class Gateway(Namespace):
         self.teardown_db_session()
 
     def get_user_color(self, guild_id, user_id):
-        member = redisqueue.get_guild_member(guild_id, user_id)
-        if not member:
+        if not (member := redisqueue.get_guild_member(guild_id, user_id)):
             return None
 
+        # get the role objects from id's in member["roles"]
         guild_roles = redisqueue.get_guild(guild_id)["roles"]
-        guildroles_filtered = {role["id"]: role for role in guild_roles}
-
-        roles = []
-        for r_id in member["roles"]:
-            role = guildroles_filtered.get(str(r_id))
-            if role:
-                roles.append(role)
+        roles_map = {str(role["id"]): role for role in guild_roles}
+        roles = [r for r_id in member["roles"] if (r := roles_map.get(str(r_id)))]
 
         color = None
-        for role in [x for x in sorted(roles, key=lambda k: k["position"]) if x["color"] != 0]:
+        for role in [
+            x for x in sorted(roles, key=lambda k: k["position"]) if x["color"] != 0
+        ]:
             color = f"{role['color']:02x}"
             while len(color) < 6:
                 color = "0" + color
@@ -252,10 +248,10 @@ class Gateway(Namespace):
             if usr["avatar"]:
                 usr[
                     "avatar_url"
-                ] = f"https://cdn.discordapp.com/avatars/{usr['id']}/{usr['avatar']}.png"
+                ] = f"{DISCORDAPP_AVATARS_URL}{usr['id']}/{usr['avatar']}.png"
             usr["roles"] = member["roles"]
             usr["discordbotsorgvoted"] = bool(
-                redisqueue.redis_store.get("DiscordBotsOrgVoted/" + str(member["id"]))
+                redisqueue.redis_store.get(f"DiscordBotsOrgVoted/{member['id']}")
             )
         else:
             member = redisqueue.get_guild_member_named(guild_id, name)
@@ -268,10 +264,10 @@ class Gateway(Namespace):
                 if usr["avatar"]:
                     usr[
                         "avatar_url"
-                    ] = f"https://cdn.discordapp.com/avatars/{usr['id']}/{usr['avatar']}.png"
+                    ] = f"{DISCORDAPP_AVATARS_URL}{usr['id']}/{usr['avatar']}.png"
                 usr["roles"] = member["roles"]
                 usr["discordbotsorgvoted"] = bool(
-                    redisqueue.redis_store.get("DiscordBotsOrgVoted/" + str(member["id"]))
+                    redisqueue.redis_store.get(f"DiscordBotsOrgVoted/{member['id']}")
                 )
 
         emit("lookup_user_info", usr)

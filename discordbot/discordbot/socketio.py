@@ -12,11 +12,8 @@ from discordbot.utils import (
 
 
 class SocketIOInterface:
-    def __init__(self, bot, redis_uri):
-        self.io = socketio.AsyncRedisManager(
-            redis_uri, write_only=True, channel="flask-socketio"
-        )
-        self.bot = bot
+    def __init__(self, redis_uri):
+        self.io = socketio.AsyncRedisManager(redis_uri, write_only=True, channel="flask-socketio")
 
     async def on_mess(self, action, message):
         if not message.guild:
@@ -71,7 +68,7 @@ class SocketIOInterface:
         await self.io.emit(
             "GUILD_EMOJIS_UPDATE",
             data=get_formatted_emojis(emojis),
-            room=str("GUILD_" + str(emojis[0].guild.id)),
+            room=f"GUILD_{emojis[0].guild.id}",
             namespace="/gateway",
         )
 
@@ -101,7 +98,7 @@ class SocketIOInterface:
         await self.io.emit(
             "CHANNEL_UPDATE",
             data=get_formatted_channel(channel),
-            room=str("GUILD_" + str(channel.guild.id)),
+            room=f"GUILD_{channel.guild.id}",
             namespace="/gateway",
         )
 
@@ -109,7 +106,7 @@ class SocketIOInterface:
         await self.io.emit(
             "GUILD_UPDATE",
             data=get_formatted_guild(guild),
-            room=str("GUILD_" + str(guild.id)),
+            room=f"GUILD_{guild.id}",
             namespace="/gateway",
         )
 

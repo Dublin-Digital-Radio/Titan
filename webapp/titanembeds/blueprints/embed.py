@@ -92,24 +92,24 @@ def is_peak(guild_id):
 
 @embed.route("/<int:guild_id>")
 def guild_embed(guild_id):
-    guild = redisqueue.get_guild(guild_id)
-    if not guild:
+
+    if not (guild := redisqueue.get_guild(guild_id)):
         log.warning("could not get guild '%s' from redis", guild_id)
         abort(404)
 
-    dbguild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
-    if not dbguild:
+    db_guild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+    if not db_guild:
         log.warning("found guild '%s' in redis but not in db", guild_id)
         abort(404)
 
     guild_dict = {
         "id": guild["id"],
         "name": guild["name"],
-        "unauth_users": dbguild.unauth_users,
+        "unauth_users": db_guild.unauth_users,
         "icon": guild["icon"],
-        "invite_link": dbguild.invite_link,
-        "invite_domain": parse_url_domain(dbguild.invite_link),
-        "post_timeout": dbguild.post_timeout,
+        "invite_link": db_guild.invite_link,
+        "invite_domain": parse_url_domain(db_guild.invite_link),
+        "post_timeout": db_guild.post_timeout,
     }
 
     customcss = get_custom_css()

@@ -38,7 +38,7 @@ class UnauthenticatedBans(db.Model):
         self.lifter_id = None
         self.placer_id = placer_id
 
-    def liftBan(self, lifter_id):
+    def lift_ban(self, lifter_id):
         self.lifter_id = lifter_id
         return self.lifter_id
 

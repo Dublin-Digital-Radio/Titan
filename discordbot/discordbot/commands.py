@@ -1,11 +1,11 @@
 import aiohttp
 import discord
+from config import config
 
 
 class Commands:
-    def __init__(self, client, config):
+    def __init__(self, client):
         self.client = client
-        self.config = config
 
     async def ban(self, message):
         if not message.author.guild_permissions.ban_members:
@@ -23,13 +23,9 @@ class Commands:
             )
             return
 
-        username = (
-            content[2][: content[2].find("#")] if "#" in content[2] else content[2]
-        )
-        discriminator = (
-            int(content[2][content[2].find("#") + 1 :]) if "#" in content[2] else None
-        )
-        headers = {"Authorization": self.config["titan-web-app-secret"]}
+        username = content[2][: content[2].find("#")] if "#" in content[2] else content[2]
+        discriminator = int(content[2][content[2].find("#") + 1 :]) if "#" in content[2] else None
+        headers = {"Authorization": config["titan-web-app-secret"]}
         payload = {
             "guild_id": message.guild.id,
             "placer_id": message.author.id,
@@ -38,7 +34,7 @@ class Commands:
 
         if discriminator:
             payload["discriminator"] = discriminator
-        url = self.config["titan-web-url"] + "api/bot/ban"
+        url = config["titan-web-url"] + "api/bot/ban"
 
         async with aiohttp.ClientSession() as aioclient:
             async with aioclient.post(url, json=payload, headers=headers) as resp:
@@ -49,9 +45,7 @@ class Commands:
                     )
                     return
                 if "success" in j:
-                    await message.channel.send(
-                        f'{message.author.mention} {j["success"]}'
-                    )
+                    await message.channel.send(f'{message.author.mention} {j["success"]}')
                     return
 
         await message.channel.send("Unhandled webservice error in banning guest user!")
@@ -72,13 +66,9 @@ class Commands:
             )
             return
 
-        username = (
-            content[2][: content[2].find("#")] if "#" in content[2] else content[2]
-        )
-        discriminator = (
-            int(content[2][content[2].find("#") + 1 :]) if "#" in content[2] else None
-        )
-        headers = {"Authorization": self.config["titan-web-app-secret"]}
+        username = content[2][: content[2].find("#")] if "#" in content[2] else content[2]
+        discriminator = int(content[2][content[2].find("#") + 1 :]) if "#" in content[2] else None
+        headers = {"Authorization": config["titan-web-app-secret"]}
         payload = {
             "guild_id": message.guild.id,
             "lifter_id": message.author.id,
@@ -87,7 +77,7 @@ class Commands:
 
         if discriminator:
             payload["discriminator"] = discriminator
-        url = self.config["titan-web-url"] + "api/bot/unban"
+        url = config["titan-web-url"] + "api/bot/unban"
 
         async with aiohttp.ClientSession() as aioclient:
             async with aioclient.post(url, json=payload, headers=headers) as resp:
@@ -98,14 +88,10 @@ class Commands:
                     )
                     return
                 if "success" in j:
-                    await message.channel.send(
-                        f"{message.author.mention} {j['success']}"
-                    )
+                    await message.channel.send(f"{message.author.mention} {j['success']}")
                     return
 
-        await message.channel.send(
-            "Unhandled webservice error in unbanning guest user!"
-        )
+        await message.channel.send("Unhandled webservice error in unbanning guest user!")
 
     async def kick(self, message):
         if not message.author.guild_permissions.kick_members:
@@ -123,17 +109,13 @@ class Commands:
             )
             return
 
-        username = (
-            content[2][: content[2].find("#")] if "#" in content[2] else content[2]
-        )
-        discriminator = (
-            int(content[2][content[2].find("#") + 1 :]) if "#" in content[2] else None
-        )
-        headers = {"Authorization": self.config["titan-web-app-secret"]}
+        username = content[2][: content[2].find("#")] if "#" in content[2] else content[2]
+        discriminator = int(content[2][content[2].find("#") + 1 :]) if "#" in content[2] else None
+        headers = {"Authorization": config["titan-web-app-secret"]}
         payload = {"guild_id": message.guild.id, "username": username}
         if discriminator:
             payload["discriminator"] = discriminator
-        url = self.config["titan-web-url"] + "api/bot/revoke"
+        url = config["titan-web-url"] + "api/bot/revoke"
 
         async with aiohttp.ClientSession() as aioclient:
             async with aioclient.post(url, json=payload, headers=headers) as resp:
@@ -144,9 +126,7 @@ class Commands:
                     )
                     return
                 if "success" in j:
-                    await message.channel.send(
-                        f"{message.author.mention} {j['success']}"
-                    )
+                    await message.channel.send(f"{message.author.mention} {j['success']}")
                     return
 
         await message.channel.send("Unhandled webservice error in kicking guest user!")
@@ -172,12 +152,12 @@ class Commands:
         )
 
     async def members(self, message):
-        headers = {"Authorization": self.config["titan-web-app-secret"]}
+        headers = {"Authorization": config["titan-web-app-secret"]}
         payload = {
             "guild_id": message.guild.id,
         }
         users = {"authenticated": [], "unauthenticated": []}
-        url = self.config["titan-web-url"] + "api/bot/members"
+        url = config["titan-web-url"] + "api/bot/members"
 
         async with aiohttp.ClientSession() as aioclient:
             async with aioclient.get(url, params=payload, headers=headers) as resp:

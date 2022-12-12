@@ -114,7 +114,7 @@ with app.app_context():
 
 app.register_blueprint(api.api, url_prefix="/api", template_folder="/templates")
 app.register_blueprint(admin.admin, url_prefix="/admin", template_folder="/templates")
-app.register_blueprint(user.user, url_prefix="/user", template_folder="/templates")
+app.register_blueprint(user.user_bp, url_prefix="/user", template_folder="/templates")
 app.register_blueprint(embed.embed, url_prefix="/embed", template_folder="/templates")
 socketio.on_namespace(gateway.Gateway("/gateway"))
 

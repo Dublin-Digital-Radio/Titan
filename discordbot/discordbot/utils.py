@@ -1,6 +1,7 @@
 from email import utils as emailutils
 
-import discord
+from discord import Role
+from discord.channel import CategoryChannel, TextChannel
 
 
 def format_datetime(datetimeobj):
@@ -77,7 +78,7 @@ def get_formatted_user(user):
     roles = sorted(user.roles, key=lambda k: k.position, reverse=True)
     for role in roles:
         userobj["roles"].append(str(role.id))
-        if role.hoist and userobj["hoist-role"] == None:
+        if role.hoist and userobj["hoist-role"] is None:
             userobj["hoist-role"] = {
                 "id": str(role.id),
                 "name": role.name,
@@ -188,6 +189,7 @@ def get_webhooks_list(guild_webhooks):
 
 def get_emojis_list(guildemojis):
     emojis = []
+
     for emote in guildemojis:
         emojis.append(
             {
@@ -195,7 +197,7 @@ def get_emojis_list(guildemojis):
                 "name": emote.name,
                 "require_colons": emote.require_colons,
                 "managed": emote.managed,
-                "roles": list_role_ids(emote.roles),
+                "roles": [str(role.id) for role in emote.roles],
                 "url": str(emote.url),
                 "animated": emote.animated,
             }
@@ -222,10 +224,7 @@ def get_roles_list(guildroles):
 def get_channels_list(guildchannels):
     channels = []
     for channel in guildchannels:
-        if not (
-            isinstance(channel, discord.channel.TextChannel)
-            or isinstance(channel, discord.channel.CategoryChannel)
-        ):
+        if not (isinstance(channel, TextChannel) or isinstance(channel, CategoryChannel)):
             continue
 
         overwrites = []
@@ -237,13 +236,13 @@ def get_channels_list(guildchannels):
             overwrites.append(
                 {
                     "id": str(target.id),
-                    "type": "role" if isinstance(target, discord.Role) else "member",
+                    "type": "role" if isinstance(target, Role) else "member",
                     "allow": allow.value,
                     "deny": deny.value,
                 }
             )
 
-        is_text_channel = isinstance(channel, discord.channel.TextChannel)
+        is_text_channel = isinstance(channel, TextChannel)
         channels.append(
             {
                 "id": str(channel.id),
@@ -257,10 +256,6 @@ def get_channels_list(guildchannels):
             }
         )
     return channels
-
-
-def list_role_ids(usr_roles):
-    return [str(role.id) for role in usr_roles]
 
 
 def get_attachments_list(attachments):

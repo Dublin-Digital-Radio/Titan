@@ -124,19 +124,22 @@ def update_user_status(guild_id, username, user_key=None):
             "banned": checkUserBanned(guild_id, ip_address),
             "revoked": checkUserRevoke(guild_id, user_key),
         }
+
         if status["banned"] or status["revoked"]:
             session["user_keys"].pop(guild_id, None)
             return status
-        dbUser = UnauthenticatedUsers.query.filter(
+
+        db_user = UnauthenticatedUsers.query.filter(
             and_(
                 UnauthenticatedUsers.guild_id == guild_id,
                 UnauthenticatedUsers.user_key == user_key,
             )
         ).first()
+
         redisqueue.bump_user_presence_timestamp(guild_id, "UnauthenticatedUsers", user_key)
-        if dbUser.username != username or dbUser.ip_address != ip_address:
-            dbUser.username = username
-            dbUser.ip_address = ip_address
+        if db_user.username != username or db_user.ip_address != ip_address:
+            db_user.username = username
+            db_user.ip_address = ip_address
             db.session.commit()
     else:
         status = {
@@ -151,12 +154,15 @@ def update_user_status(guild_id, username, user_key=None):
             "banned": checkUserBanned(guild_id),
             "revoked": checkUserRevoke(guild_id),
         }
+
         if status["banned"] or status["revoked"]:
             return status
-        dbMember = redisqueue.get_guild_member(guild_id, status["user_id"])
-        if dbMember:
+
+        if dbMember := redisqueue.get_guild_member(guild_id, status["user_id"]):
             status["nickname"] = dbMember["nick"]
+
         redisqueue.bump_user_presence_timestamp(guild_id, "AuthenticatedUsers", status["user_id"])
+
     return status
 
 
@@ -201,18 +207,20 @@ def get_guild_channels(guild_id, force_everyone=False, forced_role=0):
         member_roles = get_member_roles(guild_id, session["user_id"])
         if guild_id not in member_roles:
             member_roles.append(guild_id)
-
     if forced_role:
         member_roles.append(str(forced_role))
+
     bot_member_roles = get_member_roles(guild_id, config["client-id"])
     if guild_id not in bot_member_roles:
         bot_member_roles.append(guild_id)
+
     guild = redisqueue.get_guild(guild_id)
     db_guild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
     guild_channels = guild["channels"]
     guild_roles = guild["roles"]
     guild_owner = guild["owner_id"]
     result_channels = []
+
     for channel in guild_channels:
         if channel["type"] in ["text", "category"]:
             result = get_channel_permission(
@@ -222,7 +230,6 @@ def get_guild_channels(guild_id, force_everyone=False, forced_role=0):
                 guild_roles,
                 member_roles,
                 str(session.get("user_id")),
-                force_everyone,
             )
             bot_result = get_channel_permission(
                 channel,
@@ -231,7 +238,6 @@ def get_guild_channels(guild_id, force_everyone=False, forced_role=0):
                 guild_roles,
                 bot_member_roles,
                 config["client-id"],
-                False,
             )
             if not bot_result["read"]:
                 result["read"] = False
@@ -248,6 +254,7 @@ def get_guild_channels(guild_id, force_everyone=False, forced_role=0):
             ):
                 result["embed_links"] = False
             result_channels.append(result)
+
     return sorted(result_channels, key=lambda k: k["channel"]["position"])
 
 
@@ -258,7 +265,6 @@ def get_channel_permission(
     guild_roles,
     member_roles,
     user_id=None,
-    force_everyone=False,
 ):
     result = {
         "channel": channel,
@@ -349,30 +355,30 @@ def get_channel_permission(
         result["mention_everyone"] = False
         result["attach_files"] = False
         result["embed_links"] = False
+
     return result
 
 
 def get_forced_role(guild_id):
-    dbguild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+    db_guild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
     if not session.get("unauthenticated", True):
-        return dbguild.autorole_discord
-    return dbguild.autorole_unauth
+        return db_guild.autorole_discord
+
+    return db_guild.autorole_unauth
 
 
 def bot_can_create_webhooks(guild):
     perm = 0
-    guild_roles = guild["roles"]
 
     # @everyone
-    for role in guild_roles:
+    for role in guild["roles"]:
         if role["id"] == guild["id"]:
             perm |= role["permissions"]
             continue
 
-    member_roles = get_member_roles(guild["id"], config["client-id"])
     # User Guild Roles
-    for m_role in member_roles:
-        for g_role in guild_roles:
+    for m_role in get_member_roles(guild["id"], config["client-id"]):
+        for g_role in guild["roles"]:
             if g_role["id"] == m_role:
                 perm |= g_role["permissions"]
                 continue
@@ -384,16 +390,16 @@ def bot_can_create_webhooks(guild):
 
 
 def guild_webhooks_enabled(guild_id):
-    dbguild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
-    if not dbguild.webhook_messages:
+    db_guild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+    if not db_guild.webhook_messages:
         return False
 
     return bot_can_create_webhooks(redisqueue.get_guild(guild_id))
 
 
 def guild_unauthcaptcha_enabled(guild_id):
-    dbguild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
-    return dbguild.unauth_captcha
+    db_guild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+    return db_guild.unauth_captcha
 
 
 def is_int(specimen):

@@ -4,7 +4,7 @@ from config import config
 from flask import abort
 from flask import current_app as app
 from flask import redirect, render_template, request, session, url_for
-from titanembeds.blueprints.user import user
+from titanembeds.blueprints.user import user_bp
 from titanembeds.database import (
     Cosmetics,
     add_badge,
@@ -16,7 +16,7 @@ from titanembeds.database.patreon import Patreon
 from titanembeds.decorators import discord_users_only
 
 
-@user.route("/donate", methods=["GET"])
+@user_bp.route("/donate", methods=["GET"])
 @discord_users_only()
 def donate_get():
     cosmetics = (
@@ -35,7 +35,7 @@ def get_paypal_api():
     )
 
 
-@user.route("/donate", methods=["POST"])
+@user_bp.route("/donate", methods=["POST"])
 @discord_users_only()
 def donate_post():
     donation_amount = request.form.get("amount")
@@ -88,7 +88,7 @@ def donate_post():
     return redirect(url_for("index"))
 
 
-@user.route("/donate/confirm")
+@user_bp.route("/donate/confirm")
 @discord_users_only()
 def donate_confirm():
     if not request.args.get("success"):
@@ -109,7 +109,7 @@ def donate_confirm():
     return redirect(url_for("user.donate_thanks", transaction=trans_id))
 
 
-@user.route("/donate/thanks")
+@user_bp.route("/donate/thanks")
 @discord_users_only()
 def donate_thanks():
     tokens = get_titan_token(session["user_id"])
@@ -117,7 +117,7 @@ def donate_thanks():
     return render_template("donate_thanks.html.j2", tokens=tokens, transaction=transaction)
 
 
-@user.route("/donate", methods=["PATCH"])
+@user_bp.route("/donate", methods=["PATCH"])
 @discord_users_only()
 def donate_patch():
     item = request.form.get("item")
@@ -165,7 +165,7 @@ def donate_patch():
     return "", 204
 
 
-@user.route("/patreon")
+@user_bp.route("/patreon")
 @discord_users_only()
 def patreon_landing():
     return render_template(
@@ -173,7 +173,7 @@ def patreon_landing():
     )
 
 
-@user.route("/patreon/callback")
+@user_bp.route("/patreon/callback")
 @discord_users_only()
 def patreon_callback():
     patreon_oauth_client = patreon.OAuth(
@@ -230,7 +230,7 @@ def format_patreon_user(user):
     return usrobj
 
 
-@user.route("/patreon/sync", methods=["GET"])
+@user_bp.route("/patreon/sync", methods=["GET"])
 @discord_users_only()
 def patreon_sync_get():
     if "patreon" not in session:
@@ -261,7 +261,7 @@ def patreon_sync_get():
     return render_template("patreon.html.j2", state="prepare", user=format_patreon_user(user))
 
 
-@user.route("/patreon/sync", methods=["POST"])
+@user_bp.route("/patreon/sync", methods=["POST"])
 @discord_users_only()
 def patreon_sync_post():
     if "patreon" not in session:
@@ -309,7 +309,7 @@ def patreon_sync_post():
     return "", 204
 
 
-@user.route("/patreon/thanks")
+@user_bp.route("/patreon/thanks")
 @discord_users_only()
 def patreon_thanks():
     return render_template("patreon.html.j2", state="thanks")

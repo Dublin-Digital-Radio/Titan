@@ -45,22 +45,21 @@ from titanembeds.utils import (
 )
 
 log = logging.getLogger(__name__)
-user = Blueprint("user", __name__)
+user_bp = Blueprint("user", __name__)
 
 
-@user.route("/login_authenticated", methods=["GET"])
+@user_bp.route("/login_authenticated", methods=["GET"])
 def login_authenticated():
     session["redirect"] = request.args.get("redirect")
-    scope = ["identify", "guilds", "guilds.join"]
-    authorization_url, state = get_authorization_url(scope)
+    authorization_url, state = get_authorization_url(["identify", "guilds", "guilds.join"])
     session["oauth2_state"] = state
+
     return redirect(authorization_url)
 
 
-@user.route("/callback", methods=["GET"])
+@user_bp.route("/callback", methods=["GET"])
 def callback():
-    state = session.get("oauth2_state")
-    if not state:
+    if not (state := session.get("oauth2_state")):
         return redirect(url_for("user.logout", error="state_error"))
 
     if request.values.get("error"):
@@ -71,8 +70,7 @@ def callback():
             )
         )
 
-    discord_token = get_token(state)
-    if not discord_token:
+    if not (discord_token := get_token(state)):
         return redirect(url_for("user.logout", error="discord_user_token_fetch_error"))
 
     session["user_keys"] = discord_token
@@ -80,33 +78,29 @@ def callback():
     session.permanent = True
 
     user = get_current_authenticated_user()
+
     session["user_id"] = int(user["id"])
     session["username"] = user["username"]
     session["discriminator"] = user["discriminator"]
     session["avatar"] = generate_avatar_url(user["id"], user["avatar"], user["discriminator"])
-    session["tokens"] = get_titan_token(session["user_id"])
 
+    session["tokens"] = get_titan_token(session["user_id"])
     if session["tokens"] == -1:
         session["tokens"] = 0
 
     log.info("Callback ok. Session: %s", pformat(session))
 
     if session["redirect"]:
-        redir = session["redirect"]
         session["redirect"] = None
-        return redirect(redir)
+        return redirect(session["redirect"])
 
     return redirect(url_for("user.dashboard"))
 
 
-@user.route("/logout", methods=["GET"])
+@user_bp.route("/logout", methods=["GET"])
 def logout():
-    redir = session.get("redirect", None)
-    if not redir:
-        redir = request.args.get("redirect", None)
-
     session.clear()
-    if redir:
+    if redir := session.get("redirect", None) or request.args.get("redirect", None):
         session["redirect"] = redir
         return redirect(session["redirect"])
 
@@ -118,10 +112,9 @@ def count_user_premium_css():
     return len([css for css in css_list if css.css is not None])
 
 
-@user.route("/dashboard")
+@user_bp.route("/dashboard")
 @discord_users_only()
 def dashboard():
-    guilds = get_user_managed_servers()
     error = request.args.get("error")
     if session["redirect"] and not (error and error == "access_denied"):
         redir = session["redirect"]
@@ -131,7 +124,7 @@ def dashboard():
     cosmetics = (
         db.session.query(Cosmetics).filter(Cosmetics.user_id == session["user_id"]).first()
     )
-    css_list = None
+
     if cosmetics and cosmetics.css:
         css_list = (
             db.session.query(UserCSS)
@@ -139,19 +132,20 @@ def dashboard():
             .order_by(UserCSS.id)
             .all()
         )
+    else:
+        css_list = None
 
-    premium_css_count = count_user_premium_css()
     return render_template(
         "dashboard.html.j2",
-        servers=guilds,
+        servers=get_user_managed_servers(),
         icon_generate=generate_guild_icon_url,
         cosmetics=cosmetics,
         css_list=css_list,
-        premium_css_count=premium_css_count,
+        premium_css_count=count_user_premium_css(),
     )
 
 
-@user.route("/custom_css/new", methods=["GET"])
+@user_bp.route("/custom_css/new", methods=["GET"])
 @discord_users_only()
 def new_custom_css_get():
     cosmetics = (
@@ -160,16 +154,15 @@ def new_custom_css_get():
     if not cosmetics or not cosmetics.css:
         abort(403)
 
-    premium_css_count = count_user_premium_css()
     return render_template(
         "usercss.html.j2",
         new=True,
         cosmetics=cosmetics,
-        premium_css_count=premium_css_count,
+        premium_css_count=count_user_premium_css(),
     )
 
 
-@user.route("/custom_css/new", methods=["POST"])
+@user_bp.route("/custom_css/new", methods=["POST"])
 @discord_users_only()
 def new_custom_css_post():
     cosmetics = (
@@ -178,27 +171,23 @@ def new_custom_css_post():
     if not cosmetics or not cosmetics.css:
         abort(403)
 
-    name = request.form.get("name", None)
+    name = request.form.get("name", "").strip()
     user_id = session["user_id"]
-    css = request.form.get("css", None)
+    css = request.form.get("css", "").strip() or None
     variables = request.form.get("variables", None)
     variables_enabled = request.form.get("variables_enabled", False) in ["true", True]
+
     if not name:
         abort(400)
-    else:
-        name = name.strip()
-        css = css.strip()
 
-    if len(css) == 0:
-        css = None
-    css = UserCSS(name, user_id, variables_enabled, variables, css)
-    db.session.add(css)
+    db_css = UserCSS(name, user_id, variables_enabled, variables, css)
+    db.session.add(db_css)
     db.session.commit()
 
-    return jsonify({"id": css.id})
+    return jsonify({"id": db_css.id})
 
 
-@user.route("/custom_css/edit/<css_id>", methods=["GET"])
+@user_bp.route("/custom_css/edit/<css_id>", methods=["GET"])
 @discord_users_only()
 def edit_custom_css_get(css_id):
     cosmetics = (
@@ -213,22 +202,17 @@ def edit_custom_css_get(css_id):
     if str(css.user_id) != str(session["user_id"]):
         abort(403)
 
-    variables = css.css_variables
-    if variables:
-        variables = json.loads(variables)
-
-    premium_css_count = count_user_premium_css()
     return render_template(
         "usercss.html.j2",
         new=False,
         css=css,
-        variables=variables,
+        variables=json.loads(css.css_variables) if css.css_variables else None,
         cosmetics=cosmetics,
-        premium_css_count=premium_css_count,
+        premium_css_count=count_user_premium_css(),
     )
 
 
-@user.route("/custom_css/edit/<css_id>", methods=["POST"])
+@user_bp.route("/custom_css/edit/<css_id>", methods=["POST"])
 @discord_users_only()
 def edit_custom_css_post(css_id):
     cosmetics = (
@@ -237,34 +221,26 @@ def edit_custom_css_post(css_id):
     if not cosmetics or not cosmetics.css:
         abort(403)
 
-    dbcss = db.session.query(UserCSS).filter(UserCSS.id == css_id).first()
-    if not dbcss:
+    db_css = db.session.query(UserCSS).filter(UserCSS.id == css_id).first()
+    if not db_css:
         abort(404)
-    if dbcss.user_id != session["user_id"]:
+
+    if db_css.user_id != session["user_id"]:
         abort(403)
 
-    name = request.form.get("name", None)
-    css = request.form.get("css", None)
-    variables = request.form.get("variables", None)
-    variables_enabled = request.form.get("variables_enabled", False) in ["true", True]
-
-    if not name:
+    if not (name := request.form.get("name", "").strip()):
         abort(400)
-    else:
-        name = name.strip()
-        css = css.strip()
-    if len(css) == 0:
-        css = None
 
-    dbcss.name = name
-    dbcss.css = css
-    dbcss.css_variables = variables
-    dbcss.css_var_bool = variables_enabled
+    db_css.name = name
+    db_css.css = request.form.get("css", "").strip() or None
+    db_css.css_variables = request.form.get("variables", None)
+    db_css.css_var_bool = request.form.get("variables_enabled", False) in ["true", True]
     db.session.commit()
-    return jsonify({"id": dbcss.id})
+
+    return jsonify({"id": db_css.id})
 
 
-@user.route("/custom_css/edit/<css_id>", methods=["DELETE"])
+@user_bp.route("/custom_css/edit/<css_id>", methods=["DELETE"])
 @discord_users_only()
 def edit_custom_css_delete(css_id):
     cosmetics = (
@@ -273,18 +249,18 @@ def edit_custom_css_delete(css_id):
     if not cosmetics or not cosmetics.css:
         abort(403)
 
-    dbcss = db.session.query(UserCSS).filter(UserCSS.id == css_id).first()
-    if not dbcss:
+    db_css = db.session.query(UserCSS).filter(UserCSS.id == css_id).first()
+    if not db_css:
         abort(404)
-    if dbcss.user_id != session["user_id"]:
+    if db_css.user_id != session["user_id"]:
         abort(403)
-    db.session.delete(dbcss)
+    db.session.delete(db_css)
     db.session.commit()
 
     return jsonify({})
 
 
-@user.route("/administrate_guild/<guild_id>", methods=["GET"])
+@user_bp.route("/administrate_guild/<guild_id>", methods=["GET"])
 @discord_users_only()
 def administrate_guild(guild_id):
     if not check_user_can_administrate_guild(guild_id):
@@ -343,8 +319,8 @@ def administrate_guild(guild_id):
         "mentions_limit": db_guild.mentions_limit,
         "unauth_captcha": db_guild.unauth_captcha,
         "icon": guild["icon"],
-        "invite_link": db_guild.invite_link if db_guild.invite_link != None else "",
-        "guest_icon": db_guild.guest_icon if db_guild.guest_icon != None else "",
+        "invite_link": db_guild.invite_link if db_guild.invite_link is not None else "",
+        "guest_icon": db_guild.guest_icon if db_guild.guest_icon is not None else "",
         "post_timeout": db_guild.post_timeout,
         "max_message_length": db_guild.max_message_length,
         "banned_words_enabled": db_guild.banned_words_enabled,
@@ -366,7 +342,7 @@ def administrate_guild(guild_id):
     )
 
 
-@user.route("/administrate_guild/<guild_id>", methods=["POST"])
+@user_bp.route("/administrate_guild/<guild_id>", methods=["POST"])
 @discord_users_only()
 def update_administrate_guild(guild_id):
     if guild_id in list_disabled_guilds():
@@ -412,12 +388,12 @@ def update_administrate_guild(guild_id):
     )
 
     invite_link = request.form.get("invite_link", db_guild.invite_link)
-    if invite_link != None and invite_link.strip() == "":
+    if invite_link is not None and invite_link.strip() == "":
         invite_link = None
     db_guild.invite_link = invite_link
 
     guest_icon = request.form.get("guest_icon", db_guild.guest_icon)
-    if guest_icon != None and guest_icon.strip() == "":
+    if guest_icon is not None and guest_icon.strip() == "":
         guest_icon = None
     db_guild.guest_icon = guest_icon
 
@@ -466,7 +442,7 @@ def update_administrate_guild(guild_id):
     )
 
 
-@user.route("/add-bot/<guild_id>")
+@user_bp.route("/add-bot/<guild_id>")
 @discord_users_only()
 def add_bot(guild_id):
     session["redirect"] = None
@@ -519,7 +495,7 @@ def prepare_guild_members_list(members, bans):
     return all_users
 
 
-@user.route("/ban", methods=["POST"])
+@user_bp.route("/ban", methods=["POST"])
 @discord_users_only(api=True)
 def ban_unauthenticated_user():
     guild_id = request.form.get("guild_id", None)
@@ -578,7 +554,7 @@ def ban_unauthenticated_user():
     return "", 204
 
 
-@user.route("/ban", methods=["DELETE"])
+@user_bp.route("/ban", methods=["DELETE"])
 @discord_users_only(api=True)
 def unban_unauthenticated_user():
     guild_id = request.args.get("guild_id", None)
@@ -616,13 +592,13 @@ def unban_unauthenticated_user():
     if db_ban.lifter_id is not None:
         abort(409)
 
-    db_ban.liftBan(session["user_id"])
+    db_ban.lift_ban(session["user_id"])
     db.session.commit()
 
     return "", 204
 
 
-@user.route("/revoke", methods=["POST"])
+@user_bp.route("/revoke", methods=["POST"])
 @discord_users_only(api=True)
 def revoke_unauthenticated_user():
     guild_id = request.form.get("guild_id", None)
@@ -648,6 +624,7 @@ def revoke_unauthenticated_user():
         abort(404)
     if db_user.isRevoked():
         abort(409)
+
     db_user.revokeUser()
     db.session.commit()
 

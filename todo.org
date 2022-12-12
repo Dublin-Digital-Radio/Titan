@@ -1,5 +1,9 @@
 * TODO
-*** DONE update python version
+** DONE update python version
     + 3.10 - needs gunicorn release
     + 3.11 - ???
-*** DONE bot: reconnect to redis automatically
+** DONE bot: reconnect to redis automatically
+** TODO fix display on mobile
+** TODO bug: messages sometimes do not show up, esp for guest login
+** TODO move the database into the same postgres server as powers the main ddr site
+
