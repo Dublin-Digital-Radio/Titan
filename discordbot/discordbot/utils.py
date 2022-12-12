@@ -13,9 +13,7 @@ def format_message(message):
     edit_ts = message.edited_at
     edit_ts = None if not edit_ts else format_datetime(edit_ts)
 
-    msg_type = (
-        int(message.type) if isinstance(message.type, int) else message.type.value
-    )
+    msg_type = int(message.type) if isinstance(message.type, int) else message.type.value
 
     msg = {
         "id": str(message.id),
@@ -96,9 +94,7 @@ def format_message_author(message):
         "discriminator": message.author.discriminator,
         "bot": message.author.bot,
         "id": str(message.author.id),
-        "avatar": message.author.avatar.key
-        if message.author and message.author.avatar
-        else None,
+        "avatar": message.author.avatar.key if message.author and message.author.avatar else None,
     }
 
 
@@ -208,9 +204,7 @@ def format_roles_list(guildroles):
 def format_channels_list(guildchannels):
     channels = []
     for channel in guildchannels:
-        if not (
-            isinstance(channel, TextChannel) or isinstance(channel, CategoryChannel)
-        ):
+        if not (isinstance(channel, TextChannel) or isinstance(channel, CategoryChannel)):
             continue
 
         overwrites = []

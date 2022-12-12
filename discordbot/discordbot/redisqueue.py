@@ -1,9 +1,7 @@
 import re
-import sys
 import json
 import asyncio
 import logging
-import traceback
 from pprint import pformat
 
 import async_timeout
@@ -84,13 +82,9 @@ class RedisQueue:
             pass
         except Exception:
             try:
-                await self.on_error(event)
+                log.exception("error running event")
             except asyncio.CancelledError:
                 pass
-
-    async def on_error(self, event_method):
-        print(f"Ignoring exception in {event_method}", file=sys.stderr)
-        traceback.print_exc()
 
     async def set_scan_json(self, key, dict_key, dict_value_pattern):
         if not await self.connection.exists(key):
@@ -178,8 +172,7 @@ class RedisQueue:
 
             member = members[0]
 
-        user = format_user(member)
-        await self.connection.set(key, json.dumps(user, separators=(",", ":")))
+        await self.connection.set(key, json.dumps(format_user(member), separators=(",", ":")))
         await self.enforce_expiring_key(key)
 
     async def on_get_guild_member_named(self, key, params):
@@ -264,8 +257,9 @@ class RedisQueue:
         else:
             server_webhooks = []
 
-        guild_fmtted = format_guild(guild, server_webhooks)
-        await self.connection.set(key, json.dumps(guild_fmtted, separators=(",", ":")))
+        await self.connection.set(
+            key, json.dumps(format_guild(guild, server_webhooks), separators=(",", ":"))
+        )
         await self.enforce_expiring_key(key)
 
     async def delete_guild(self, guild):
