@@ -5,10 +5,12 @@ from collections import deque
 
 # from raven import Client as RavenClient
 # import raven
+from aiohttp import web
 import discord
 from config import config
 from redis.exceptions import ConnectionError
 
+from discordbot.web import web_app
 from discordbot import commands
 from discordbot.poststats import BotsDiscordPw, DiscordBotsOrg
 from discordbot.redisqueue import RedisQueue
@@ -76,6 +78,10 @@ class Titan(discord.AutoShardedClient):
 
         self.redis_sub_task = None
         self.post_stats_task = None
+        self.web_app = web.Application()
+        self.web_app.add_routes(
+            "/channel_messages/{channel_id}", self.http_get_channel_messages
+        )
 
     def _cleanup(self):
         try:
@@ -123,6 +129,8 @@ class Titan(discord.AutoShardedClient):
         if config["discord-bots-org-token"] or config["bots-discord-pw-token"]:
             self.post_stats_task = self.loop.create_task(self.auto_post_stats())
             self.post_stats_task.add_done_callback(_handle_task_result)
+
+        web.run_app(web_app)
 
     async def on_message(self, message):
         await self.socketio.on_message(message)
@@ -371,3 +379,17 @@ class Titan(discord.AutoShardedClient):
         shard_id = self.shard_id
         await self.discordBotsOrg.post(count, shard_count, shard_id)
         await self.botsDiscordPw.post(count, shard_count, shard_id)
+
+    async def http_get_channel_messages(self, request):
+        channel_id = request.match_info.get("channel_id")
+        channel = self.get_channel(int(channel_id))
+        if not channel or not isinstance(channel, discord.channel.TextChannel):
+            return
+        me = channel.guild.get_member(self.user.id)
+
+        messages = []
+        if channel.permissions_for(me).read_messages:
+            async for message in channel.history(limit=50):
+                messages.append(
+                    json.dumps(format_message(message), separators=(",", ":"))
+                )

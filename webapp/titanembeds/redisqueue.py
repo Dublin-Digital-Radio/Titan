@@ -3,6 +3,7 @@ import time
 import logging
 
 import redis
+from titanembeds.formatters import format_guild, format_message, format_user
 
 log = logging.getLogger(__name__)
 
@@ -65,12 +66,11 @@ def validate_not_none(key, data_key, data):
 
 def get_channel_messages(guild_id, channel_id, after_snowflake=0):
     log.info("get_channel_messages")
-    channel_messages = get(
-        f"/channels/{channel_id}/messages",
-        "get_channel_messages",
-        {"channel_id": channel_id, "limit": 50},
-        data_type="set",
-    )
+    key = f"/channels/{channel_id}/messages"
+
+    channel_messages = redis_store.smembers("Queue" + key)
+    if not channel_messages:
+        channel_messages = on_get_channel_messages(key, channel_id)
     if not channel_messages:
         log.warning("Got none from channel messages")
         return []
@@ -140,7 +140,9 @@ def get_channel_messages(guild_id, channel_id, after_snowflake=0):
 
 def get_guild_member(guild_id, user_id):
     key = f"/guilds/{guild_id}/members/{user_id}"
-    q = get(key, "get_guild_member", {"guild_id": guild_id, "user_id": user_id})
+    q = redis_store.get(key)
+    if not q:
+        q = on_get_guild_member(key, guild_id, user_id)
     if q and not validate_not_none(key, "username", q):
         return get_user(user_id)
     return q
@@ -148,9 +150,9 @@ def get_guild_member(guild_id, user_id):
 
 def get_guild_member_named(guild_id, query):
     key = f"/custom/guilds/{guild_id}/member_named/{query}"
-    guild_member_id = get(
-        key, "get_guild_member_named", {"guild_id": guild_id, "query": query}
-    )
+    guild_member_id = redis_store.get("get_guild_member_named")
+    if not guild_member_id:
+        guild_member_id = on_get_guild_member_named(key, guild_id, query)
     if guild_member_id:
         return get_guild_member(guild_id, guild_member_id["user_id"])
     return None
@@ -158,13 +160,13 @@ def get_guild_member_named(guild_id, query):
 
 def list_guild_members(guild_id):
     key = f"/guilds/{guild_id}/members"
-    member_ids = get(
-        key, "list_guild_members", {"guild_id": guild_id}, data_type="set"
-    )
+    member_ids = redis_store.smembers(key)
+    if not member_ids:
+        member_ids = on_list_guild_members(key, guild_id)
+
+    member_ids = get(key, "list_guild_members", {"guild_id": guild_id}, data_type="set")
     return [
-        m
-        for m_id in member_ids
-        if (m := get_guild_member(guild_id, m_id["user_id"]))
+        m for m_id in member_ids if (m := get_guild_member(guild_id, m_id["user_id"]))
     ]
 
 
@@ -180,7 +182,9 @@ def get_guild(guild_id):
         return None
 
     key = f"/guilds/{guild_id}"
-    q = get(key, "get_guild", {"guild_id": guild_id})
+    q = redis_store.get(key)
+    if not q:
+        q = on_get_guild(key, guild_id)
     if q and not validate_not_none(key, "name", q):
         return get_guild(guild_id)
     return q
@@ -188,7 +192,9 @@ def get_guild(guild_id):
 
 def get_user(user_id):
     key = f"/users/{user_id}"
-    q = get(key, "get_user", {"user_id": user_id})
+    q = redis_store.get(key)
+    if not q:
+        q = on_get_user(key, user_id)
     if q and not validate_not_none(key, "username", q):
         return get_user(user_id)
     return q
@@ -201,9 +207,7 @@ def bump_user_presence_timestamp(guild_id, user_type, client_key):
 
 def get_online_embed_user_keys(guild_id="*", user_type=None):
     user_type = (
-        [user_type]
-        if user_type
-        else ["AuthenticatedUsers", "UnauthenticatedUsers"]
+        [user_type] if user_type else ["AuthenticatedUsers", "UnauthenticatedUsers"]
     )
 
     return {
@@ -213,3 +217,135 @@ def get_online_embed_user_keys(guild_id="*", user_type=None):
         ]
         for utype in user_type
     }
+
+
+def on_get_channel_messages(key, channel_id):
+    channel = self.bot.get_channel(int(channel_id))
+    if not channel or not isinstance(channel, discord.channel.TextChannel):
+        return
+
+    redis_store.delete(key)
+    me = channel.guild.get_member(self.bot.user.id)
+
+    messages = []
+    if channel.permissions_for(me).read_messages:
+        async for message in channel.history(limit=50):
+            messages.append(json.dumps(format_message(message), separators=(",", ":")))
+
+    redis_store.sadd(key, "", *messages)
+
+    return messages
+
+
+def on_get_guild_member(key, guild_id, user_id):
+    if not (guild := self.bot.get_guild(int(guild_id))):
+        return
+
+    if not (member := guild.get_member(int(user_id))):
+        members = guild.query_members(user_ids=[int(user_id)], cache=True)
+
+        if not len(members):
+            redis_store.set(key, "")
+            enforce_expiring_key(key, 15)
+            return
+
+        member = members[0]
+
+    formatted_member = format_user(member)
+    redis_store.set(key, json.dumps(formatted_member, separators=(",", ":")))
+    enforce_expiring_key(key)
+
+    return formatted_member
+
+
+def on_get_guild_member_named(key, guild_id, query):
+    if not (guild := self.bot.get_guild(int(guild_id))):
+        return
+
+    result = None
+    members = guild.members
+    if members and len(query) > 5 and query[-5] == "#":
+        potential_discriminator = query[-4:]
+        result = discord.utils.get(
+            members, name=query[:-5], discriminator=potential_discriminator
+        )
+        if not result:
+            result = discord.utils.get(
+                members, nick=query[:-5], discriminator=potential_discriminator
+            )
+
+    if not result:
+        result = ""
+    else:
+        result = json.dumps({"user_id": result.id}, separators=(",", ":"))
+        get_guild_member_key = f"Queue/guilds/{guild.id}/members/{result.id}"
+        on_get_guild_member(get_guild_member_key, guild_id, result.id)
+
+    redis_store.set(key, result)
+    enforce_expiring_key(key)
+
+    return result
+
+
+def on_list_guild_members(key, guild_id):
+    if not (guild := self.bot.get_guild(int(guild_id))):
+        return
+
+    member_ids = []
+    for member in guild.members:
+        member_ids.append(json.dumps({"user_id": member.id}, separators=(",", ":")))
+        get_guild_member_key = f"Queue/guilds/{guild.id}/members/{member.id}"
+        on_get_guild_member(get_guild_member_key, guild_id, member.id)
+
+    redis_store.sadd(key, *member_ids)
+
+
+def on_get_guild(key, guild_id):
+    if not (guild := self.bot.get_guild(int(guild_id))):
+        return
+
+    if guild.me and guild.me.guild_permissions.manage_webhooks:
+        try:
+            server_webhooks = guild.webhooks()
+        except:
+            log.exception("Could not get guild webhooks")
+            server_webhooks = []
+    else:
+        server_webhooks = []
+
+    guild_data = format_guild(guild, server_webhooks)
+    redis_store.set(key, json.dumps(guild_data, separators=(",", ":")))
+    enforce_expiring_key(key)
+    return guild_data
+
+
+def on_get_user(key, user_id):
+    if not (user := self.bot.get_user(int(user_id))):
+        return
+
+    user_formatted = {
+        "id": user.id,
+        "username": user.name,
+        "discriminator": user.discriminator,
+        "avatar": user.avatar.key if user.avatar else None,
+        "bot": user.bot,
+    }
+    redis_store.set(key, json.dumps(user_formatted, separators=(",", ":")))
+    enforce_expiring_key(key)
+    return user_formatted
+
+
+def enforce_expiring_key(key, ttl_override=None):
+    if ttl_override:
+        redis_store.expire(key, ttl_override)
+        return
+
+    ttl = redis_store.ttl(key)
+    if ttl >= 0:
+        new_ttl = ttl
+    elif ttl == -1:
+        new_ttl = 60 * 5  # 5 minutes
+    else:
+        new_ttl = 0
+
+    redis_store.expire(key, new_ttl)
