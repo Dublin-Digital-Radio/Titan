@@ -35,21 +35,22 @@ class Gateway(Namespace):
     def on_identify(self, data):
         if authorization := data.get("session", None):
             try:
-                data = serializer.loads(authorization)
-                session.update(data)
+                session.update(serializer.loads(authorization))
             except:
                 log.exception("exception in authorisation session update")
                 pass
 
         guild_id = data["guild_id"]
         if not guild_accepts_visitors(guild_id) and not check_user_in_guild(guild_id):
-            disconnect()
+            log.info("not guild_accepts_visitors and not check_user_in_guild")
             self.teardown_db_session()
             return
 
         session["socket_guild_id"] = guild_id
 
-        force_everyone = guild_accepts_visitors(guild_id) and not check_user_in_guild(guild_id)
+        force_everyone = guild_accepts_visitors(guild_id) and not check_user_in_guild(
+            guild_id
+        )
         channels = get_guild_channels(
             guild_id,
             force_everyone=force_everyone,
@@ -61,7 +62,9 @@ class Gateway(Namespace):
             if chan["read"]:
                 join_room("CHANNEL_" + chan["channel"]["id"])
 
-        if session.get("unauthenticated", True) and guild_id in session.get("user_keys", {}):
+        if session.get("unauthenticated", True) and guild_id in session.get(
+            "user_keys", {}
+        ):
             join_room(f"IP_{get_client_ipaddr()}")
         elif not session.get("unauthenticated", True):
             join_room(f"USER_{session['user_id']}")
@@ -75,9 +78,9 @@ class Gateway(Namespace):
                     "discriminator": session["user_id"],
                 }
             else:
-                nickname = redisqueue.get_guild_member(guild_id, session["user_id"]).get(
-                    "nickname"
-                )
+                nickname = redisqueue.get_guild_member(
+                    guild_id, session["user_id"]
+                ).get("nickname")
                 data = {
                     "unauthenticated": False,
                     "id": str(session["user_id"]),
@@ -111,7 +114,11 @@ class Gateway(Namespace):
         if guild_webhooks_enabled(guild_id):  # Delete webhooks
             guild_webhooks = redisqueue.get_guild(guild_id)["webhooks"]
 
-            d = session["user_id"] if session["unauthenticated"] else session["discriminator"]
+            d = (
+                session["user_id"]
+                if session["unauthenticated"]
+                else session["discriminator"]
+            )
             name = f"[Titan] {session['username'][:19]}#{d}"
 
             for webhook in [w for w in guild_webhooks if w["name"] == name]:
@@ -121,6 +128,7 @@ class Gateway(Namespace):
 
     def on_heartbeat(self, data):
         if "socket_guild_id" not in session:
+            log.info("disconnect because socket_guild_id not in session:")
             disconnect()
             return
 
@@ -130,6 +138,9 @@ class Gateway(Namespace):
             key = None
             if "unauthenticated" not in session:
                 self.teardown_db_session()
+                log.info(
+                    "disconnect because unauthenticated not in session and not visitor_mode"
+                )
                 disconnect()
                 return
 
@@ -141,6 +152,8 @@ class Gateway(Namespace):
                 emit("revoke")
                 self.teardown_db_session()
                 time.sleep(1)
+
+                log.info("disconnect because status revoked or banned")
                 disconnect()
                 return
             else:
@@ -148,6 +161,7 @@ class Gateway(Namespace):
         else:
             if not guild_accepts_visitors(guild_id):
                 self.teardown_db_session()
+                log.info("disconnect because guild does no accept visitors")
                 disconnect()
                 return
 
@@ -155,6 +169,7 @@ class Gateway(Namespace):
 
     def on_channel_list(self, data):
         if "socket_guild_id" not in session:
+            log.info("disconnect because socket_guild_id not in session")
             disconnect()
             return
 
@@ -174,6 +189,7 @@ class Gateway(Namespace):
 
     def on_current_user_info(self, data):
         if "socket_guild_id" not in session:
+            log.info("disconnect because socket_guild_id not in session")
             disconnect()
             return
 
@@ -201,7 +217,9 @@ class Gateway(Namespace):
         roles = [r for r_id in member["roles"] if (r := roles_map.get(str(r_id)))]
 
         color = None
-        for role in [x for x in sorted(roles, key=lambda k: k["position"]) if x["color"] != 0]:
+        for role in [
+            x for x in sorted(roles, key=lambda k: k["position"]) if x["color"] != 0
+        ]:
             color = f"{role['color']:02x}"
             while len(color) < 6:
                 color = "0" + color
@@ -210,6 +228,7 @@ class Gateway(Namespace):
 
     def on_lookup_user_info(self, data):
         if "socket_guild_id" not in session:
+            log.info("disconnect because socket_guild_id not in session")
             disconnect()
             return
 
@@ -236,7 +255,9 @@ class Gateway(Namespace):
             usr["avatar"] = member["avatar"]
             usr["color"] = self.get_user_color(guild_id, usr["id"])
             if usr["avatar"]:
-                usr["avatar_url"] = f"{DISCORDAPP_AVATARS_URL}{usr['id']}/{usr['avatar']}.png"
+                usr[
+                    "avatar_url"
+                ] = f"{DISCORDAPP_AVATARS_URL}{usr['id']}/{usr['avatar']}.png"
             usr["roles"] = member["roles"]
             usr["discordbotsorgvoted"] = bool(
                 redisqueue.redis_store.get(f"DiscordBotsOrgVoted/{member['id']}")
@@ -250,7 +271,9 @@ class Gateway(Namespace):
                 usr["avatar"] = member["avatar"]
                 usr["color"] = self.get_user_color(guild_id, usr["id"])
                 if usr["avatar"]:
-                    usr["avatar_url"] = f"{DISCORDAPP_AVATARS_URL}{usr['id']}/{usr['avatar']}.png"
+                    usr[
+                        "avatar_url"
+                    ] = f"{DISCORDAPP_AVATARS_URL}{usr['id']}/{usr['avatar']}.png"
                 usr["roles"] = member["roles"]
                 usr["discordbotsorgvoted"] = bool(
                     redisqueue.redis_store.get(f"DiscordBotsOrgVoted/{member['id']}")
