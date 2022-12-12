@@ -1,3 +1,5 @@
+import logging
+
 import discord
 import socketio
 
@@ -9,6 +11,8 @@ from discordbot.utils import (
     format_role,
     format_user,
 )
+
+log = logging.getLogger(__name__)
 
 
 class SocketIOInterface:

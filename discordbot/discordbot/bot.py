@@ -1,7 +1,6 @@
 import sys
 import asyncio
 import logging
-from pprint import pformat
 from collections import deque
 
 # from raven import Client as RavenClient
@@ -20,7 +19,7 @@ from discordbot.socketio import SocketIOInterface
 #     pass
 
 intents = discord.Intents.default()
-intents.members = True
+intents.message_content = True
 
 
 def setup_logger(shard_ids=None):
@@ -116,17 +115,14 @@ class Titan(discord.AutoShardedClient):
     async def on_message(self, message):
         await self.socketio.on_message(message)
         await self.redisqueue.push_message(message)
-        msg = message.content.split()  # split the message
 
-        self.log.info("received message:\n%s\n%s", message, msg)
-
+        # See if there is a command we recognise
+        msg = message.content.split()
         if len(msg) <= 1:
-            self.log.info("Could not read message - too short\n%s", pformat(msg))
             return
 
         msg_cmd = msg[1].lower()
         if msg_cmd == "__init__":
-            self.log.info("Skipping message - command is '__init__'\n%s", pformat(msg))
             return
 
         # making sure there is actually stuff in the message and have arguments
@@ -141,8 +137,6 @@ class Titan(discord.AutoShardedClient):
             async with message.channel.typing():  # this looks nice
                 # actually run cmd, passing in msg obj
                 await getattr(self.command, msg_cmd)(message)
-        else:
-            self.log.info("Could not run message %s\n%s", msg_cmd, pformat(msg))
 
     async def on_message_edit(self, message_before, message_after):
         await self.redisqueue.update_message(message_after)
