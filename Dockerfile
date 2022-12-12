@@ -6,6 +6,10 @@ WORKDIR /home/titan/Titan
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
+RUN apt update && \
+  apt install --no-install-recommends -y \
+    redis-tools && \
+  rm -rf /var/lib/apt/lists/*
 
 FROM base as build
 
