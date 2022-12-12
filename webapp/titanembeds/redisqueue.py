@@ -19,12 +19,14 @@ def get(key, resource, params, *, data_type="str"):
     _get = redis_store.smembers if data_type == "set" else redis_store.get
 
     data = _get(key)
-    payload = {"key": key, "resource": resource, "params": params}
 
     loop_count = 0
     while (not data and data != "") and loop_count < 50:
         if loop_count % 25 == 0:
-            redis_store.publish("discord-api-req", json.dumps(payload))
+            redis_store.publish(
+                "discord-api-req",
+                json.dumps({"key": key, "resource": resource, "params": params}),
+            )
         time.sleep(0.1)
         data = _get(key)
         loop_count += 1
@@ -122,12 +124,7 @@ def get_guild_member_named(guild_id, query):
 def list_guild_members(guild_id):
     key = f"/guilds/{guild_id}/members"
     member_ids = get(key, "list_guild_members", {"guild_id": guild_id}, data_type="set")
-    members = []
-    for member_id in member_ids:
-        member = get_guild_member(guild_id, member_id["user_id"])
-        if member:
-            members.append(member)
-    return members
+    return [m for m_id in member_ids if (m := get_guild_member(guild_id, m_id["user_id"]))]
 
 
 def get_guild(guild_id):

@@ -3,6 +3,7 @@ import copy
 import json
 import random
 import logging
+from pprint import pformat
 from urllib.parse import urlsplit, parse_qsl
 
 import requests
@@ -99,14 +100,14 @@ def parse_emoji(text_to_parse, guild_id):
     return text_to_parse
 
 
-def format_post_content(guild_id, message, dbUser):
+def format_post_content(guild_id, message, db_user):
     illegal_post = False
     illegal_reasons = []
     message = message.replace("<", "\<")
     message = message.replace(">", "\>")
     message = parse_emoji(message, guild_id)
 
-    dbguild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+    db_guild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
 
     max_len = get_post_content_max_len(guild_id)
     if len(message) > max_len:
@@ -117,28 +118,28 @@ def format_post_content(guild_id, message, dbUser):
         "http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+",
         message,
     )
-    if not dbguild.chat_links and len(links) > 0:
+    if not db_guild.chat_links and len(links) > 0:
         illegal_post = True
         illegal_reasons.append("Links is not allowed.")
-    elif dbguild.chat_links and not dbguild.bracket_links:
+    elif db_guild.chat_links and not db_guild.bracket_links:
         for link in links:
             message = message.replace(link, f"<{link}>")
 
     mention_pattern = re.compile(r"\[@[0-9]+\]")
     all_mentions = re.findall(mention_pattern, message)
-    if dbguild.mentions_limit != -1 and len(all_mentions) > dbguild.mentions_limit:
+    if db_guild.mentions_limit != -1 and len(all_mentions) > db_guild.mentions_limit:
         illegal_post = True
         illegal_reasons.append(
-            "Mentions is capped at the following limit: " + str(dbguild.mentions_limit)
+            "Mentions is capped at the following limit: " + str(db_guild.mentions_limit)
         )
 
     for match in all_mentions:
         mention = "<@" + match[2 : len(match) - 1] + ">"
         message = message.replace(match, mention, 1)
 
-    if dbguild.banned_words_enabled:
-        banned_words = set(json.loads(dbguild.banned_words))
-        if dbguild.banned_words_global_included:
+    if db_guild.banned_words_enabled:
+        banned_words = set(json.loads(db_guild.banned_words))
+        if db_guild.banned_words_global_included:
             banned_words = banned_words.union(set(constants.GLOBAL_BANNED_WORDS))
 
         for word in banned_words:
@@ -152,8 +153,8 @@ def format_post_content(guild_id, message, dbUser):
             message = f"**[{session['username']}#{session['user_id']}]** {message}"
         else:
             username = session["username"]
-            if dbUser and dbUser["nick"]:
-                username = dbUser["nick"]
+            if db_user and db_user["nick"]:
+                username = db_user["nick"]
 
             # I would like to do a @ mention, but i am worried about notify spam
             message = f"**<{username}#{session['discriminator']}>** {message}"
@@ -252,7 +253,7 @@ def get_guild_roles(guild_id):
 
 
 # Returns webhook url if exists and can post w/webhooks, otherwise None
-def get_channel_webhook_url(guild_id, channel_id):
+def get_channel_webhook(guild_id, channel_id):
     if not guild_webhooks_enabled(guild_id):
         return None
 
@@ -260,6 +261,7 @@ def get_channel_webhook_url(guild_id, channel_id):
     name = f"[Titan] {session['username'][:19]}#{discrim}"
 
     for webhook in redisqueue.get_guild(guild_id)["webhooks"]:
+        log.info("Found guild webhook : %s", webhook)
         if channel_id == webhook["channel_id"] and webhook["name"] == name:
             return {
                 "id": webhook["id"],
@@ -270,6 +272,7 @@ def get_channel_webhook_url(guild_id, channel_id):
             }
 
     webhook = discord_api.create_webhook(channel_id, name)
+    log.info("Created guild webhook : %s", webhook)
     return webhook.get("content") if webhook else None
 
 
@@ -324,6 +327,7 @@ def delete_webhook_if_too_much(webhook):
     titan_wh_cnt = len([wh for wh in guild["webhooks"] if wh["name"].startswith("[Titan] ")])
 
     if titan_wh_cnt > 0 and len(guild["webhooks"]) >= 8:
+        log.info("Deleting excess webhook %s", webhook)
         try:
             discord_api.delete_webhook(webhook["id"], webhook["token"])
         except:
@@ -449,35 +453,46 @@ def post():
         else None
     )
     key = session["user_keys"][guild_id] if user_unauthenticated() else None
+
+    log.info("post: message is %s", pformat(content))
     content, illegal_post, illegal_reasons = format_post_content(guild_id, content, db_user)
-    status = update_user_status(guild_id, session["username"], key)
     chan = filter_guild_channel(guild_id, channel_id)
+    content = format_everyone_mention(chan, content)
+    log.info("post: message is now %s", pformat(content))
 
-    message = {}
+    status = update_user_status(guild_id, session["username"], key)
+
+    if not content:
+        return return_response(204, {}, status)
     if status["banned"] or status["revoked"]:
-        status_code = 401
+        return return_response(401, {}, status, illegal_reasons)
     elif not chan.get("write") or chan["channel"]["type"] != "text":
-        status_code = 401
+        return return_response(401, {}, status, illegal_reasons)
     elif (file and not chan.get("attach_files")) or (rich_embed and not chan.get("embed_links")):
-        status_code = 406
+        return return_response(406, {}, status, illegal_reasons)
     elif illegal_post:
-        status_code = 417
+        return return_response(417, {}, status, illegal_reasons)
+
+    # if userid in get_administrators_list():
+    #     content = "(Titan Dev) " + content
+    if webhook := get_channel_webhook(guild_id, channel_id):
+        log.info("sending message by webhook '%s'", webhook)
+        # https://discord.com/api/webhooks/1051803851684073502/-bMS3xabIBd7Bz6qdJ3psGVDSHJYqRvtSPp1dMntR1iiHFNYx5EDh9r2WaseDsdxeoLu
+        # https://discord.com/api/webhooks/1051804042302599198/E3bq8_tm1eKV1B_STL5IykczUkVHAb5RtvZ53TarQRj-3thsc9Bk7mV9lTGxeGCzkce6
+        message = send_webhook(content, db_user, file, guild_id, rich_embed, webhook)
     else:
-        content = format_everyone_mention(chan, content)
-        # if userid in get_administrators_list():
-        #     content = "(Titan Dev) " + content
-        if webhook := get_channel_webhook_url(guild_id, channel_id):
-            message = send_webhook(content, db_user, file, guild_id, rich_embed, webhook)
-        else:
-            message = discord_api.create_message(channel_id, content, file, rich_embed)
+        log.info("sending message by discord api")
+        message = discord_api.create_message(channel_id, content, file, rich_embed)
 
-        status_code = message["code"]
+    return return_response(message["code"], message, status, illegal_reasons)
 
+
+def return_response(status_code, message, status, illegal_reasons=None):
     db.session.commit()
     response = jsonify(
         message=message.get("content", message),
         status=status,
-        illegal_reasons=illegal_reasons,
+        illegal_reasons=illegal_reasons or [],
     )
     response.status_code = status_code
     return response

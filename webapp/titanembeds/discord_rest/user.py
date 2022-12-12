@@ -15,6 +15,15 @@ from titanembeds.discord_rest.oauth import (
 )
 
 
+def discordrest_from_user(endpoint):
+    discord = make_authenticated_session(token=session["user_keys"])
+    try:
+        return discord.get(f"https://discordapp.com/api/v6{endpoint}")
+    except InvalidGrantError as ex:
+        log.exception("Invalid grant")
+        abort(401)
+
+
 def get_current_authenticated_user():
     req = discordrest_from_user("/users/@me")
     if req.status_code != 200:
@@ -77,12 +86,3 @@ def check_user_permission(guild_id, permission_id):
             return user_has_permission(guild["permissions"], permission_id) or guild["owner"]
 
     return False
-
-
-def discordrest_from_user(endpoint):
-    discord = make_authenticated_session(token=session["user_keys"])
-    try:
-        return discord.get(f"https://discordapp.com/api/v6{endpoint}")
-    except InvalidGrantError as ex:
-        log.exception("Invalid grant")
-        abort(401)
