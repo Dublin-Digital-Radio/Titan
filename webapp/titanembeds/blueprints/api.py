@@ -530,7 +530,7 @@ def verify_captcha_request(captcha_response, ip_address):
 
 
 @api.route("/create_unauthenticated_user", methods=["POST"])
-@rate_limiter.limit("3 per 30 minute", key_func=guild_ratelimit_key)
+@rate_limiter.limit("6 per 30 minute", key_func=guild_ratelimit_key)
 @abort_if_guild_disabled()
 def create_unauthenticated_user():
     session["unauthenticated"] = True
