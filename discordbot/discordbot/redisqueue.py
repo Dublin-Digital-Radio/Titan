@@ -180,24 +180,25 @@ class RedisQueue:
             return
 
         query = params["query"]
-        result = None
-        members = guild.members
-        if members and len(query) > 5 and query[-5] == "#":
+        members = None
+        if guild.members and len(query) > 5 and query[-5] == "#":
             potential_discriminator = query[-4:]
-            result = discord.utils.get(
-                members, name=query[:-5], discriminator=potential_discriminator
+            members = discord.utils.get(
+                guild.members, name=query[:-5], discriminator=potential_discriminator
             )
-            if not result:
-                result = discord.utils.get(
-                    members, nick=query[:-5], discriminator=potential_discriminator
+            if not members:
+                members = discord.utils.get(
+                    guild.members,
+                    nick=query[:-5],
+                    discriminator=potential_discriminator,
                 )
 
-        if not result:
+        if not members:
             result = ""
         else:
-            result = json.dumps({"user_id": result.id}, separators=(",", ":"))
-            get_guild_member_key = f"Queue/guilds/{guild.id}/members/{result.id}"
-            get_guild_member_param = {"guild_id": guild.id, "user_id": result.id}
+            result = json.dumps({"user_id": (members.id)}, separators=(",", ":"))
+            get_guild_member_key = f"Queue/guilds/{guild.id}/members/{members.id}"
+            get_guild_member_param = {"guild_id": guild.id, "user_id": members.id}
             await self.on_get_guild_member(get_guild_member_key, get_guild_member_param)
 
         await self.connection.set(key, result)
