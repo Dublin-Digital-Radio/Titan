@@ -15,7 +15,7 @@ run-webapp:
 deploy-webapp:
 	flyctl deploy  --build-target webapp --config webapp/fly.toml
 
-deploy-bot:
+deploy-discordbot:
 	 flyctl deploy  --build-target discordbot --config discordbot/fly.toml
 
 deploy-all: deploy-bot deploy-webapp
