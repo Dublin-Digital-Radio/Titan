@@ -184,6 +184,7 @@ var passedCookieTest = true; // If passed cross origin test
         if (content == "") {
             content = null;
         }
+
         var data = null;
         var ajaxobj = {
             method: "POST",
@@ -222,6 +223,7 @@ var passedCookieTest = true; // If passed cross origin test
         } else {
             data = {"guild_id": guild_id, "channel_id": channel_id, "content": content};
         }
+
         ajaxobj.data = data;
         var funct = $.ajax(ajaxobj);
         funct.always(ajax_always);
@@ -2137,6 +2139,7 @@ var passedCookieTest = true; // If passed cross origin test
         if (event.type == "keydown" && (event.which == 38 || event.which == 40 || event.which == 13) && $("#mention-picker").is(":visible")) {
             return;
         }
+
         var cursorAt = $(this).caret();
         var input = $(this).val().substr(0, cursorAt);
         var lastWord = input.match(/@\w+$/);
@@ -2144,11 +2147,13 @@ var passedCookieTest = true; // If passed cross origin test
             $("#mention-picker").hide();
             return;
         }
+
         lastWord = lastWord[0];
         if (lastWord.charAt(0) != "@") {
             $("#mention-picker").hide();
             return;
         }
+
         lastWord = lastWord.substr(1);
         if (all_users.length == 0) {
             var usrs = list_users();
@@ -2156,6 +2161,7 @@ var passedCookieTest = true; // If passed cross origin test
                 all_users = lst;
             });
         }
+
         var template = $('#mustache_usermentionchoices').html();
         Mustache.parse(template);
         var users = [];
@@ -2175,12 +2181,14 @@ var passedCookieTest = true; // If passed cross origin test
                 });
             }
         }
+
         if (users.length == 0) {
             $("#mention-picker").hide();
             return;
         }
         $("#mention-picker").show();
         $("#mention-picker-content").html("");
+
         for (var i = 0; i < users.length; i++) {
             var usr = users[i];
             var rendered = $(Mustache.render(template, usr));
@@ -2197,6 +2205,7 @@ var passedCookieTest = true; // If passed cross origin test
             });
             $("#mention-picker-content").append(rendered);
         }
+
         $("#mention-picker .mention-choice.selected").removeClass("selected");
         $("#mention-picker .mention-choice").first().addClass("selected");
     });
@@ -2273,6 +2282,7 @@ var passedCookieTest = true; // If passed cross origin test
             if (!richembed) {
                 richembed = null;
             }
+
             var funct = post(selected_channel, messageInput, file, richembed);
             funct.done(function(data) {
                 $("#messagebox").val("");
@@ -2390,8 +2400,10 @@ var passedCookieTest = true; // If passed cross origin test
             return;
         }
 
+        console.log('connecting to websocket')
         socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + "/gateway", {path: '/gateway', transports: ['websocket'], query: "v=1"});
         socket.on('connect', function () {
+            console.log('connected to websocket')
             var sen = {"guild_id": guild_id, "visitor_mode": visitor_mode};
             if (!passedCookieTest && session) {
                 sen["session"] = session;
@@ -2408,15 +2420,18 @@ var passedCookieTest = true; // If passed cross origin test
         });
 
         socket.on("identified", function () {
+            console.log('websocket identified')
             socket_identified = true;
             process_message_users_cache();
         })
 
         socket.on("disconnect", function () {
+            console.log('websocket disconnect')
             socket_identified = false;
         });
 
         socket.on("revoke", function () {
+            console.log('websocket revoke!')
             socket.disconnect();
             socket = null;
             $('#loginmodal').modal('open');
@@ -2695,6 +2710,7 @@ var passedCookieTest = true; // If passed cross origin test
         });
 
         socket.on("ack", function () {
+            console.log('socked ack')
             socket_last_ack = moment();
             if (socket && socket_error_should_refetch) {
                 run_fetch_routine();
