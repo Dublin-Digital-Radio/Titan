@@ -6,7 +6,7 @@ import redis
 
 log = logging.getLogger(__name__)
 
-redis_store = None
+redis_store = redis.Redis()
 
 
 def init_redis(url):
@@ -125,6 +125,11 @@ def list_guild_members(guild_id):
     key = f"/guilds/{guild_id}/members"
     member_ids = get(key, "list_guild_members", {"guild_id": guild_id}, data_type="set")
     return [m for m_id in member_ids if (m := get_guild_member(guild_id, m_id["user_id"]))]
+
+
+def guild_clear_cache(guild_id):
+    key = f"Queue/guilds/{guild_id}"
+    redis_store.delete(key)
 
 
 def get_guild(guild_id):

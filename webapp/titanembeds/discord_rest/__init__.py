@@ -184,11 +184,12 @@ class DiscordREST:
     # Webhook
     #####################
 
-    def create_webhook(self, channel_id, name, avatar=None):
+    def create_webhook(self, guild_id, channel_id, name, avatar=None):
         _endpoint = f"/channels/{channel_id}/webhooks"
         payload = {"name": name}
         if avatar:
             payload["avatar"] = avatar
+        redisqueue.guild_clear_cache(guild_id)
         return self.request("POST", _endpoint, data=payload, json=True)
 
     def execute_webhook(
@@ -226,7 +227,8 @@ class DiscordREST:
 
         return self.request("POST", _endpoint, data=payload, json=is_json)
 
-    def delete_webhook(self, webhook_id, webhook_token):
+    def delete_webhook(self, webhook_id, webhook_token, guild_id):
+        redisqueue.guild_clear_cache(guild_id)
         _endpoint = f"/webhooks/{webhook_id}/{webhook_token}"
         return self.request("DELETE", _endpoint)
 

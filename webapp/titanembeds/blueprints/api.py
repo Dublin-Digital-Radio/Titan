@@ -260,9 +260,18 @@ def get_channel_webhook(guild_id, channel_id):
     discrim = session["user_id"] if user_unauthenticated() else session["discriminator"]
     name = f"[Titan] {session['username'][:19]}#{discrim}"
 
-    for webhook in redisqueue.get_guild(guild_id)["webhooks"]:
-        log.info("Found guild webhook : %s", webhook)
+    webhooks = redisqueue.get_guild(guild_id)["webhooks"]
+    log.info("checking webhook for channel %s and name '%s'", channel_id, name)
+    for webhook in webhooks:
+        log.info(
+            "checking webhook: id: %s, channel_id: %s, name: %s",
+            webhook["id"],
+            webhook["channel_id"],
+            webhook["name"],
+        )
+    for webhook in webhooks:
         if channel_id == webhook["channel_id"] and webhook["name"] == name:
+            log.info("Found guild webhook : %s", webhook)
             return {
                 "id": webhook["id"],
                 "token": webhook["token"],
@@ -271,8 +280,12 @@ def get_channel_webhook(guild_id, channel_id):
                 "channel_id": webhook.get("channel_id"),
             }
 
-    webhook = discord_api.create_webhook(channel_id, name)
+    webhook = discord_api.create_webhook(guild_id, channel_id, name)
     log.info("Created guild webhook : %s", webhook)
+    # "Maximum number of webhooks reached (10)"
+    if webhook["code"] == 30007 or not webhook:
+        return None
+
     return webhook.get("content") if webhook else None
 
 
@@ -293,11 +306,6 @@ def send_webhook(content, db_user, file, guild_id, rich_embed, webhook):
             )
     else:
         username = db_user["nick"] if db_user and db_user["nick"] else session["username"]
-
-        # if content.startswith("(Titan Dev) "):
-        #     content = content[12:]
-        #     username = "(Titan Dev) " + username
-
         username = f"{username[:25]}#{session['discriminator']}"
         avatar = session["avatar"]
 
@@ -310,29 +318,35 @@ def send_webhook(content, db_user, file, guild_id, rich_embed, webhook):
         file,
         rich_embed,
     )
-    delete_webhook_if_too_much(webhook)
+    if message.get("message", {}).get("code") == 10015:  # Unknown webhook
+        log.error("Unknown webhook: %s", message)
+        return None
+
+    delete_webhook_if_too_much(guild_id)
     return message
 
 
-def delete_webhook_if_too_much(webhook):
-    if not webhook:
-        return
-
-    guild_id = webhook["guild_id"]
+def delete_webhook_if_too_much(guild_id):
     if not guild_webhooks_enabled(guild_id):
         return
 
     guild = redisqueue.get_guild(guild_id)
+    titan_webhooks = [w for w in guild["webhooks"] if w["name"].startswith("[Titan] ")]
 
-    titan_wh_cnt = len([wh for wh in guild["webhooks"] if wh["name"].startswith("[Titan] ")])
-
-    if titan_wh_cnt > 0 and len(guild["webhooks"]) >= 8:
-        log.info("Deleting excess webhook %s", webhook)
-        try:
-            discord_api.delete_webhook(webhook["id"], webhook["token"])
-        except:
-            log.exception("Could not delete webhook")
-            pass  # not my problem now
+    if len(titan_webhooks) > 0 and len(guild["webhooks"]) >= 8:
+        log.info(
+            "Webhook count: %s. guild webhooks: %s.",
+            len(titan_webhooks),
+            len(guild["webhooks"]),
+        )
+        for wh in titan_webhooks:
+            log.info("Deleting excess webhook %s", wh)
+            try:
+                res = discord_api.delete_webhook(wh["id"], wh["token"], guild_id)
+                log.info("delete_webhook result:  %s", pformat(res))
+            except:
+                log.exception("Could not delete webhook")
+                pass  # not my problem now
 
 
 def get_all_users(guild_id):
@@ -475,12 +489,16 @@ def post():
 
     # if userid in get_administrators_list():
     #     content = "(Titan Dev) " + content
-    if webhook := get_channel_webhook(guild_id, channel_id):
+    webhook = get_channel_webhook(guild_id, channel_id)
+    if webhook:
         log.info("sending message by webhook '%s'", webhook)
         # https://discord.com/api/webhooks/1051803851684073502/-bMS3xabIBd7Bz6qdJ3psGVDSHJYqRvtSPp1dMntR1iiHFNYx5EDh9r2WaseDsdxeoLu
         # https://discord.com/api/webhooks/1051804042302599198/E3bq8_tm1eKV1B_STL5IykczUkVHAb5RtvZ53TarQRj-3thsc9Bk7mV9lTGxeGCzkce6
         message = send_webhook(content, db_user, file, guild_id, rich_embed, webhook)
-    else:
+        if not message:
+            webhook = None
+
+    if not webhook:
         log.info("sending message by discord api")
         message = discord_api.create_message(channel_id, content, file, rich_embed)
 

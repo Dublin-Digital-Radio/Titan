@@ -41,7 +41,7 @@ def get_user_guilds():
 
     cache = redisqueue.redis_store.get(cache_key)
     if cache:
-        log.info("got user guilds from cache: '%s'", pformat(json.loads(cache)))
+        log.debug("got user guilds from cache: '%s'", pformat(json.loads(cache)))
         return json.loads(cache)
 
     req = discordrest_from_user("/users/@me/guilds")
@@ -55,7 +55,7 @@ def get_user_guilds():
     result = req.json()
     redisqueue.redis_store.set(cache_key, json.dumps(result), 250)
 
-    log.info("get_user_guilds - type '%s' - value: '%s'", type(result), pformat(result))
+    log.debug("get_user_guilds - type '%s' - value: '%s'", type(result), pformat(result))
     return result
 
 
