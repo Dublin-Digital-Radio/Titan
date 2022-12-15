@@ -18,6 +18,12 @@ deploy-webapp:
 deploy-discordbot:
 	 flyctl deploy --env GIT_COMMIT=$$(git rev-parse HEAD) --build-target discordbot --config discordbot/fly.toml
 
+ssh-webapp:
+	flyctl ssh console --config webapp/fly.toml --app ddr-titan
+
+ssh-discordbot:
+	flyctl ssh console --config discordbot/fly.toml --app ddr-discord-bot
+
 deploy-all: deploy-bot deploy-webapp
 
 pip-install-discordbot:
