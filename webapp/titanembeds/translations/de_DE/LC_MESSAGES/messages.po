@@ -94,7 +94,7 @@ msgid "You will be invited into this server."
 msgstr "Du wirst auf diesen Server eingeladen."
 
 #: titanembeds/templates/embed.html.j2:133
-msgid "Of course, you also have the option to login by picking a temporary username for your current browsing session."
+msgid "Guest login:"
 msgstr "Du kannst dich auch anmelden, indem du einen temporären Benutzernamen für deine aktuelle Browser-Sitzung auswählst."
 
 #: titanembeds/templates/embed.html.j2:135

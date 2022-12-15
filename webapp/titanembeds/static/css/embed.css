@@ -38,11 +38,11 @@ html {
     margin-left: auto;
     width: calc(100% - 300px);
   }
-  
+
   body.fixed-sidenav #overall-main-content #message-spinner {
     left: calc(50% + 150px);
   }
-  
+
   body.fixed-sidenav #guild-nav {
     z-index: 995;
   }
@@ -528,10 +528,6 @@ a {
 }
 
 @media screen and (max-width: 600px) {
-  #guest_login_instr {
-    display: none;
-  }
-
   #loginmodal h4 {
     font-size: 12pt;
   }
@@ -541,23 +537,23 @@ a {
   #modal_guildinfobox {
     width: 100%;
   }
-  
+
   #modal_guildiconcircle {
     float: left;
   }
-  
+
   #authfields {
     width: 100%;
   }
-  
+
   #modal_guildiconcircle {
     width: 55px;
   }
-  
+
   #modal_guildname {
     margin: 5px;
   }
-  
+
   #authfield-choosetxt.flow-text {
     font-size: 9pt;
     margin-top: 3px;
@@ -569,42 +565,42 @@ a {
   #authfields {
     margin-top: 5px;
   }
-  
+
   #discordlogin_btn_warn {
     display: none;
   }
-  
+
   #loginmodal a.btn, #loginmodal a.btn-large {
     height: 30px;
     line-height: 30px;
     padding: 0;
     font-size: 7pt;
   }
-  
+
   #loginmodal h4 {
     display: none;
   }
-  
+
   #discordlogin_box {
     width: 100%;
   }
-  
+
   #guestlogin_box {
     width: 100%;
   }
-  
+
   #discordlogin_btn {
     width: 100%;
   }
-  
+
   #custom_username_field {
     margin-bottom: 0;
   }
-  
+
   #custom_username_field_label {
     font-size: 6pt;
   }
-  
+
   #authfield-choosetxt {
     font-size: 7pt;
   }
@@ -943,11 +939,11 @@ p.mentioned span.chatmessage {
   #send-rich-embed-btn {
     display: none;
   }
-  
+
   #upload-file-btn {
     display: none;
   }
-  
+
   #send-msg-btn {
     display: none;
   }
@@ -965,7 +961,7 @@ p.mentioned span.chatmessage {
   #upload-file-btn {
     display: block;
   }
-  
+
   #send-msg-btn {
     display: block;
   }
@@ -1028,7 +1024,7 @@ p.mentioned span.chatmessage {
     display: flex;
     justify-content: space-evenly;
   }
-  
+
   #filemodal-right {
     width: 75%;
   }

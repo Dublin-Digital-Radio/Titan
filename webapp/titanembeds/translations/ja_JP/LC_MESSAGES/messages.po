@@ -99,7 +99,7 @@ msgstr "\t\n"
 "このサーバーに招待されます。"
 
 #: titanembeds/templates/embed.html.j2:133
-msgid "Of course, you also have the option to login by picking a temporary username for your current browsing session."
+msgid "Guest login:"
 msgstr "\t\n"
 "もちろん、あなたもあなたの現在のブラウジングセッションのために一時的なユーザ名を選択することにより、ログインするオプションがあります。"
 
