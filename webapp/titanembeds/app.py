@@ -122,10 +122,10 @@ socketio.on_namespace(gateway.Gateway("/gateway"))
 
 @babel.localeselector
 def get_locale():
-    param_lang = request.args.get("lang", None)
-    if param_lang in LANGUAGE_CODE_LIST:
-        return param_lang
-    return request.accept_languages.best_match(LANGUAGE_CODE_LIST)
+    return LANGUAGE_CODE_LIST.get(
+        request.args.get("lang", None),
+        request.accept_languages.best_match(LANGUAGE_CODE_LIST),
+    )
 
 
 @app.route("/")
@@ -158,6 +158,11 @@ def vote():
 @app.route("/global_banned_words")
 def global_banned_words():
     return render_template("global_banned_words.html.j2")
+
+
+@app.route("/licence")
+def licence():
+    return render_template("LICENCE")
 
 
 @app.context_processor
