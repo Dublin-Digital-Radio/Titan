@@ -66,7 +66,7 @@ def callback():
         return redirect(
             url_for(
                 "user.logout",
-                error="discord_error {}".format(request.values.get("error")),
+                error=f"discord_error {request.values.get('error')}",
             )
         )
 
@@ -91,8 +91,9 @@ def callback():
     log.info("Callback ok. Session: %s", pformat(session))
 
     if session["redirect"]:
+        redir = session["redirect"]
         session["redirect"] = None
-        return redirect(session["redirect"])
+        return redirect(redir)
 
     return redirect(url_for("user.dashboard"))
 
