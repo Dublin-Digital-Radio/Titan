@@ -1,9 +1,11 @@
 import copy
 import json
+import time
 import random
 import logging
 from urllib.parse import urlparse
 
+import sqlalchemy.exc
 from config import config
 from flask import (
     Blueprint,
@@ -97,7 +99,15 @@ def guild_embed(guild_id):
         log.warning("could not get guild '%s' from redis", guild_id)
         abort(404)
 
-    db_guild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+    try:
+        db_guild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+    except sqlalchemy.exc.OperationalError:
+        # we sometimes loose connection with the database and have to reconnect
+        # This seems to be the first db query we hit when loading the embed
+        # So retry once
+        time.sleep(1)
+        db_guild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+
     if not db_guild:
         log.warning("found guild '%s' in redis but not in db", guild_id)
         abort(404)
