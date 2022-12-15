@@ -59,7 +59,12 @@
           <div class="nav-wrapper">
             <a href="#" data-activates="guild-nav" class="button-collapse {% if fixed_sidenav %}hide-on-large-only{% endif %}" id="guild-btn"><i class="material-icons">menu</i></a>
             <div class="container">
-              <a href="{{ url_for("index") }}" target="_blank" class="brand-logo"><img src="{{ url_for('static', filename='img/titanembeds_shield.png') }}" /><span class="brand-logo-text"><strong class="align-top">Titan</strong><span class="align-top">Embeds</span> <span class="betatag align-top">BETA</span></span></a>
+              <a href="{{ url_for("index") }}" target="_blank" class="brand-logo">
+                <img src="{{ url_for('static', filename='img/titanembeds_shield.png') }}" />
+                <span class="brand-logo-text"><strong class="align-top">DDR</strong>
+                <span class="align-top">Discord Embed</span>
+                <span class="betatag align-top">BETA</span></span>
+              </a>
             </div>
             <a href="#" data-activates="members-nav" class="button-collapse right" id="members-btn"><i class="material-icons">people</i></a>
           </div>
@@ -189,14 +194,17 @@
                   <div class="indeterminate"></div>
               </div>
               <div class="row">
-                <div id="discordlogin_box" class="col s6 l4">
+                <div id="discordlogin_box" class="col s5 l5">
                   <a id="discordlogin_btn" href="{% if not same_target %}{{ url_for("embed.login_discord", _external=True) }}{% else %}{{ url_for("user.login_authenticated", redirect=request.url+"&create_authenticated_user=true", _external=True) }}{% endif %}" class="waves-effect waves-light btn-large" {% if not same_target %}target="_blank"{% endif %}>
                     {{ _("Discord Login") }}
                   </a>
                   <p id="discordlogin_btn_warn">*{{ _("You will be invited into this server.") }}</p>
                 </div>
                 {% if unauth_enabled %}
-                <div id="guestlogin_box" class="col s6 l8">
+                <div id="or_box" class="col s1 l1">
+                  <b>OR</b>
+                </div>
+                <div id="guestlogin_box" class="col s6 l7">
                   <p id="guest_login_instr">{{ _("Guest login:") }}</p>
                   <input id="custom_username_field" type="text" {% if session.unauthenticated and session.username %}value="{{ session['username'] }}"{% endif %}>
                   <label id="custom_username_field_label" class="active" for="custom_username_field">{{ _("Username (Hit ENTER/RETURN key to confirm)") }}</label>
