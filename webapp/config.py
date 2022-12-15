@@ -44,4 +44,5 @@ config = {
     "patreon-client-id": "",
     "patreon-client-secret": "",
     # "" or "eventlet"
+    "git-commit": env.get("GIT_COMMIT"),
 }

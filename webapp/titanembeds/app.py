@@ -62,6 +62,7 @@ if __name__ != "__main__":
         handler.setFormatter(logging.Formatter(" %(levelname)s %(name)s: %(message)s"))
 
 log = logging.getLogger(__name__)
+log.info("starting up. git commit: %s", config["git-commit"])
 
 app.config["SQLALCHEMY_DATABASE_URI"] = config["database-uri"]
 # Suppress the warning/no need this on for now.

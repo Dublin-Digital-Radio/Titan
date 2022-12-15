@@ -1,8 +1,8 @@
 build-discordbot:
-	 docker build -t discordbot --target discordbot .
+	 docker build --build-arg GIT_COMMIT=$$(git rev-parse HEAD) -t discordbot --target discordbot .
 
 build-webapp:
-	 docker build -t titan-webapp --target webapp .
+	 docker build --build-arg GIT_COMMIT=$$(git rev-parse HEAD) -t titan-webapp --target webapp .
 
 build-all: build-discordbot build-webapp
 
@@ -13,10 +13,10 @@ run-webapp:
 	docker run --env-file webapp/.env --network host titan-webapp
 
 deploy-webapp:
-	flyctl deploy  --build-target webapp --config webapp/fly.toml
+	flyctl deploy --env GIT_COMMIT=$$(git rev-parse HEAD) --build-target webapp --config webapp/fly.toml
 
 deploy-discordbot:
-	 flyctl deploy  --build-target discordbot --config discordbot/fly.toml
+	 flyctl deploy --env GIT_COMMIT=$$(git rev-parse HEAD) --build-target discordbot --config discordbot/fly.toml
 
 deploy-all: deploy-bot deploy-webapp
 

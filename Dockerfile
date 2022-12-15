@@ -60,6 +60,8 @@ ENV DATABASE_URL='postgresql://titan:titan@localhost:5432/titan'
 ENV REDIS_URL='redis://localhost'
 ENV PYTHONUNBUFFERED 1
 ENV PYTHONDONTWRITEBYTECODE 1
+ARG GIT_COMMIT
+ENV GIT_COMMIT=$GIT_COMMIT
 
 COPY --from=build-discordbot /home/titan/venv /home/titan/venv
 COPY discordbot discordbot/
@@ -80,6 +82,8 @@ ENV REDIS_URL='redis://localhost'
 ENV TITAN_HTTPS_PROXY='True'
 ENV PYTHONUNBUFFERED 1
 ENV PYTHONDONTWRITEBYTECODE 1
+ARG GIT_COMMIT
+ENV GIT_COMMIT=$GIT_COMMIT
 
 COPY --from=build-webapp /home/titan/venv /home/titan/venv
 
