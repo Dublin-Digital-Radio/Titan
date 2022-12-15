@@ -105,9 +105,12 @@ def guild_embed(guild_id):
         # we sometimes loose connection with the database and have to reconnect
         # This seems to be the first db query we hit when loading the embed
         # So retry once
+        log.warning('Lost connection to db - attempting to reconnect')
         time.sleep(1)
         # sqlalchemy.exc.PendingRollbackError: Can't reconnect until invalid transaction is rolled back.
         # (Background on this error at: https://sqlalche.me/e/14/8s2b)
+        db.session.rollback()
+        db.session.begin()
         db_guild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
 
     if not db_guild:
