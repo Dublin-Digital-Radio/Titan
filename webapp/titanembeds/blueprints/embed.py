@@ -105,13 +105,14 @@ def guild_embed(guild_id):
         # we sometimes loose connection with the database and have to reconnect
         # This seems to be the first db query we hit when loading the embed
         # So retry once
-        log.warning('Lost connection to db - attempting to reconnect')
+        log.warning("Lost connection to db - attempting to reconnect")
+        db.session.rollback()
         time.sleep(1)
         # sqlalchemy.exc.PendingRollbackError: Can't reconnect until invalid transaction is rolled back.
         # (Background on this error at: https://sqlalche.me/e/14/8s2b)
-        db.session.rollback()
         db.session.begin()
         db_guild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+        log.info("Reconnected to db")
 
     if not db_guild:
         log.warning("found guild '%s' in redis but not in db", guild_id)
@@ -188,7 +189,10 @@ def cookietest1():
 
 @embed.route("/cookietest2")
 def cookietest2():
-    if "third_party_c_t" in request.cookies and request.cookies["third_party_c_t"] == "works":
+    if (
+        "third_party_c_t" in request.cookies
+        and request.cookies["third_party_c_t"] == "works"
+    ):
         res = "true"
     else:
         res = "false"
