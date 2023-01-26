@@ -24,7 +24,13 @@ ssh-webapp:
 ssh-discordbot:
 	flyctl ssh console --config discordbot/fly.toml --app ddr-discord-bot
 
-deploy-all: deploy-bot deploy-webapp
+logs-webapp:
+	flyctl logs --app ddr-titan
+
+logs-discordbot:
+	flyctl logs --app ddr-discord-bot
+
+deploy-all: deploy-discordbot deploy-webapp
 
 pip-install-discordbot:
 	pip install -r discordbot/requirements.txt
