@@ -514,7 +514,8 @@ var passedCookieTest = true; // If passed cross origin test
             changeTheme(null, keep_custom_css);
         });
 
-        hljs.configure({useBR: true});
+        if (hljs) hljs.configure({useBR: true});
+
         linkify.options.defaults.ignoreTags = ["code"];
 
         wdtEmojiBundle.defaults.emojiSheets = {
