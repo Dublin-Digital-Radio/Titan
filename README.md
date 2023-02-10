@@ -75,6 +75,60 @@ Titan also requires a Redis instance in order to function. There is no specific 
 before utilizing Titan with redis. Follow the official
 Redis [installation instructions](https://redis.io/topics/quickstart) to install and start redis.
 
+## Data flow
+
+The data flow is confusing.
+
+The bot subscribes to the `discord-api-req` channel.
+
+When the webapp gets values prefixed with `Queue` from redis it also publishes
+details of the request to the `discord-api-req` channel.
+
+The webapp uses this channel as an ad-hoc query interface to the bot:
+
+First it runs `get` on the desired key - e.g. `Queue/guilds/{guild_id}/members`
+
+If there is no value for that key it will publish a message of the format:
+
+```json
+{
+    "key": `Queue/<key>`,
+    "resource": <resource>,
+    "params": <params>
+}
+```
+
+e.g.
+
+```json
+{
+    "key": 'Queue/guilds/{guild_id}/members',
+    "resource": "list_guild_members",
+    "params": {"guild_id": <guild_id>}
+}
+```
+
+It then loops up to 50 times, sleeping for 0.1 second on each loop, and runs `get`
+`Queue/guilds/{guild_id}/members` until it gets a response. If it does not find a
+response it returns `None`.
+
+The discordbot is subscribed to this channel and when it receives the message it
+runs async, using the event loop's `create_task()` a method that matches the
+`resource` field, passing the `key` and the `params` data.
+
+
+e.g. for the data above it would run `discordbot.redisqueue.RedisQueue.on_list_guild_members()`, passing
+`key='Queue/guilds/{guild_id}/members'`, `params= {"guild_id": <guild_id>}`
+
+The method then runs a query using the `discord` bot's query methods, and then
+sets the supplied redis `key` to the result.
+
+As long as this completes in the time it takes the webapp to run 50 `get`'s (5s) it
+kind of works.
+
+Obviously this is a little disfunctional and the best approach would probably be to
+add a web interface to the bot that provided the same functionality.
+
 ## Join us!
 
 Come and talk with us at our very own [Discord server](https://discord.gg/z4pdtuV)! We offer
