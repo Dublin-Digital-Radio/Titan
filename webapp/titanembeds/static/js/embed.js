@@ -957,6 +957,10 @@ var passedCookieTest = true; // If passed cross origin test
     function update_emoji_picker() {
         var emojis = wdtEmojiBundle.listCustomEmojis();
         var short_names = [];
+        if (!emojis) {
+            console.log('ERROR: could not find emojis');
+            return;
+        }
         for (var i = 0; i < emojis.length; i++) {
             short_names.push(emojis.short_name);
         }
