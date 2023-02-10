@@ -514,7 +514,7 @@ var passedCookieTest = true; // If passed cross origin test
             changeTheme(null, keep_custom_css);
         });
 
-        if (hljs) hljs.configure({useBR: true});
+        if (typeof hljs !== 'undefined' && hljs) hljs.configure({useBR: true});
 
         linkify.options.defaults.ignoreTags = ["code"];
 
@@ -1537,7 +1537,7 @@ var passedCookieTest = true; // If passed cross origin test
     }
 
     function render_code_highlighting(element) {
-        if (!hljs){
+        if (typeof hljs === 'undefined' || !hljs){
             console.log('Code highlighting not enabled');
             return;
         }
@@ -1548,7 +1548,7 @@ var passedCookieTest = true; // If passed cross origin test
             var splitted = codetext.split("\n");
             if (splitted.length > 1) {
                 var firstLine = splitted[0];
-                if (!(/^\s/.test(firstLine))) { // make sure no whitespace at begining
+                if (!(/^\s/.test(firstLine))) { // make sure no whitespace at beginning
                     var firstLineSplitted = firstLine.split(/[ ]+/); // split at whitespace
                     if (firstLineSplitted.length == 1 && firstLineSplitted[0] != "") { // only one token and the token is not empty
                         var language = firstLineSplitted[0]; // assume token is lang

@@ -51,7 +51,9 @@ class RedisQueue:
             try:
                 async with async_timeout.timeout(1):
                     try:
-                        reply = await subscriber.get_message(ignore_subscribe_messages=True)
+                        reply = await subscriber.get_message(
+                            ignore_subscribe_messages=True
+                        )
                     except ConnectionError:
                         log.error("Redis connection lost... reconnecting")
                         await self.connect()
@@ -61,7 +63,9 @@ class RedisQueue:
                         continue
 
                     request = json.loads(reply["data"].decode())
-                    self.dispatch(request["resource"], request["key"], request["params"])
+                    self.dispatch(
+                        request["resource"], request["key"], request["params"]
+                    )
                     await asyncio.sleep(0.01)
             except asyncio.TimeoutError:
                 pass
@@ -82,7 +86,9 @@ class RedisQueue:
             pass
         except Exception:
             try:
-                log.exception("error running event")
+                log.exception(
+                    "error running event\n  '%s' : '%s' : '%s'", pformat(params)
+                )
             except asyncio.CancelledError:
                 pass
 
@@ -127,7 +133,9 @@ class RedisQueue:
         messages = []
         if channel.permissions_for(me).read_messages:
             async for message in channel.history(limit=50):
-                messages.append(json.dumps(format_message(message), separators=(",", ":")))
+                messages.append(
+                    json.dumps(format_message(message), separators=(",", ":"))
+                )
 
         await self.connection.sadd(key, "", *messages)
 
@@ -150,7 +158,9 @@ class RedisQueue:
         if not await self.connection.exists(key):
             return
 
-        unformatted_item, formatted_item = await self.set_scan_json(key, "id", message.id)
+        unformatted_item, formatted_item = await self.set_scan_json(
+            key, "id", message.id
+        )
         if formatted_item:
             await self.connection.srem(key, unformatted_item)
 
@@ -163,7 +173,9 @@ class RedisQueue:
             return
 
         if not (member := guild.get_member(int(params["user_id"]))):
-            members = await guild.query_members(user_ids=[int(params["user_id"])], cache=True)
+            members = await guild.query_members(
+                user_ids=[int(params["user_id"])], cache=True
+            )
 
             if not len(members):
                 await self.connection.set(key, "")
@@ -172,7 +184,9 @@ class RedisQueue:
 
             member = members[0]
 
-        await self.connection.set(key, json.dumps(format_user(member), separators=(",", ":")))
+        await self.connection.set(
+            key, json.dumps(format_user(member), separators=(",", ":"))
+        )
         await self.enforce_expiring_key(key)
 
     async def on_get_guild_member_named(self, key, params):
@@ -285,5 +299,7 @@ class RedisQueue:
             "avatar": user.avatar.key if user.avatar else None,
             "bot": user.bot,
         }
-        await self.connection.set(key, json.dumps(user_formatted, separators=(",", ":")))
+        await self.connection.set(
+            key, json.dumps(user_formatted, separators=(",", ":"))
+        )
         await self.enforce_expiring_key(key)
