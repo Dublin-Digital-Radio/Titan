@@ -5,7 +5,9 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <!--Import materialize.css-->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/css/materialize.min.css" integrity="sha256-e22BQKCF7bb/h/4MFJ1a4lTRR2OuAe8Hxa/3tgU5Taw=" crossorigin="anonymous" />
+    {% if enable_code_highlighting %}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/solarized-dark.min.css" integrity="sha256-90Y+fvi28WF+3jKH4tHEkoQ9WLeFKJjpvCPNOtU9ZvU=" crossorigin="anonymous" />
+    {% endif %}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/spinkit/1.2.5/spinners/2-double-bounce.min.css" integrity="sha256-EUobIj2z8wTjkWEwkjqubfq0NEqgOoNScgHP1oUSU7M=" crossorigin="anonymous" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/wdt-emoji-bundle/0.2.1/wdt-emoji-bundle.min.css" integrity="sha256-5+pPkh0iWNYFrqNU7G36rsHynAmXNpL4rq6/NI29mmk=" crossorigin="anonymous" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/malihu-custom-scrollbar-plugin/3.1.5/jquery.mCustomScrollbar.min.css" integrity="sha256-JHGEmB629pipTkMag9aMaw32I8zle24p3FpsEeI6oZU=" crossorigin="anonymous" />
@@ -59,10 +61,10 @@
           <div class="nav-wrapper">
             <a href="#" data-activates="guild-nav" class="button-collapse {% if fixed_sidenav %}hide-on-large-only{% endif %}" id="guild-btn"><i class="material-icons">menu</i></a>
             <div class="container">
-              <a href="{{ url_for("index") }}" target="_blank" class="brand-logo">
+              <a href="{{ url_for("index") }}" target="_blank">
                 <img src="{{ url_for('static', filename='img/titanembeds_shield.png') }}" />
                 <span class="brand-logo-text"><strong class="align-top">DDR</strong>
-                <span class="align-top">Discord Embed</span>
+                <span class="align-top">Discord</span>
                 <span class="betatag align-top">BETA</span></span>
               </a>
             </div>
@@ -482,7 +484,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/caret/1.0.0/jquery.caret.min.js" integrity="sha256-NfP6KWI/oETcPbLcLXVAamn8K2wJrYH8ZIRrOf1XNUE=" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/post-robot/10.0.42/post-robot.min.js" integrity="sha512-8rkatbA3uOONyiRqBiT5dvzaE7hWX6m0SpVr/4rpAxxuZX+Vjuvqp+DSmF1sQX3268hMk8BZxHVRdgHmuoDhXQ==" crossorigin="anonymous"></script>
 
+    {% if enable_code_highlighting %}
     <script src="{{ url_for("static", filename="js/vendor/highlight.pack.js") }}"></script>
+    {% endif %}
     <script src="{{ url_for("static", filename="js/vendor/jquery.balloon.min.js") }}"></script>
     <script src="{{ url_for('static', filename='js/vendor/emoji.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/vendor/wdt-emoji-bundle.min.js') }}"></script>

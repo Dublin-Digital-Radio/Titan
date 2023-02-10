@@ -45,4 +45,5 @@ config = {
     "patreon-client-secret": "",
     # "" or "eventlet"
     "git-commit": env.get("GIT_COMMIT"),
+    "enable-code-highlighting": env.get("TITAN_WEBAPP_ENABLE_CODE_HIGHLIGHTING", False),
 }

@@ -90,7 +90,8 @@ nav {
 }
 
 nav .brand-logo {
-  font-size: 1.5rem;
+  font-size: 1rem;
+  left: 30%
 }
 
 @media only screen and (min-width: 601px) {
@@ -317,7 +318,7 @@ nav .brand-logo {
 
 .authoravatar {
   width: 100%;
-  max-width: 30px;
+  max-width: 23px;
   border-radius: 50%;
   vertical-align: middle;
   margin-right: 10px;

@@ -19,14 +19,13 @@ from flask import (
 )
 from flask_babel import gettext
 from titanembeds.database import Guilds, UserCSS, db, list_disabled_guilds
-from titanembeds.redisqueue import get_online_embed_user_keys
+from titanembeds import redisqueue
 from titanembeds.utils import (
     generate_guild_icon_url,
     guild_accepts_visitors,
     guild_query_unauth_users_bool,
     guild_unauthcaptcha_enabled,
     int_or_none,
-    redisqueue,
     serializer,
 )
 
@@ -82,19 +81,16 @@ def parse_css_variable(css):
 
 def parse_url_domain(url):
     parsed = urlparse(url)
-    if parsed.netloc != "":
-        return parsed.netloc
-    return url
+    return parsed.netloc if parsed.netloc != "" else url
 
 
 def is_peak(guild_id):
-    usrs = get_online_embed_user_keys(guild_id)
+    usrs = redisqueue.get_online_embed_user_keys(guild_id)
     return (len(usrs["AuthenticatedUsers"]) + len(usrs["UnauthenticatedUsers"])) > 10
 
 
 @embed.route("/<int:guild_id>")
 def guild_embed(guild_id):
-
     if not (guild := redisqueue.get_guild(guild_id)):
         log.warning("could not get guild '%s' from redis", guild_id)
         abort(404)
@@ -148,6 +144,7 @@ def guild_embed(guild_id):
         userscalable=request.args.get("userscalable", "True").lower().startswith("t"),
         fixed_sidenav=request.args.get("fixedsidenav", "False").lower().startswith("t"),
         is_peak=request.args.get("forcepeak", False) == "1" or is_peak(guild_id),
+        enable_code_highlighting=config["enable-code-highlighting"],
     )
 
 

@@ -1532,6 +1532,11 @@ var passedCookieTest = true; // If passed cross origin test
     }
 
     function render_code_highlighting(element) {
+        if (!hljs){
+            console.log('Code highlighting not enabled');
+            return;
+        }
+
         for (var i = 0; i < element.length; i++) {
             var elem = $(element[i]);
             var codetext = elem.text();
