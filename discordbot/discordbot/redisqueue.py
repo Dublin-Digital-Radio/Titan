@@ -28,6 +28,7 @@ class RedisQueue:
         self.bot = bot
         self.redis_uri = redis_uri
         self.connection = UnreadyConnection()
+        self.running_tasks = set()
 
     async def connect(self):
         connection_pool = ConnectionPool.from_url(self.redis_uri)
@@ -73,10 +74,16 @@ class RedisQueue:
 
     def dispatch(self, event, key, params):
         method = "on_" + event
-        if hasattr(self, method):
-            self.bot.loop.create_task(self._run_event(method, key, params))
-        else:
+        if not hasattr(self, method):
             log.error("cannot find method '%s'", method)
+            return
+
+        task = self.bot.loop.create_task(
+            self._run_event(method, key, params), name=f"{method}:{key}"
+        )
+        # need to keep a reference to the task to prevent it being garbage collected
+        self.running_tasks.add(task)
+        task.add_done_callback(self.running_tasks.discard)
 
     async def _run_event(self, event, key, params):
         log.info("_run_event '%s': '%s': '%s'", event, key, pformat(params))
