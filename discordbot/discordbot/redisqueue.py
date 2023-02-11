@@ -6,6 +6,7 @@ from pprint import pformat
 
 import async_timeout
 import discord
+import redis.exceptions
 from redis.asyncio.client import Redis
 from redis.asyncio.connection import ConnectionPool
 from redis.asyncio.retry import Retry
@@ -82,6 +83,9 @@ class RedisQueue:
 
         try:
             await getattr(self, event)(key, params)
+        except redis.exceptions.ConnectionError:
+            log.error("Redis connection error")
+            await self.connect()
         except asyncio.CancelledError:
             pass
         except Exception:
