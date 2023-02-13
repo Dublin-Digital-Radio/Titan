@@ -370,6 +370,8 @@ def get_all_users(guild_id):
 @valid_session_required(api=True)
 @abort_if_guild_disabled()
 @rate_limiter.limit("2 per 2 second", key_func=channel_ratelimit_key)
+# GET
+# 	https://ddr-titan.fly.dev/api/fetch?guild_id=1022123131948769430&channel_id=1022123131948769436&after=
 def fetch():
     guild_id = request.args.get("guild_id")
     channel_id = request.args.get("channel_id")

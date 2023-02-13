@@ -136,9 +136,7 @@ def update_user_status(guild_id, username, user_key=None):
             )
         ).first()
 
-        redisqueue.bump_user_presence_timestamp(
-            guild_id, "UnauthenticatedUsers", user_key
-        )
+        redisqueue.bump_user_presence_timestamp(guild_id, "UnauthenticatedUsers", user_key)
         if db_user.username != username or db_user.ip_address != ip_address:
             db_user.username = username
             db_user.ip_address = ip_address
@@ -163,9 +161,7 @@ def update_user_status(guild_id, username, user_key=None):
         if dbMember := redisqueue.get_guild_member(guild_id, status["user_id"]):
             status["nickname"] = dbMember["nick"]
 
-        redisqueue.bump_user_presence_timestamp(
-            guild_id, "AuthenticatedUsers", status["user_id"]
-        )
+        redisqueue.bump_user_presence_timestamp(guild_id, "AuthenticatedUsers", status["user_id"])
 
     return status
 
@@ -251,11 +247,7 @@ def get_guild_channels(guild_id, force_everyone=False, forced_role=0):
                 result["write"] = False
             if not bot_result["mention_everyone"]:
                 result["mention_everyone"] = False
-            if (
-                not bot_result["attach_files"]
-                or not db_guild.file_upload
-                or not result["write"]
-            ):
+            if not bot_result["attach_files"] or not db_guild.file_upload or not result["write"]:
                 result["attach_files"] = False
             if (
                 not bot_result["embed_links"]
