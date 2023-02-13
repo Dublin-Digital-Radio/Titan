@@ -50,6 +50,7 @@ def validate_not_none(key, data_key, data):
 
 
 def get_channel_messages(guild_id, channel_id, after_snowflake=0):
+    log.info("get_channel_messages")
     channel_messages = get(
         f"/channels/{channel_id}/messages",
         "get_channel_messages",
@@ -59,6 +60,7 @@ def get_channel_messages(guild_id, channel_id, after_snowflake=0):
     if not channel_messages:
         log.warning("Got none from channel messages")
         return []
+    log.info("get_channel_messages : got %s messages", len(channel_messages))
 
     msgs = []
     snowflakes = []
@@ -118,6 +120,7 @@ def get_channel_messages(guild_id, channel_id, after_snowflake=0):
         msgs.append(message)
 
     sorted_msgs = sorted(msgs, key=lambda k: k["id"], reverse=True)
+    log.info("get_channel_messages finished")
     return sorted_msgs[:50]  # only return last 50 messages in cache please
 
 

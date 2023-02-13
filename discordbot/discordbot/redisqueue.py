@@ -141,14 +141,17 @@ class RedisQueue:
 
         messages = []
         if channel.permissions_for(me).read_messages:
-            async for message in channel.history(
-                limit=int(params.get("limit", DEFAULT_CHANNEL_MESSAGES_LIMIT))
-            ):
+            limit = int(params.get("limit", DEFAULT_CHANNEL_MESSAGES_LIMIT))
+            log.info("reading %s messages for channel %s", limit, params["channel_id"])
+            async for message in channel.history(limit=limit):
                 messages.append(json.dumps(format_message(message), separators=(",", ":")))
+            log.info("Read messages from channel %s", params["channel_id"])
         else:
             log.error("Do not have permission to read messages from channel %s", channel.id)
 
+        log.info("Adding messages for channel to redis")
         await self.connection.sadd(key, "", *messages)
+        log.info("Done messages for channel to redis")
 
     async def push_message(self, message):
         if not message.guild:
