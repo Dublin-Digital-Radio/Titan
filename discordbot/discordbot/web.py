@@ -1,5 +1,5 @@
-from aiohttp import web
 import discord
+from aiohttp import web
 
 
 async def handle(request):

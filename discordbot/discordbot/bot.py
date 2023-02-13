@@ -3,18 +3,19 @@ import asyncio
 import logging
 from collections import deque
 
+import discord
+
 # from raven import Client as RavenClient
 # import raven
 from aiohttp import web
-import discord
 from config import config
 from redis.exceptions import ConnectionError
 
-from discordbot.web import web_app
 from discordbot import commands
 from discordbot.poststats import BotsDiscordPw, DiscordBotsOrg
 from discordbot.redisqueue import RedisQueue
 from discordbot.socketio import SocketIOInterface
+from discordbot.web import web_app
 
 # try:
 #     raven_client = RavenClient(config["sentry-dsn"])
@@ -79,9 +80,7 @@ class Titan(discord.AutoShardedClient):
         self.redis_sub_task = None
         self.post_stats_task = None
         self.web_app = web.Application()
-        self.web_app.add_routes(
-            "/channel_messages/{channel_id}", self.http_get_channel_messages
-        )
+        self.web_app.add_routes("/channel_messages/{channel_id}", self.http_get_channel_messages)
 
     def _cleanup(self):
         try:
@@ -390,6 +389,4 @@ class Titan(discord.AutoShardedClient):
         messages = []
         if channel.permissions_for(me).read_messages:
             async for message in channel.history(limit=50):
-                messages.append(
-                    json.dumps(format_message(message), separators=(",", ":"))
-                )
+                messages.append(json.dumps(format_message(message), separators=(",", ":")))
