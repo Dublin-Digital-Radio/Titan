@@ -50,57 +50,73 @@ def validate_not_none(key, data_key, data):
 
 
 def get_channel_messages(guild_id, channel_id, after_snowflake=0):
-    key = f"/channels/{channel_id}/messages"
-
-    q = get(key, "get_channel_messages", {"channel_id": channel_id}, data_type="set")
-    if not q:
+    channel_messages = get(
+        f"/channels/{channel_id}/messages",
+        "get_channel_messages",
+        {"channel_id": channel_id, "limit": 50},
+        data_type="set",
+    )
+    if not channel_messages:
         log.warning("Got none from channel messages")
         return []
 
     msgs = []
     snowflakes = []
     guild_members = {}
-    for x in q:
-        if x["id"] in snowflakes or int(x["id"]) <= int(after_snowflake):
+
+    for channel_message in channel_messages:
+        if channel_message["id"] in snowflakes or int(channel_message["id"]) <= int(
+            after_snowflake
+        ):
             continue
-        snowflakes.append(x["id"])
+
+        snowflakes.append(channel_message["id"])
+
         message = {
-            "attachments": x["attachments"],
-            "timestamp": x["timestamp"],
-            "id": x["id"],
-            "edited_timestamp": x["edited_timestamp"],
-            "author": x["author"],
-            "content": x["content"],
-            "channel_id": str(x["channel_id"]),
-            "mentions": x["mentions"],
-            "embeds": x["embeds"],
-            "reactions": x["reactions"],
-            "type": x.get("type", 0),
+            "attachments": channel_message["attachments"],
+            "timestamp": channel_message["timestamp"],
+            "id": channel_message["id"],
+            "edited_timestamp": channel_message["edited_timestamp"],
+            "author": channel_message["author"],
+            "content": channel_message["content"],
+            "channel_id": str(channel_message["channel_id"]),
+            "mentions": channel_message["mentions"],
+            "embeds": channel_message["embeds"],
+            "reactions": channel_message["reactions"],
+            "type": channel_message.get("type", 0),
         }
+
         if message["author"]["id"] not in guild_members:
             member = get_guild_member(guild_id, message["author"]["id"])
             guild_members[message["author"]["id"]] = member
         else:
             member = guild_members[message["author"]["id"]]
-        message["author"]["nickname"] = None
+
         if member:
             message["author"]["nickname"] = member["nick"]
             message["author"]["avatar"] = member["avatar"]
             message["author"]["discriminator"] = member["discriminator"]
             message["author"]["username"] = member["username"]
+        else:
+            message["author"]["nickname"] = None
+
         for mention in message["mentions"]:
             if mention["id"] not in guild_members:
                 author = get_guild_member(guild_id, mention["id"])
                 guild_members[mention["id"]] = author
             else:
                 author = guild_members[mention["id"]]
-            mention["nickname"] = None
+
             if author:
                 mention["nickname"] = author["nick"]
                 mention["avatar"] = author["avatar"]
                 mention["username"] = author["username"]
                 mention["discriminator"] = author["discriminator"]
+            else:
+                mention["nickname"] = None
+
         msgs.append(message)
+
     sorted_msgs = sorted(msgs, key=lambda k: k["id"], reverse=True)
     return sorted_msgs[:50]  # only return last 50 messages in cache please
 

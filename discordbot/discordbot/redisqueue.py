@@ -18,6 +18,9 @@ from discordbot.utils import format_guild, format_message, format_user
 log = logging.getLogger(__name__)
 
 
+DEFAULT_CHANNEL_MESSAGES_LIMIT = 50
+
+
 class UnreadyConnection:
     def __getattr__(self, item):
         raise Exception(f"accessing {item} before RedisQueue.connect()")
@@ -136,6 +139,7 @@ class RedisQueue:
     async def on_get_channel_messages(self, key, params):
         channel = self.bot.get_channel(int(params["channel_id"]))
         if not channel or not isinstance(channel, discord.channel.TextChannel):
+            log.error('Could not find channel %s', params["channel_id"])
             return
 
         await self.connection.delete(key)
@@ -143,10 +147,12 @@ class RedisQueue:
 
         messages = []
         if channel.permissions_for(me).read_messages:
-            async for message in channel.history(limit=50):
+            async for message in channel.history(limit=int(params.get("limit", DEFAULT_CHANNEL_MESSAGES_LIMIT))):
                 messages.append(
                     json.dumps(format_message(message), separators=(",", ":"))
                 )
+        else:
+            log.error('Do not have permission to read messages from channel %s', channel.id)
 
         await self.connection.sadd(key, "", *messages)
 
