@@ -12,7 +12,7 @@ from redis.exceptions import ConnectionError
 
 from discordbot import commands
 from discordbot.poststats import BotsDiscordPw, DiscordBotsOrg
-from discordbot.redisqueue import RedisQueue
+from discordbot.redisqueue import Web
 from discordbot.socketio import SocketIOInterface
 from discordbot.web import Web
 
@@ -68,7 +68,8 @@ class Titan(discord.AutoShardedClient, Web):
         )
         self.log = setup_logger(shard_ids)
         self.http.user_agent += " TitanEmbeds-Bot"
-        self.redisqueue = RedisQueue(self, config["redis-uri"])
+        self.redisqueue = Web()
+        self.command = Commands(self)
         self.socketio = SocketIOInterface(config["redis-uri"])
 
         # List of msg ids to prevent duplicate delete

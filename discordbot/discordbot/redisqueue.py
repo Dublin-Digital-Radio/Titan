@@ -1,17 +1,9 @@
 import re
 import json
-import asyncio
 import logging
-from pprint import pformat
 
-import async_timeout
 import discord
-import redis.exceptions
-from redis.asyncio.client import Redis
-from redis.asyncio.connection import ConnectionPool
-from redis.asyncio.retry import Retry
-from redis.backoff import ConstantBackoff
-from redis.exceptions import ConnectionError, TimeoutError
+from aiohttp import web
 
 from discordbot.utils import format_guild, format_message, format_user
 
@@ -21,90 +13,32 @@ log = logging.getLogger(__name__)
 DEFAULT_CHANNEL_MESSAGES_LIMIT = 50
 
 
-class UnreadyConnection:
-    def __getattr__(self, item):
-        raise Exception(f"accessing {item} before RedisQueue.connect()")
-
-
-class RedisQueue:
-    def __init__(self, bot, redis_uri):
-        self.bot = bot
-        self.redis_uri = redis_uri
-        self.connection = UnreadyConnection()
+class Web(discord.AutoShardedClient):
+    def __init__(self):
+        self.web_app = web.Application()
         self.running_tasks = set()
 
-    async def connect(self):
-        connection_pool = ConnectionPool.from_url(self.redis_uri)
-        self.connection = Redis(
-            connection_pool=connection_pool,
-            retry_on_error=[ConnectionError, TimeoutError],
-            retry=Retry(backoff=ConstantBackoff(2), retries=100),
-            health_check_interval=60,  # seconds
+    def init_web(self):
+        self.running_tasks = set()
+
+        self.web_app = web.Application()
+        self.web_app.add_routes(
+            [
+                web.get("/", self.handle),
+                web.get("/{name}", self.handle),
+                web.get("/channel_messages/{channel_id}", self.on_get_channel_messages),
+                web.get("/guild/{guild_id}/member/{user_id}", self.on_get_guild_member),
+                web.get(
+                    "/guild/{guild_id}/member-name/{query}",
+                    self.on_get_guild_member_named,
+                ),
+                web.get("/guild/members/", self.on_list_guild_members),
+                web.get("/guild/{guild_id}", self.on_get_guild),
+                web.get("/user/{user_id}", self.on_get_user),
+            ]
         )
-        log.info("Connected to redis")
 
-    async def subscribe(self):
-        await self.bot.wait_until_ready()
-
-        subscriber = self.connection.pubsub()
-        await subscriber.subscribe("discord-api-req")
-
-        while True:
-            if not self.bot.is_ready() or self.bot.is_closed():
-                await asyncio.sleep(1)
-                continue
-            try:
-                async with async_timeout.timeout(1):
-                    try:
-                        reply = await subscriber.get_message(
-                            ignore_subscribe_messages=True
-                        )
-                    except ConnectionError:
-                        log.error("Redis connection lost... reconnecting")
-                        await self.connect()
-                        continue
-
-                    if reply is None:
-                        continue
-
-                    request = json.loads(reply["data"].decode())
-                    self.dispatch(
-                        request["resource"], request["key"], request["params"]
-                    )
-                    await asyncio.sleep(0.01)
-            except asyncio.TimeoutError:
-                pass
-
-    def dispatch(self, event, key, params):
-        method = "on_" + event
-        if not hasattr(self, method):
-            log.error("cannot find method '%s'", method)
-            return
-
-        task = self.bot.loop.create_task(
-            self._run_event(method, key, params), name=f"{method}:{key}"
-        )
-        # need to keep a reference to the task to prevent it being garbage collected
-        self.running_tasks.add(task)
-        task.add_done_callback(self.running_tasks.discard)
-
-    async def _run_event(self, event, key, params):
-        log.info("_run_event '%s': '%s': '%s'", event, key, pformat(params))
-
-        try:
-            await getattr(self, event)(key, params)
-        except redis.exceptions.ConnectionError:
-            log.error("Redis connection error")
-            await self.connect()
-        except asyncio.CancelledError:
-            pass
-        except Exception:
-            try:
-                log.exception(
-                    "error running event\n  '%s' : '%s' : '%s'", pformat(params)
-                )
-            except asyncio.CancelledError:
-                pass
+        web.run_app(self.web_app)
 
     async def set_scan_json(self, key, dict_key, dict_value_pattern):
         if not await self.connection.exists(key):
@@ -136,37 +70,36 @@ class RedisQueue:
 
         await self.connection.expire(key, new_ttl)
 
-    async def on_get_channel_messages(self, key, params):
-        channel = self.bot.get_channel(int(params["channel_id"]))
+    async def handle(self, request):
+        name = request.match_info.get("name", "Anonymous")
+        text = "Hello, " + name
+        return web.Response(text=text)
+
+    async def on_get_channel_messages(self, request):
+        channel_id = request.match_info.get("channel_id")
+        channel = self.get_channel(channel_id)
         if not channel or not isinstance(channel, discord.channel.TextChannel):
-            log.error("Could not find channel %s", params["channel_id"])
+            log.error("Could not find channel %s", channel_id)
             return
 
-        await self.connection.delete(key)
-        me = channel.guild.get_member(self.bot.user.id)
+        me = channel.guild.get_member(self.user.id)
 
         messages = []
         if channel.permissions_for(me).read_messages:
-            limit = int(params.get("limit", DEFAULT_CHANNEL_MESSAGES_LIMIT))
-            log.info(
-                "reading %s messages for channel %s",
-                limit,
-                params["channel_id"],
-            )
+            limit = request.match_info.get("limit", DEFAULT_CHANNEL_MESSAGES_LIMIT)
+            log.info("reading %s messages for channel %s", limit, channel_id)
             async for message in channel.history(limit=limit):
                 messages.append(
                     json.dumps(format_message(message), separators=(",", ":"))
                 )
-            log.info("Read messages from channel %s", params["channel_id"])
+            log.info("Read messages from channel %s", channel_id)
         else:
             log.error(
-                "Do not have permission to read messages from channel %s",
-                channel.id,
+                "Do not have permission to read messages from channel %s", channel.id
             )
 
         log.info("Adding messages for channel to redis")
-        await self.connection.sadd(key, "", *messages)
-        log.info("Done messages for channel to redis")
+        return web.json_response(messages)
 
     async def push_message(self, message):
         if not message.guild:
@@ -199,32 +132,29 @@ class RedisQueue:
         await self.delete_message(message)
         await self.push_message(message)
 
-    async def on_get_guild_member(self, key, params):
-        if not (guild := self.bot.get_guild(int(params["guild_id"]))):
+    async def on_get_guild_member(self, request):
+        guild_id = request.match_info.get("guild_id")
+        if not (guild := self.get_guild(guild_id)):
             return
 
-        if not (member := guild.get_member(int(params["user_id"]))):
-            members = await guild.query_members(
-                user_ids=[int(params["user_id"])], cache=True
-            )
+        user_id = request.match_info.get("user_id")
+        if not (member := guild.get_member(user_id)):
+            members = await guild.query_members(user_ids=[user_id], cache=True)
 
             if not len(members):
-                await self.connection.set(key, "")
-                await self.enforce_expiring_key(key, 15)
-                return
+                return web.json_response({})
 
             member = members[0]
 
-        await self.connection.set(
-            key, json.dumps(format_user(member), separators=(",", ":"))
-        )
-        await self.enforce_expiring_key(key)
+        return web.json_response(format_user(member))
 
-    async def on_get_guild_member_named(self, key, params):
-        if not (guild := self.bot.get_guild(int(params["guild_id"]))):
+    async def on_get_guild_member_named(self, request):
+        guild_id = request.match_info.get("guild_id")
+
+        if not (guild := self.get_guild(guild_id)):
             return
 
-        query = params["query"]
+        query = request.match_info.get("query")
         members = None
         if guild.members and len(query) > 5 and query[-5] == "#":
             potential_discriminator = query[-4:]
@@ -257,11 +187,11 @@ class RedisQueue:
                 get_guild_member_key, get_guild_member_param
             )
 
-        await self.connection.set(key, result)
-        await self.enforce_expiring_key(key)
+        return web.json_response(result)
 
-    async def on_list_guild_members(self, key, params):
-        if not (guild := self.bot.get_guild(int(params["guild_id"]))):
+    async def on_list_guild_members(self, request):
+        guild_id = request.match_info.get("guild_id")
+        if not (guild := self.get_guild(guild_id)):
             return
 
         member_ids = []
@@ -280,7 +210,7 @@ class RedisQueue:
                 get_guild_member_key, get_guild_member_param
             )
 
-        await self.connection.sadd(key, *member_ids)
+        return web.json_response(member_ids)
 
     async def add_member(self, member):
         if await self.connection.exists(
@@ -321,11 +251,9 @@ class RedisQueue:
     async def ban_member(self, guild, user):
         await self.remove_member(user, guild)
 
-    async def on_get_guild(self, key, params):
-        log.info("on_get_guild: %s", int(params["guild_id"]))
-
-        if not (guild := self.bot.get_guild(int(params["guild_id"]))):
-            log.info("Could not get guild")
+    async def on_get_guild(self, request):
+        guild_id = request.match_info.get("guild_id")
+        if not (guild := self.get_guild(guild_id)):
             return
 
         if guild.me and guild.me.guild_permissions.manage_webhooks:
@@ -337,14 +265,7 @@ class RedisQueue:
         else:
             server_webhooks = []
 
-        await self.connection.set(
-            key,
-            json.dumps(
-                format_guild(guild, server_webhooks), separators=(",", ":")
-            ),
-        )
-        await self.enforce_expiring_key(key)
-        log.info("Found guild\n%s", pformat(guild))
+        return web.json_response(format_guild(guild, server_webhooks))
 
     async def delete_guild(self, guild):
         await self.connection.delete(f"Queue/guilds/{guild.id}")
@@ -357,8 +278,9 @@ class RedisQueue:
             await self.on_get_guild(key, {"guild_id": guild.id})
         await self.enforce_expiring_key(key)
 
-    async def on_get_user(self, key, params):
-        if not (user := self.bot.get_user(int(params["user_id"]))):
+    async def on_get_user(self, request):
+        user_id = request.match_info.get("user_id")
+        if not (user := self.get_user(user_id)):
             return
 
         user_formatted = {
@@ -368,7 +290,4 @@ class RedisQueue:
             "avatar": user.avatar.key if user.avatar else None,
             "bot": user.bot,
         }
-        await self.connection.set(
-            key, json.dumps(user_formatted, separators=(",", ":"))
-        )
-        await self.enforce_expiring_key(key)
+        return web.json_response(user_formatted)
