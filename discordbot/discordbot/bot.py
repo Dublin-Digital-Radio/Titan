@@ -7,6 +7,7 @@ from collections import deque
 # import raven
 import discord
 from config import config
+from redis.exceptions import ConnectionError
 
 from discordbot.commands import Commands
 from discordbot.poststats import BotsDiscordPw, DiscordBotsOrg
@@ -105,16 +106,25 @@ class Titan(discord.AutoShardedClient):
         self.redis_sub_task.add_done_callback(_handle_task_result)
 
         if config["discord-bots-org-token"]:
-            self.discordBotsOrg = DiscordBotsOrg(self.user.id, config["discord-bots-org-token"])
+            self.discordBotsOrg = DiscordBotsOrg(
+                self.user.id, config["discord-bots-org-token"]
+            )
         if config["bots-discord-pw-token"]:
-            self.botsDiscordPw = BotsDiscordPw(self.user.id, config["bots-discord-pw-token"])
+            self.botsDiscordPw = BotsDiscordPw(
+                self.user.id, config["bots-discord-pw-token"]
+            )
         if config["discord-bots-org-token"] or config["bots-discord-pw-token"]:
             self.post_stats_task = self.loop.create_task(self.auto_post_stats())
             self.post_stats_task.add_done_callback(_handle_task_result)
 
     async def on_message(self, message):
         await self.socketio.on_message(message)
-        await self.redisqueue.push_message(message)
+        try:
+            await self.redisqueue.push_message(message)
+        except ConnectionError:
+            self.log.error("Retrying one time after redis connection error")
+            await self.redisqueue.connect()
+            await self.redisqueue.push_message(message)
 
         # See if there is a command we recognise
         msg = message.content.split()
@@ -305,7 +315,9 @@ class Titan(discord.AutoShardedClient):
             return
 
         message = await channel.fetch_message(message_id)
-        message._add_reaction({"me": payload.user_id == self.user.id}, emoji, payload.user_id)
+        message._add_reaction(
+            {"me": payload.user_id == self.user.id}, emoji, payload.user_id
+        )
         reaction = message._remove_reaction({}, emoji, payload.user_id)
 
         await self.on_reaction_remove(reaction, None)
