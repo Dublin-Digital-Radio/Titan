@@ -15,8 +15,14 @@ run-webapp:
 deploy-webapp:
 	flyctl deploy --env GIT_COMMIT=$$(git rev-parse HEAD) --build-target webapp --config webapp/fly.toml
 
+deploy-webapp-remote:
+	flyctl deploy --remote-only --env GIT_COMMIT=$$(git rev-parse HEAD) --build-target webapp --config webapp/fly.toml
+
 deploy-discordbot:
 	 flyctl deploy --env GIT_COMMIT=$$(git rev-parse HEAD) --build-target discordbot --config discordbot/fly.toml
+
+deploy-discordbot-remote:
+	 flyctl deploy --remote-only --env GIT_COMMIT=$$(git rev-parse HEAD) --build-target discordbot --config discordbot/fly.toml
 
 ssh-webapp:
 	flyctl ssh console --config webapp/fly.toml --app ddr-titan
@@ -57,3 +63,9 @@ rm-discordbot-venv:
 rm-webapp-venv:
 	deactivate
 	rm -r ../venvs/Titan-webapp/bin/activate
+
+restart-discordbot:
+	fly apps restart ddr-discord-bot
+
+restart-webapp:
+	fly apps restart ddr-titan
