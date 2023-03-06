@@ -12,7 +12,6 @@ from redis.exceptions import ConnectionError
 
 from discordbot import commands
 from discordbot.poststats import BotsDiscordPw, DiscordBotsOrg
-from discordbot.redisqueue import Web
 from discordbot.socketio import SocketIOInterface
 
 # try:
@@ -53,7 +52,7 @@ def _handle_task_result(task: asyncio.Task) -> None:
         logging.exception("Exception raised by task = %r", task)
 
 
-class Titan(discord.AutoShardedClient, Web):
+class Titan(discord.AutoShardedClient):
     def __init__(self, shard_ids=None, shard_count=None):
         super().__init__(
             shard_ids=shard_ids,
@@ -67,7 +66,6 @@ class Titan(discord.AutoShardedClient, Web):
         )
         self.log = setup_logger(shard_ids)
         self.http.user_agent += " TitanEmbeds-Bot"
-        self.redisqueue = Web()
         self.socketio = SocketIOInterface(config["redis-uri"])
 
         # List of msg ids to prevent duplicate delete
@@ -77,8 +75,6 @@ class Titan(discord.AutoShardedClient, Web):
 
         self.redis_sub_task = None
         self.post_stats_task = None
-
-        self.init_web()
 
     def _cleanup(self):
         try:

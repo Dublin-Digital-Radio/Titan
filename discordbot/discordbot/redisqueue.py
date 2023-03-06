@@ -7,13 +7,45 @@ from aiohttp import web
 
 from discordbot.utils import format_guild, format_message, format_user
 
+from .bot import Titan
+
 log = logging.getLogger(__name__)
 
 
 DEFAULT_CHANNEL_MESSAGES_LIMIT = 50
 
 
-class Web(discord.AutoShardedClient):
+class Web(Titan):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.running_tasks = set()
+
+        self.web_app = web.Application()
+        self.web_app.add_routes(
+            [
+                web.get("/", self.handle_http),
+                web.get("/{name}", self.handle_http),
+                web.get(
+                    "/channel_messages/{channel_id}",
+                    self.on_get_channel_messages_http,
+                ),
+                web.get(
+                    "/guild/{guild_id}/member/{user_id}",
+                    self.on_get_guild_member_http,
+                ),
+                web.get(
+                    "/guild/{guild_id}/member-name/{query}",
+                    self.on_get_guild_member_named_http,
+                ),
+                web.get("/guild/members/", self.on_list_guild_members_http),
+                web.get("/guild/{guild_id}", self.on_get_guild_http),
+                web.get("/user/{user_id}", self.on_get_user_http),
+            ]
+        )
+
+        web.run_app(self.web_app)
+
     async def set_scan_json(self, key, dict_key, dict_value_pattern):
         if not await self.connection.exists(key):
             return None, None
@@ -69,7 +101,7 @@ class Web(discord.AutoShardedClient):
             )
 
         log.info("Adding messages for channel to redis")
-        return web.json_response(messages)
+        return messages
 
     async def push_message(self, message):
         if not message.guild:
@@ -110,11 +142,11 @@ class Web(discord.AutoShardedClient):
             members = await guild.query_members(user_ids=[user_id], cache=True)
 
             if not len(members):
-                return web.json_response({})
+                return {}
 
             member = members[0]
 
-        return web.json_response(format_user(member))
+        return format_user(member)
 
     async def on_get_guild_member_named(self, guild_id, query):
         if not (guild := self.get_guild(guild_id)):
@@ -148,11 +180,12 @@ class Web(discord.AutoShardedClient):
                 "guild_id": guild.id,
                 "user_id": members.id,
             }
+            # TODO
             await self.on_get_guild_member(
                 get_guild_member_key, get_guild_member_param
             )
 
-        return web.json_response(result)
+        return result
 
     async def on_list_guild_members(self, guild_id):
         if not (guild := self.get_guild(guild_id)):
@@ -170,11 +203,12 @@ class Web(discord.AutoShardedClient):
                 "guild_id": guild.id,
                 "user_id": member.id,
             }
+            # TODO
             await self.on_get_guild_member(
                 get_guild_member_key, get_guild_member_param
             )
 
-        return web.json_response(member_ids)
+        return member_ids
 
     async def add_member(self, member):
         if await self.connection.exists(
@@ -192,6 +226,7 @@ class Web(discord.AutoShardedClient):
             "guild_id": member.guild.id,
             "user_id": member.id,
         }
+        # TODO
         await self.on_get_guild_member(
             get_guild_member_key, get_guild_member_param
         )
@@ -228,7 +263,7 @@ class Web(discord.AutoShardedClient):
         else:
             server_webhooks = []
 
-        return web.json_response(format_guild(guild, server_webhooks))
+        return format_guild(guild, server_webhooks)
 
     async def delete_guild(self, guild):
         await self.connection.delete(f"Queue/guilds/{guild.id}")
@@ -245,11 +280,51 @@ class Web(discord.AutoShardedClient):
         if not (user := self.get_user(user_id)):
             return
 
-        user_formatted = {
+        return {
             "id": user.id,
             "username": user.name,
             "discriminator": user.discriminator,
             "avatar": user.avatar.key if user.avatar else None,
             "bot": user.bot,
         }
+
+    async def handle_http(self, request):
+        name = request.match_info.get("name", "Anonymous")
+        text = "Hello, " + name
+        return web.Response(text=text)
+
+    async def on_get_channel_messages_http(self, request):
+        channel_id = request.match_info.get("channel_id")
+        messages = self.on_get_channel_messages(
+            channel_id,
+            request.match_info.get("limit", DEFAULT_CHANNEL_MESSAGES_LIMIT),
+        )
+        return web.json_response(messages)
+
+    async def on_get_guild_member_http(self, request):
+        guild_id = request.match_info.get("guild_id")
+        user_id = request.match_info.get("user_id")
+        result = self.on_get_guild_member(guild_id, user_id)
+        return web.json_response(result)
+
+    async def on_get_guild_member_named_http(self, request):
+        guild_id = request.match_info.get("guild_id")
+        query = request.match_info.get("query")
+        result = self.on_get_guild_member_named(guild_id, query)
+
+        return web.json_response(result)
+
+    async def on_list_guild_members_http(self, request):
+        guild_id = request.match_info.get("guild_id")
+        member_ids = self.on_list_guild_members(guild_id)
+        return web.json_response(member_ids)
+
+    async def on_get_guild_http(self, request):
+        guild_id = request.match_info.get("guild_id")
+        guild = self.on_get_guild(guild_id)
+        return web.json_response(guild)
+
+    async def on_get_user_http(self, request):
+        user_id = request.match_info.get("user_id")
+        user_formatted = self.on_get_user(user_id)
         return web.json_response(user_formatted)
