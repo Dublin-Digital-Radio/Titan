@@ -2,7 +2,6 @@ import logging as _logging
 
 import aiohttp as _aiohttp
 import discord as _discord
-
 from config import config as _config
 
 __all__ = ["ban", "unban", "kick", "invite", "server", "help", "members"]
@@ -27,9 +26,7 @@ async def ban(message):
         return
 
     username = content[2][: content[2].find("#")] if "#" in content[2] else content[2]
-    discriminator = (
-        int(content[2][content[2].find("#") + 1 :]) if "#" in content[2] else None
-    )
+    discriminator = int(content[2][content[2].find("#") + 1 :]) if "#" in content[2] else None
     headers = {"Authorization": _config["titan-web-app-secret"]}
     payload = {
         "guild_id": message.guild.id,
@@ -45,9 +42,7 @@ async def ban(message):
         async with aioclient.post(url, json=payload, headers=headers) as resp:
             j = await resp.json()
             if "error" in j:
-                await message.channel.send(
-                    f"{message.author.mention} Ban error! {j['error']}"
-                )
+                await message.channel.send(f"{message.author.mention} Ban error! {j['error']}")
                 return
             if "success" in j:
                 await message.channel.send(f'{message.author.mention} {j["success"]}')
@@ -73,9 +68,7 @@ async def unban(message):
         return
 
     username = content[2][: content[2].find("#")] if "#" in content[2] else content[2]
-    discriminator = (
-        int(content[2][content[2].find("#") + 1 :]) if "#" in content[2] else None
-    )
+    discriminator = int(content[2][content[2].find("#") + 1 :]) if "#" in content[2] else None
     headers = {"Authorization": _config["titan-web-app-secret"]}
     payload = {
         "guild_id": message.guild.id,
@@ -91,9 +84,7 @@ async def unban(message):
         async with aioclient.post(url, json=payload, headers=headers) as resp:
             j = await resp.json()
             if "error" in j:
-                await message.channel.send(
-                    f"{message.author.mention} Unban error! {j['error']}"
-                )
+                await message.channel.send(f"{message.author.mention} Unban error! {j['error']}")
                 return
             if "success" in j:
                 await message.channel.send(f"{message.author.mention} {j['success']}")
@@ -119,9 +110,7 @@ async def kick(message):
         return
 
     username = content[2][: content[2].find("#")] if "#" in content[2] else content[2]
-    discriminator = (
-        int(content[2][content[2].find("#") + 1 :]) if "#" in content[2] else None
-    )
+    discriminator = int(content[2][content[2].find("#") + 1 :]) if "#" in content[2] else None
     headers = {"Authorization": _config["titan-web-app-secret"]}
     payload = {"guild_id": message.guild.id, "username": username}
     if discriminator:
@@ -132,9 +121,7 @@ async def kick(message):
         async with aioclient.post(url, json=payload, headers=headers) as resp:
             j = await resp.json()
             if "error" in j:
-                await message.channel.send(
-                    f"{message.author.mention} Kick error! {j['error']}"
-                )
+                await message.channel.send(f"{message.author.mention} Kick error! {j['error']}")
                 return
             if "success" in j:
                 await message.channel.send(f"{message.author.mention} {j['success']}")
@@ -150,9 +137,7 @@ async def invite(message):
 
 
 async def server(message):
-    await message.channel.send(
-        "Join the Titan Embeds Discord server! https://discord.gg/pFDDtcN"
-    )
+    await message.channel.send("Join the Titan Embeds Discord server! https://discord.gg/pFDDtcN")
 
 
 async def help(message):
@@ -186,8 +171,7 @@ async def members(message):
                 continue
 
             embed_description = (
-                embed_description
-                + f"**{count}.** {server_user.name}#{server_user.discriminator}"
+                embed_description + f"**{count}.** {server_user.name}#{server_user.discriminator}"
             )
             if server_user.nick:
                 embed_description = embed_description + f" ({server_user.nick})"
@@ -202,8 +186,7 @@ async def members(message):
         count = 1
         for user in users["unauthenticated"]:
             embed_description = (
-                embed_description
-                + f"**{count}.** {user['username']}#{user['discriminator']}\n"
+                embed_description + f"**{count}.** {user['username']}#{user['discriminator']}\n"
             )
             count = count + 1
 
@@ -225,6 +208,4 @@ async def members(message):
     if message.channel.permissions_for(message.guild.me).embed_links:
         await message.channel.send(embed=embed)
     else:
-        await message.channel.send(
-            "__**Currently Online Embed Members**__\n" + embed_description
-        )
+        await message.channel.send("__**Currently Online Embed Members**__\n" + embed_description)

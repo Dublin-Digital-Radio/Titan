@@ -105,13 +105,9 @@ class Titan(discord.AutoShardedClient):
         self.redis_sub_task.add_done_callback(_handle_task_result)
 
         if config["discord-bots-org-token"]:
-            self.discordBotsOrg = DiscordBotsOrg(
-                self.user.id, config["discord-bots-org-token"]
-            )
+            self.discordBotsOrg = DiscordBotsOrg(self.user.id, config["discord-bots-org-token"])
         if config["bots-discord-pw-token"]:
-            self.botsDiscordPw = BotsDiscordPw(
-                self.user.id, config["bots-discord-pw-token"]
-            )
+            self.botsDiscordPw = BotsDiscordPw(self.user.id, config["bots-discord-pw-token"])
         if config["discord-bots-org-token"] or config["bots-discord-pw-token"]:
             self.post_stats_task = self.loop.create_task(self.auto_post_stats())
             self.post_stats_task.add_done_callback(_handle_task_result)
@@ -314,9 +310,7 @@ class Titan(discord.AutoShardedClient):
             return
 
         message = await channel.fetch_message(message_id)
-        message._add_reaction(
-            {"me": payload.user_id == self.user.id}, emoji, payload.user_id
-        )
+        message._add_reaction({"me": payload.user_id == self.user.id}, emoji, payload.user_id)
         reaction = message._remove_reaction({}, emoji, payload.user_id)
 
         await self.on_reaction_remove(reaction, None)
