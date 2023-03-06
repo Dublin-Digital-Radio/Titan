@@ -8,7 +8,6 @@ from urllib.parse import urlsplit, parse_qsl
 
 import requests
 import titanembeds.constants as constants
-from titanembeds import redis_cache
 from config import config
 from flask import Blueprint, abort
 from flask import current_app as app
@@ -16,7 +15,7 @@ from flask import jsonify, request, session, url_for
 from flask_socketio import emit
 from itsdangerous.exc import BadSignature
 from sqlalchemy import and_
-from titanembeds import rate_limiter, redisqueue
+from titanembeds import rate_limiter, redis_cache, redisqueue
 from titanembeds.cache_keys import (
     channel_ratelimit_key,
     get_client_ipaddr,

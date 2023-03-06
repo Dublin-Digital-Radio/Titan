@@ -6,8 +6,6 @@ import logging
 from urllib.parse import urlparse
 
 import sqlalchemy.exc
-
-from titanembeds.redis_cache import get_online_embed_user_keys
 from config import config
 from flask import (
     Blueprint,
@@ -22,6 +20,7 @@ from flask import (
 from flask_babel import gettext
 from titanembeds import redisqueue
 from titanembeds.database import Guilds, UserCSS, db, list_disabled_guilds
+from titanembeds.redis_cache import get_online_embed_user_keys
 from titanembeds.utils import (
     generate_guild_icon_url,
     guild_accepts_visitors,

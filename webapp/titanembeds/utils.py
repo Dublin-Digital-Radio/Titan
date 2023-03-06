@@ -1,7 +1,6 @@
 # from raven.contrib.flask import Sentry
 import logging
 
-from titanembeds.redis_cache import bump_user_presence_timestamp
 from config import config
 from flask import session
 from itsdangerous import URLSafeSerializer
@@ -24,6 +23,7 @@ from titanembeds.discord_rest.user import (
     check_user_can_administrate_guild,
     user_has_permission,
 )
+from titanembeds.redis_cache import bump_user_presence_timestamp
 
 log = logging.getLogger(__name__)
 

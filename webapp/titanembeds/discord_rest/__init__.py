@@ -3,10 +3,8 @@ import json
 import time
 
 import requests
-
-from titanembeds import redis_cache
 from config import config
-from titanembeds import redisqueue
+from titanembeds import redis_cache, redisqueue
 
 _DISCORD_API_BASE = "https://discordapp.com/api/v6"
 

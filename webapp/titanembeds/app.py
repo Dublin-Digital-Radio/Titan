@@ -1,7 +1,7 @@
 import time
 import random
 import logging
-from datetime import timedelta, datetime, date
+from datetime import date, datetime, timedelta
 from urllib.parse import urlparse
 
 from config import config
@@ -200,7 +200,8 @@ def context_processor():
         "devs": get_administrators_list(),
         "sentry_js_dsn": config.get("sentry-js-dsn", None),
         "constants": constants,
-        "af_mode_enabled": datetime.now().date() == date(datetime.now().year, 4, 1),
+        "af_mode_enabled": datetime.now().date()
+        == date(datetime.now().year, 4, 1),
         "app_start_stamp": app_start_stamp,
     }
 
