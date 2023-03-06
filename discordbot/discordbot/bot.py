@@ -44,13 +44,11 @@ def _handle_task_result(task: asyncio.Task) -> None:
         logging.exception("Exception raised by task = %r", task)
 
 
-# class Titan(discord.AutoShardedClient):
-class Titan(discord.Client):
-    # def __init__(self, shard_ids=None, shard_count=None):
-    def __init__(self):
+class Titan(discord.AutoShardedClient):
+    def __init__(self, shard_ids=None, shard_count=None):
         super().__init__(
-            # shard_ids=shard_ids,
-            # shard_count=shard_count,
+            shard_ids=shard_ids,
+            shard_count=shard_count,
             max_messages=10000,
             intents=intents,
             chunk_guilds_at_startup=False,
@@ -58,8 +56,7 @@ class Titan(discord.Client):
                 name="Embed your Discord server! Visit https://TitanEmbeds.com/"
             ),
         )
-        # self.log = setup_logger(shard_ids)
-        self.log = setup_logger()
+        self.log = setup_logger(shard_ids)
         self.http.user_agent += " TitanEmbeds-Bot"
         self.redisqueue = RedisQueue(self, config["redis-uri"])
         self.command = Commands(self)
@@ -75,7 +72,7 @@ class Titan(discord.Client):
 
     def _cleanup(self):
         try:
-            self.loop.run_until_complete(self.close())
+            self.loop.run_until_complete(self.logout())
         except:  # Can be ignored
             self.log.exception("run_until_complete")
             pass
