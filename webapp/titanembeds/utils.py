@@ -30,15 +30,6 @@ log = logging.getLogger(__name__)
 serializer = URLSafeSerializer(config["app-secret"])
 
 
-def get_guild(guild_id):
-    try:
-        guild_id = int(guild_id)
-    except (TypeError, ValueError):
-        return None
-
-    return redisqueue.get_guild(guild_id)
-
-
 def check_guild_existance(guild_id):
     try:
         guild_id = int(guild_id)
@@ -196,13 +187,7 @@ def check_user_in_guild(guild_id):
 
 def get_member_roles(guild_id, user_id):
     q = redisqueue.get_guild_member(guild_id, user_id)
-    if not q:
-        return []
-    roles = q["roles"]
-    role_converted = []
-    for role in roles:
-        role_converted.append(str(role))
-    return role_converted
+    return [str(role) for role in (q["roles"])] if q else []
 
 
 def get_guild_channels(guild_id, force_everyone=False, forced_role=0):

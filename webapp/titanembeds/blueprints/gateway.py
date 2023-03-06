@@ -8,13 +8,13 @@ from titanembeds import redis_cache
 from titanembeds.cache_keys import get_client_ipaddr
 from titanembeds.database import db
 from titanembeds.discord_rest import discord_api
+from titanembeds import redisqueue
 from titanembeds.utils import (
     check_user_in_guild,
     get_forced_role,
     get_guild_channels,
     guild_accepts_visitors,
     guild_webhooks_enabled,
-    redisqueue,
     serializer,
     update_user_status,
 )

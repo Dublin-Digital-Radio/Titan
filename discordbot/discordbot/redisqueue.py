@@ -1,4 +1,3 @@
-import re
 import json
 import logging
 
@@ -49,36 +48,6 @@ class Web(Titan):
 
         web.run_app(self.web_app)
 
-    async def set_scan_json(self, key, dict_key, dict_value_pattern):
-        if not await self.connection.exists(key):
-            return None, None
-
-        for the_member in await self.connection.smembers(key):
-            # the_member = await member
-            if not the_member:
-                continue
-
-            parsed = json.loads(the_member)
-            if re.match(str(dict_value_pattern), str(parsed[dict_key])):
-                return the_member, parsed
-
-        return None, None
-
-    async def enforce_expiring_key(self, key, ttl_override=None):
-        if ttl_override:
-            await self.connection.expire(key, ttl_override)
-            return
-
-        ttl = await self.connection.ttl(key)
-        if ttl >= 0:
-            new_ttl = ttl
-        elif ttl == -1:
-            new_ttl = 60 * 5  # 5 minutes
-        else:
-            new_ttl = 0
-
-        await self.connection.expire(key, new_ttl)
-
     async def on_get_channel_messages(
         self, channel_id, limit=DEFAULT_CHANNEL_MESSAGES_LIMIT
     ):
@@ -105,37 +74,6 @@ class Web(Titan):
 
         log.info("Adding messages for channel to redis")
         return messages
-
-    async def push_message(self, message):
-        if not message.guild:
-            return
-
-        key = f"Queue/channels/{message.channel.id}/messages"
-        if not await self.connection.exists(key):
-            return
-
-        message = format_message(message)
-        await self.connection.sadd(
-            key, json.dumps(message, separators=(",", ":"))
-        )
-
-    async def delete_message(self, message):
-        if not message.guild:
-            return
-
-        key = f"Queue/channels/{message.channel.id}/messages"
-        if not await self.connection.exists(key):
-            return
-
-        unformatted_item, formatted_item = await self.set_scan_json(
-            key, "id", message.id
-        )
-        if formatted_item:
-            await self.connection.srem(key, unformatted_item)
-
-    async def update_message(self, message):
-        await self.delete_message(message)
-        await self.push_message(message)
 
     async def on_get_guild_member(self, guild_id, user_id):
         if not (guild := self.get_guild(guild_id)):
@@ -173,9 +111,7 @@ class Web(Titan):
         if not members:
             result = ""
         else:
-            result = json.dumps(
-                {"user_id": (members.id)}, separators=(",", ":")
-            )
+            result = json.dumps({"user_id": members.id}, separators=(",", ":"))
             get_guild_member_key = (
                 f"Queue/guilds/{guild.id}/members/{members.id}"
             )
@@ -213,46 +149,6 @@ class Web(Titan):
 
         return member_ids
 
-    async def add_member(self, member):
-        if await self.connection.exists(
-            f"Queue/guilds/{member.guild.id}/members"
-        ):
-            await self.connection.sadd(
-                f"Queue/guilds/{member.guild.id}/members",
-                json.dumps({"user_id": member.id}, separators=(",", ":")),
-            )
-
-        get_guild_member_key = (
-            f"Queue/guilds/{member.guild.id}/members/{member.id}"
-        )
-        get_guild_member_param = {
-            "guild_id": member.guild.id,
-            "user_id": member.id,
-        }
-        # TODO
-        await self.on_get_guild_member(
-            get_guild_member_key, get_guild_member_param
-        )
-
-    async def remove_member(self, member, guild=None):
-        if not guild:
-            guild = member.guild
-
-        await self.connection.srem(
-            f"Queue/guilds/{guild.id}/members",
-            json.dumps({"user_id": member.id}, separators=(",", ":")),
-        )
-        await self.connection.delete(
-            f"Queue/guilds/{guild.id}/members/{member.id}"
-        )
-
-    async def update_member(self, member):
-        await self.remove_member(member)
-        await self.add_member(member)
-
-    async def ban_member(self, guild, user):
-        await self.remove_member(user, guild)
-
     async def on_get_guild(self, guild_id):
         if not (guild := self.get_guild(guild_id)):
             return
@@ -267,17 +163,6 @@ class Web(Titan):
             server_webhooks = []
 
         return format_guild(guild, server_webhooks)
-
-    async def delete_guild(self, guild):
-        await self.connection.delete(f"Queue/guilds/{guild.id}")
-
-    async def update_guild(self, guild):
-        key = f"Queue/guilds/{guild.id}"
-
-        if await self.connection.exists(key):
-            await self.delete_guild(guild)
-            await self.on_get_guild(guild.id)
-        await self.enforce_expiring_key(key)
 
     async def on_get_user(self, user_id):
         if not (user := self.get_user(user_id)):
