@@ -1,8 +1,13 @@
+import logging as _logging
+
 import aiohttp as _aiohttp
 import discord as _discord
+
 from config import config as _config
 
 __all__ = ["ban", "unban", "kick", "invite", "server", "help", "members"]
+
+log = _logging.getLogger(__name__)
 
 
 async def ban(message):
@@ -175,6 +180,11 @@ async def members(message):
         count = 1
         for user in users["authenticated"]:
             server_user = message.guild.get_member(int(user["id"]))
+
+            if not server_user:
+                log.error("could not find user with id %s", user["id"])
+                continue
+
             embed_description = (
                 embed_description
                 + f"**{count}.** {server_user.name}#{server_user.discriminator}"
@@ -188,6 +198,7 @@ async def members(message):
         if users["authenticated"]:
             embed_description = embed_description + "\n"
         embed_description = embed_description + "__(Guest)__\n"
+
         count = 1
         for user in users["unauthenticated"]:
             embed_description = (
@@ -211,7 +222,7 @@ async def members(message):
         description=embed_description,
     )
 
-    if message.guild.me.permissions_in(message.channel).embed_links:
+    if message.channel.permissions_for(message.guild.me).embed_links:
         await message.channel.send(embed=embed)
     else:
         await message.channel.send(
