@@ -6,7 +6,9 @@ class Web(discord.AutoShardedClient):
     def init_web(self):
         self.web_app = web.Application()
 
-        self.web_app.add_routes([web.get("/", self.handle), web.get("/{name}", self.handle)])
+        self.web_app.add_routes(
+            [web.get("/", self.handle), web.get("/{name}", self.handle)]
+        )
         self.web_app.add_routes(
             ["/channel_messages/{channel_id}", self.http_get_channel_messages]
         )
@@ -28,4 +30,6 @@ class Web(discord.AutoShardedClient):
         messages = []
         if channel.permissions_for(me).read_messages:
             async for message in channel.history(limit=50):
-                messages.append(json.dumps(format_message(message), separators=(",", ":")))
+                messages.append(
+                    json.dumps(format_message(message), separators=(",", ":"))
+                )

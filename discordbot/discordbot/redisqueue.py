@@ -26,8 +26,14 @@ class Web(discord.AutoShardedClient):
             [
                 web.get("/", self.handle),
                 web.get("/{name}", self.handle),
-                web.get("/channel_messages/{channel_id}", self.on_get_channel_messages),
-                web.get("/guild/{guild_id}/member/{user_id}", self.on_get_guild_member),
+                web.get(
+                    "/channel_messages/{channel_id}",
+                    self.on_get_channel_messages,
+                ),
+                web.get(
+                    "/guild/{guild_id}/member/{user_id}",
+                    self.on_get_guild_member,
+                ),
                 web.get(
                     "/guild/{guild_id}/member-name/{query}",
                     self.on_get_guild_member_named,
@@ -86,13 +92,20 @@ class Web(discord.AutoShardedClient):
 
         messages = []
         if channel.permissions_for(me).read_messages:
-            limit = request.match_info.get("limit", DEFAULT_CHANNEL_MESSAGES_LIMIT)
+            limit = request.match_info.get(
+                "limit", DEFAULT_CHANNEL_MESSAGES_LIMIT
+            )
             log.info("reading %s messages for channel %s", limit, channel_id)
             async for message in channel.history(limit=limit):
-                messages.append(json.dumps(format_message(message), separators=(",", ":")))
+                messages.append(
+                    json.dumps(format_message(message), separators=(",", ":"))
+                )
             log.info("Read messages from channel %s", channel_id)
         else:
-            log.error("Do not have permission to read messages from channel %s", channel.id)
+            log.error(
+                "Do not have permission to read messages from channel %s",
+                channel.id,
+            )
 
         log.info("Adding messages for channel to redis")
         return web.json_response(messages)
@@ -118,7 +131,9 @@ class Web(discord.AutoShardedClient):
         if not await self.connection.exists(key):
             return
 
-        unformatted_item, formatted_item = await self.set_scan_json(key, "id", message.id)
+        unformatted_item, formatted_item = await self.set_scan_json(
+            key, "id", message.id
+        )
         if formatted_item:
             await self.connection.srem(key, unformatted_item)
 

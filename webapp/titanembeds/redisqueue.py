@@ -148,7 +148,9 @@ def get_guild_member(guild_id, user_id):
 
 def get_guild_member_named(guild_id, query):
     key = f"/custom/guilds/{guild_id}/member_named/{query}"
-    guild_member_id = get(key, "get_guild_member_named", {"guild_id": guild_id, "query": query})
+    guild_member_id = get(
+        key, "get_guild_member_named", {"guild_id": guild_id, "query": query}
+    )
     if guild_member_id:
         return get_guild_member(guild_id, guild_member_id["user_id"])
     return None
@@ -156,8 +158,14 @@ def get_guild_member_named(guild_id, query):
 
 def list_guild_members(guild_id):
     key = f"/guilds/{guild_id}/members"
-    member_ids = get(key, "list_guild_members", {"guild_id": guild_id}, data_type="set")
-    return [m for m_id in member_ids if (m := get_guild_member(guild_id, m_id["user_id"]))]
+    member_ids = get(
+        key, "list_guild_members", {"guild_id": guild_id}, data_type="set"
+    )
+    return [
+        m
+        for m_id in member_ids
+        if (m := get_guild_member(guild_id, m_id["user_id"]))
+    ]
 
 
 def guild_clear_cache(guild_id):
@@ -192,11 +200,16 @@ def bump_user_presence_timestamp(guild_id, user_type, client_key):
 
 
 def get_online_embed_user_keys(guild_id="*", user_type=None):
-    user_type = [user_type] if user_type else ["AuthenticatedUsers", "UnauthenticatedUsers"]
+    user_type = (
+        [user_type]
+        if user_type
+        else ["AuthenticatedUsers", "UnauthenticatedUsers"]
+    )
 
     return {
         utype: [
-            k.split("/")[-1] for k in redis_store.keys(f"MemberPresence/{guild_id}/{utype}/*")
+            k.split("/")[-1]
+            for k in redis_store.keys(f"MemberPresence/{guild_id}/{utype}/*")
         ]
         for utype in user_type
     }
