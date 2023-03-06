@@ -1,6 +1,7 @@
 # from raven.contrib.flask import Sentry
 import logging
 
+from titanembeds.redis_cache import bump_user_presence_timestamp
 from config import config
 from flask import session
 from itsdangerous import URLSafeSerializer
@@ -138,9 +139,7 @@ def update_user_status(guild_id, username, user_key=None):
             )
         ).first()
 
-        redisqueue.bump_user_presence_timestamp(
-            guild_id, "UnauthenticatedUsers", user_key
-        )
+        bump_user_presence_timestamp(guild_id, "UnauthenticatedUsers", user_key)
         if db_user.username != username or db_user.ip_address != ip_address:
             db_user.username = username
             db_user.ip_address = ip_address
@@ -165,7 +164,7 @@ def update_user_status(guild_id, username, user_key=None):
         if dbMember := redisqueue.get_guild_member(guild_id, status["user_id"]):
             status["nickname"] = dbMember["nick"]
 
-        redisqueue.bump_user_presence_timestamp(
+        bump_user_presence_timestamp(
             guild_id, "AuthenticatedUsers", status["user_id"]
         )
 

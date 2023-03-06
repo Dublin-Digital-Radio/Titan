@@ -38,7 +38,10 @@ class Web(Titan):
                     "/guild/{guild_id}/member-name/{query}",
                     self.on_get_guild_member_named_http,
                 ),
-                web.get("/guild/members/", self.on_list_guild_members_http),
+                web.get(
+                    "/guild/{guild_id}/members/",
+                    self.on_list_guild_members_http,
+                ),
                 web.get("/guild/{guild_id}", self.on_get_guild_http),
                 web.get("/user/{user_id}", self.on_get_user_http),
             ]

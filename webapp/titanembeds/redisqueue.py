@@ -1,76 +1,17 @@
-import json
-import time
 import logging
 
-import redis
+import requests
 
 log = logging.getLogger(__name__)
 
-redis_store = redis.Redis()
-redis_url = ""
-
-
-def init_redis(url):
-    global redis_store
-    global redis_url
-    redis_store = redis.Redis.from_url(url, decode_responses=True)
-    redis_url = url
-
-
-def get(key, resource, params, *, data_type="str"):
-    key = "Queue" + key
-    _get = redis_store.smembers if data_type == "set" else redis_store.get
-
-    try:
-        data = _get(key)
-    except redis.exceptions.ConnectionError:
-        log.error("lost redis connection - retrying")
-        if redis_url:
-            init_redis(redis_url)
-        else:
-            log.error("no redis url")
-            raise
-        data = _get(key)
-
-    loop_count = 0
-    while (not data and data != "") and loop_count < 50:
-        if loop_count % 25 == 0:
-            redis_store.publish(
-                "discord-api-req",
-                json.dumps(
-                    {"key": key, "resource": resource, "params": params}
-                ),
-            )
-        time.sleep(0.1)
-        data = _get(key)
-        loop_count += 1
-    redis_store.expire(key, 60 * 5)
-
-    if not data:
-        return None
-
-    if data_type == "set":
-        return [json.loads(d) for d in list(data) if d != ""]
-
-    return json.loads(data)
-
-
-def validate_not_none(key, data_key, data):
-    if data[data_key] is None:
-        redis_store.delete(key)
-        time.sleep(0.5)
-        return False
-    return True
+URL = "https://foo.bar"
 
 
 def get_channel_messages(guild_id, channel_id, after_snowflake=0):
     log.info("get_channel_messages")
-    channel_messages = get(
-        f"/channels/{channel_id}/messages",
-        "get_channel_messages",
-        {"channel_id": channel_id, "limit": 50},
-        data_type="set",
-    )
+    response = requests.get(f"{URL}/channel_messages/{channel_id}")
+    channel_messages = response.json()
+
     if not channel_messages:
         log.warning("Got none from channel messages")
         return []
@@ -139,38 +80,29 @@ def get_channel_messages(guild_id, channel_id, after_snowflake=0):
 
 
 def get_guild_member(guild_id, user_id):
-    key = f"/guilds/{guild_id}/members/{user_id}"
-    q = get(key, "get_guild_member", {"guild_id": guild_id, "user_id": user_id})
-    if q and not validate_not_none(key, "username", q):
-        return get_user(user_id)
-    return q
+    response = requests.get(f"{URL}/guild/{guild_id}/member/{user_id}")
+    return response.json()
 
 
 def get_guild_member_named(guild_id, query):
-    key = f"/custom/guilds/{guild_id}/member_named/{query}"
-    guild_member_id = get(
-        key, "get_guild_member_named", {"guild_id": guild_id, "query": query}
-    )
+    response = requests.get(f"{URL}/guild/{guild_id}/member-name/{query}")
+    guild_member_id = response.json()
+
     if guild_member_id:
         return get_guild_member(guild_id, guild_member_id["user_id"])
+
     return None
 
 
 def list_guild_members(guild_id):
-    key = f"/guilds/{guild_id}/members"
-    member_ids = get(
-        key, "list_guild_members", {"guild_id": guild_id}, data_type="set"
-    )
+    response = requests.get(f"{URL}/guild/{guild_id}/members")
+    member_ids = response.json()
+
     return [
         m
         for m_id in member_ids
         if (m := get_guild_member(guild_id, m_id["user_id"]))
     ]
-
-
-def guild_clear_cache(guild_id):
-    key = f"Queue/guilds/{guild_id}"
-    redis_store.delete(key)
 
 
 def get_guild(guild_id):
@@ -179,37 +111,10 @@ def get_guild(guild_id):
     except (TypeError, ValueError):
         return None
 
-    key = f"/guilds/{guild_id}"
-    q = get(key, "get_guild", {"guild_id": guild_id})
-    if q and not validate_not_none(key, "name", q):
-        return get_guild(guild_id)
-    return q
+    response = requests.get(f"{URL}/guild/{guild_id}")
+    return response.json()
 
 
 def get_user(user_id):
-    key = f"/users/{user_id}"
-    q = get(key, "get_user", {"user_id": user_id})
-    if q and not validate_not_none(key, "username", q):
-        return get_user(user_id)
-    return q
-
-
-def bump_user_presence_timestamp(guild_id, user_type, client_key):
-    redis_key = f"MemberPresence/{guild_id}/{user_type}/{client_key}"
-    redis_store.set(redis_key, "", 60)
-
-
-def get_online_embed_user_keys(guild_id="*", user_type=None):
-    user_type = (
-        [user_type]
-        if user_type
-        else ["AuthenticatedUsers", "UnauthenticatedUsers"]
-    )
-
-    return {
-        utype: [
-            k.split("/")[-1]
-            for k in redis_store.keys(f"MemberPresence/{guild_id}/{utype}/*")
-        ]
-        for utype in user_type
-    }
+    response = requests.get(f"{URL}/user/{user_id}")
+    return response.json()

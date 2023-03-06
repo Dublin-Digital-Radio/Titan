@@ -8,6 +8,7 @@ from urllib.parse import urlsplit, parse_qsl
 
 import requests
 import titanembeds.constants as constants
+from titanembeds import redis_cache
 from config import config
 from flask import Blueprint, abort
 from flask import current_app as app
@@ -214,7 +215,7 @@ def get_online_discord_users(guild_id, embed):
 
 
 def get_online_embed_users(guild_id):
-    usrs = redisqueue.get_online_embed_user_keys(guild_id)
+    usrs = redis_cache.get_online_embed_user_keys(guild_id)
 
     unauths = (
         db.session.query(UnauthenticatedUsers)
@@ -893,7 +894,7 @@ def user_info(guild_id, user_id):
         ]
 
         usr["badges"] = get_badges(user_id)
-        if redisqueue.redis_store.get(f"DiscordBotsOrgVoted/{member['id']}"):
+        if redis_cache.redis_store.get(f"DiscordBotsOrgVoted/{member['id']}"):
             usr["badges"].append("discordbotsorgvoted")
 
     return jsonify(usr)
@@ -922,7 +923,7 @@ def webhook_discordbotsorg_vote():
 
     vote_type = str(incoming.get("type"))
     if vote_type == "upvote":
-        redisqueue.redis_store.set(
+        redis_cache.redis_store.set(
             f"DiscordBotsOrgVoted/{user_id}", "voted", 86400
         )
 

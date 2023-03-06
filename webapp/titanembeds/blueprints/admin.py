@@ -32,7 +32,7 @@ from titanembeds.database import (
     list_disabled_guilds,
     set_titan_token,
 )
-from titanembeds.redisqueue import get_online_embed_user_keys
+from titanembeds.redis_cache import get_online_embed_user_keys
 from titanembeds.utils import generate_guild_icon_url
 
 admin = Blueprint("admin", __name__)

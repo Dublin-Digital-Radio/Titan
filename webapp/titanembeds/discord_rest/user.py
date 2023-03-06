@@ -4,7 +4,8 @@ from pprint import pformat
 from flask import abort, request, session
 from flask_socketio import disconnect
 from oauthlib.oauth2 import InvalidGrantError
-from titanembeds import redisqueue
+
+from titanembeds import redis_cache
 from titanembeds.cache_keys import make_user_cache_key
 from titanembeds.discord_rest.oauth import (
     PERMISSION_BAN,
@@ -39,7 +40,7 @@ def user_has_permission(permission, index):
 def get_user_guilds():
     cache_key = f"OAUTH/USERGUILDS/{make_user_cache_key()}"
 
-    cache = redisqueue.redis_store.get(cache_key)
+    cache = redis_cache.redis_store.get(cache_key)
     if cache:
         log.debug(
             "got user guilds from cache: '%s'", pformat(json.loads(cache))
@@ -55,7 +56,7 @@ def get_user_guilds():
         abort(req.status_code)
 
     result = req.json()
-    redisqueue.redis_store.set(cache_key, json.dumps(result), 250)
+    redis_cache.redis_store.set(cache_key, json.dumps(result), 250)
 
     log.debug(
         "get_user_guilds - type '%s' - value: '%s'",

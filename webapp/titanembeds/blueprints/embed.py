@@ -6,6 +6,8 @@ import logging
 from urllib.parse import urlparse
 
 import sqlalchemy.exc
+
+from titanembeds.redis_cache import get_online_embed_user_keys
 from config import config
 from flask import (
     Blueprint,
@@ -87,7 +89,7 @@ def parse_url_domain(url):
 
 
 def is_peak(guild_id):
-    usrs = redisqueue.get_online_embed_user_keys(guild_id)
+    usrs = get_online_embed_user_keys(guild_id)
     return (
         len(usrs["AuthenticatedUsers"]) + len(usrs["UnauthenticatedUsers"])
     ) > 10

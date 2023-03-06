@@ -4,6 +4,8 @@ import logging
 
 from flask import session
 from flask_socketio import Namespace, disconnect, emit, join_room, leave_room
+
+from titanembeds import redis_cache
 from titanembeds.cache_keys import get_client_ipaddr
 from titanembeds.database import db
 from titanembeds.discord_rest import discord_api
@@ -276,7 +278,7 @@ class Gateway(Namespace):
                 ] = f"{DISCORDAPP_AVATARS_URL}{usr['id']}/{usr['avatar']}.png"
             usr["roles"] = member["roles"]
             usr["discordbotsorgvoted"] = bool(
-                redisqueue.redis_store.get(
+                redis_cache.redis_store.get(
                     f"DiscordBotsOrgVoted/{member['id']}"
                 )
             )
@@ -294,7 +296,7 @@ class Gateway(Namespace):
                     ] = f"{DISCORDAPP_AVATARS_URL}{usr['id']}/{usr['avatar']}.png"
                 usr["roles"] = member["roles"]
                 usr["discordbotsorgvoted"] = bool(
-                    redisqueue.redis_store.get(
+                    redis_cache.redis_store.get(
                         f"DiscordBotsOrgVoted/{member['id']}"
                     )
                 )
