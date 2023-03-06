@@ -14,38 +14,6 @@ DEFAULT_CHANNEL_MESSAGES_LIMIT = 50
 
 
 class Web(discord.AutoShardedClient):
-    def __init__(self):
-        self.web_app = web.Application()
-        self.running_tasks = set()
-
-    def init_web(self):
-        self.running_tasks = set()
-
-        self.web_app = web.Application()
-        self.web_app.add_routes(
-            [
-                web.get("/", self.handle_http),
-                web.get("/{name}", self.handle_http),
-                web.get(
-                    "/channel_messages/{channel_id}",
-                    self.on_get_channel_messages_http,
-                ),
-                web.get(
-                    "/guild/{guild_id}/member/{user_id}",
-                    self.on_get_guild_member_http,
-                ),
-                web.get(
-                    "/guild/{guild_id}/member-name/{query}",
-                    self.on_get_guild_member_named_http,
-                ),
-                web.get("/guild/members/", self.on_list_guild_members_http),
-                web.get("/guild/{guild_id}", self.on_get_guild_http),
-                web.get("/user/{user_id}", self.on_get_user_http),
-            ]
-        )
-
-        web.run_app(self.web_app)
-
     async def set_scan_json(self, key, dict_key, dict_value_pattern):
         if not await self.connection.exists(key):
             return None, None
@@ -76,13 +44,9 @@ class Web(discord.AutoShardedClient):
 
         await self.connection.expire(key, new_ttl)
 
-    async def handle_http(self, request):
-        name = request.match_info.get("name", "Anonymous")
-        text = "Hello, " + name
-        return web.Response(text=text)
-
-    async def on_get_channel_messages_http(self, request):
-        channel_id = request.match_info.get("channel_id")
+    async def on_get_channel_messages(
+        self, channel_id, limit=DEFAULT_CHANNEL_MESSAGES_LIMIT
+    ):
         channel = self.get_channel(channel_id)
         if not channel or not isinstance(channel, discord.channel.TextChannel):
             log.error("Could not find channel %s", channel_id)
@@ -92,9 +56,6 @@ class Web(discord.AutoShardedClient):
 
         messages = []
         if channel.permissions_for(me).read_messages:
-            limit = request.match_info.get(
-                "limit", DEFAULT_CHANNEL_MESSAGES_LIMIT
-            )
             log.info("reading %s messages for channel %s", limit, channel_id)
             async for message in channel.history(limit=limit):
                 messages.append(
@@ -141,11 +102,6 @@ class Web(discord.AutoShardedClient):
         await self.delete_message(message)
         await self.push_message(message)
 
-    async def on_get_guild_member_http(self, request):
-        guild_id = request.match_info.get("guild_id")
-        user_id = request.match_info.get("user_id")
-        return self.on_get_guild_member(guild_id, user_id)
-
     async def on_get_guild_member(self, guild_id, user_id):
         if not (guild := self.get_guild(guild_id)):
             return
@@ -160,13 +116,10 @@ class Web(discord.AutoShardedClient):
 
         return web.json_response(format_user(member))
 
-    async def on_get_guild_member_named_http(self, request):
-        guild_id = request.match_info.get("guild_id")
-
+    async def on_get_guild_member_named(self, guild_id, query):
         if not (guild := self.get_guild(guild_id)):
             return
 
-        query = request.match_info.get("query")
         members = None
         if guild.members and len(query) > 5 and query[-5] == "#":
             potential_discriminator = query[-4:]
@@ -201,8 +154,7 @@ class Web(discord.AutoShardedClient):
 
         return web.json_response(result)
 
-    async def on_list_guild_members_http(self, request):
-        guild_id = request.match_info.get("guild_id")
+    async def on_list_guild_members(self, guild_id):
         if not (guild := self.get_guild(guild_id)):
             return
 
@@ -263,10 +215,6 @@ class Web(discord.AutoShardedClient):
     async def ban_member(self, guild, user):
         await self.remove_member(user, guild)
 
-    async def on_get_guild_http(self, request):
-        guild_id = request.match_info.get("guild_id")
-        return self.on_get_guild(guild_id)
-
     async def on_get_guild(self, guild_id):
         if not (guild := self.get_guild(guild_id)):
             return
@@ -293,8 +241,7 @@ class Web(discord.AutoShardedClient):
             await self.on_get_guild(guild.id)
         await self.enforce_expiring_key(key)
 
-    async def on_get_user_http(self, request):
-        user_id = request.match_info.get("user_id")
+    async def on_get_user(self, user_id):
         if not (user := self.get_user(user_id)):
             return
 
