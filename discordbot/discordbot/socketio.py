@@ -21,6 +21,11 @@ class SocketIOInterface:
 
     async def on_mess(self, action, message):
         if not message.guild:
+            log.error(
+                'missing guild from message: %s - "%s"',
+                message.id,
+                message.content,
+            )
             return
 
         await self.io.emit(

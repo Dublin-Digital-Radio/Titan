@@ -1,4 +1,3 @@
-#!/usr/bin/env python2
 import subprocess
 
 from config import config
@@ -24,9 +23,15 @@ def init_debug():
 
         salt = "cookie-session"
         serializer = TaggedJSONSerializer()
-        signer_kwargs = {"key_derivation": "hmac", "digest_method": hashlib.sha1}
+        signer_kwargs = {
+            "key_derivation": "hmac",
+            "digest_method": hashlib.sha1,
+        }
         s = URLSafeTimedSerializer(
-            secret_key, salt=salt, serializer=serializer, signer_kwargs=signer_kwargs
+            secret_key,
+            salt=salt,
+            serializer=serializer,
+            signer_kwargs=signer_kwargs,
         )
         return s.loads(cookie_str)
 
@@ -48,8 +53,7 @@ def init_debug():
 
     @app.route("/error")
     def make_error():
-        1 / 0
-
+        _var = 1 / 0
         return "OK"
 
 
