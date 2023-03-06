@@ -7,7 +7,9 @@ from titanembeds.database import db
 class DiscordBotsOrgTransactions(db.Model):
     __tablename__ = "discordbotsorg_transactions"
     id = db.Column(db.Integer, primary_key=True)  # Auto increment id
-    user_id = db.Column(db.BigInteger, nullable=False)  # Discord user id of user
+    user_id = db.Column(
+        db.BigInteger, nullable=False
+    )  # Discord user id of user
     # The timestamp of when the action took place
     timestamp = db.Column(db.TIMESTAMP, nullable=False)
     # Very short description of the action

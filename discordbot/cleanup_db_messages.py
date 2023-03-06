@@ -44,7 +44,10 @@ class TitanCleanupDB:
         consoleHandler = logging.StreamHandler()
         consoleHandler.setFormatter(formatter)
         self.logger.addHandler(consoleHandler)
-        self.logger.info("Initialized Database Cleaning Class with session id of " + session_id)
+        self.logger.info(
+            "Initialized Database Cleaning Class with session id of "
+            + session_id
+        )
 
     def _cleanup(self):
         try:
@@ -93,7 +96,9 @@ class TitanCleanupDB:
             for guild in guilds_new:
                 count += 1
                 self.logger.info(
-                    "[{}] snowflake-{} name-{}".format(count, guild.guild_id, guild.name)
+                    "[{}] snowflake-{} name-{}".format(
+                        count, guild.guild_id, guild.name
+                    )
                 )
 
                 try:

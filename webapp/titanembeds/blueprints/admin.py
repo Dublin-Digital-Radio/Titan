@@ -63,7 +63,9 @@ def get_online_users_count():
 @admin.route("/")
 @is_admin
 def index():
-    return render_template("admin_index.html.j2", count=get_online_users_count())
+    return render_template(
+        "admin_index.html.j2", count=get_online_users_count()
+    )
 
 
 @admin.route("/cosmetics", methods=["GET"])
@@ -85,7 +87,9 @@ def cosmetics_post():
     guest_icon = request.form.get("guest_icon", None)
     send_rich_embed = request.form.get("send_rich_embed", None)
     badges = request.form.get("badges", None)
-    entry = db.session.query(Cosmetics).filter(Cosmetics.user_id == user_id).first()
+    entry = (
+        db.session.query(Cosmetics).filter(Cosmetics.user_id == user_id).first()
+    )
     if entry:
         abort(409)
 
@@ -121,7 +125,9 @@ def cosmetics_delete():
     if not user_id:
         abort(400)
 
-    entry = db.session.query(Cosmetics).filter(Cosmetics.user_id == user_id).first()
+    entry = (
+        db.session.query(Cosmetics).filter(Cosmetics.user_id == user_id).first()
+    )
     if not entry:
         abort(409)
 
@@ -144,7 +150,9 @@ def cosmetics_patch():
     send_rich_embed = request.form.get("send_rich_embed", None)
     badges = request.form.get("badges", None)
 
-    entry = db.session.query(Cosmetics).filter(Cosmetics.user_id == user_id).first()
+    entry = (
+        db.session.query(Cosmetics).filter(Cosmetics.user_id == user_id).first()
+    )
     if not entry:
         abort(409)
 
@@ -221,7 +229,9 @@ def administrate_guild(guild_id):
         abort(404)
         return
 
-    db_guild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+    db_guild = (
+        db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+    )
     if not db_guild:
         db_guild = Guilds(guild["id"])
         db.session.add(db_guild)
@@ -229,7 +239,9 @@ def administrate_guild(guild_id):
 
     session["redirect"] = None
     cosmetics = (
-        db.session.query(Cosmetics).filter(Cosmetics.user_id == session["user_id"]).first()
+        db.session.query(Cosmetics)
+        .filter(Cosmetics.user_id == session["user_id"])
+        .first()
     )
 
     permissions = []
@@ -261,8 +273,12 @@ def administrate_guild(guild_id):
         "mentions_limit": db_guild.mentions_limit,
         "unauth_captcha": db_guild.unauth_captcha,
         "icon": guild["icon"],
-        "invite_link": db_guild.invite_link if db_guild.invite_link != None else "",
-        "guest_icon": db_guild.guest_icon if db_guild.guest_icon != None else "",
+        "invite_link": db_guild.invite_link
+        if db_guild.invite_link != None
+        else "",
+        "guest_icon": db_guild.guest_icon
+        if db_guild.guest_icon != None
+        else "",
         "post_timeout": db_guild.post_timeout,
         "max_message_length": db_guild.max_message_length,
         "banned_words_enabled": db_guild.banned_words_enabled,
@@ -289,29 +305,52 @@ def update_administrate_guild(guild_id):
     true = ["true", True]
 
     guild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
-    guild.unauth_users = request.form.get("unauth_users", guild.unauth_users) in true
-    guild.visitor_view = request.form.get("visitor_view", guild.visitor_view) in true
-    guild.webhook_messages = request.form.get("webhook_messages", guild.webhook_messages) in true
+    guild.unauth_users = (
+        request.form.get("unauth_users", guild.unauth_users) in true
+    )
+    guild.visitor_view = (
+        request.form.get("visitor_view", guild.visitor_view) in true
+    )
+    guild.webhook_messages = (
+        request.form.get("webhook_messages", guild.webhook_messages) in true
+    )
 
     guild.chat_links = request.form.get("chat_links", guild.chat_links) in true
-    guild.bracket_links = request.form.get("bracket_links", guild.bracket_links) in true
-    guild.mentions_limit = request.form.get("mentions_limit", guild.mentions_limit)
-    guild.unauth_captcha = request.form.get("unauth_captcha", guild.unauth_captcha) in true
-    guild.post_timeout = request.form.get("post_timeout", guild.post_timeout)
-    guild.max_message_length = request.form.get("max_message_length", guild.max_message_length)
-    guild.banned_words_enabled = (
-        request.form.get("banned_words_enabled", guild.banned_words_enabled) in true
+    guild.bracket_links = (
+        request.form.get("bracket_links", guild.bracket_links) in true
     )
-    guild.banned_words_global_included = (
-        request.form.get("banned_words_global_included", guild.banned_words_global_included)
+    guild.mentions_limit = request.form.get(
+        "mentions_limit", guild.mentions_limit
+    )
+    guild.unauth_captcha = (
+        request.form.get("unauth_captcha", guild.unauth_captcha) in true
+    )
+    guild.post_timeout = request.form.get("post_timeout", guild.post_timeout)
+    guild.max_message_length = request.form.get(
+        "max_message_length", guild.max_message_length
+    )
+    guild.banned_words_enabled = (
+        request.form.get("banned_words_enabled", guild.banned_words_enabled)
         in true
     )
-    guild.autorole_unauth = request.form.get("autorole_unauth", guild.autorole_unauth, type=int)
+    guild.banned_words_global_included = (
+        request.form.get(
+            "banned_words_global_included", guild.banned_words_global_included
+        )
+        in true
+    )
+    guild.autorole_unauth = request.form.get(
+        "autorole_unauth", guild.autorole_unauth, type=int
+    )
     guild.autorole_discord = request.form.get(
         "autorole_discord", guild.autorole_discord, type=int
     )
-    guild.file_upload = request.form.get("file_upload", guild.file_upload) in true
-    guild.send_rich_embed = request.form.get("send_rich_embed", guild.send_rich_embed) in true
+    guild.file_upload = (
+        request.form.get("file_upload", guild.file_upload) in true
+    )
+    guild.send_rich_embed = (
+        request.form.get("send_rich_embed", guild.send_rich_embed) in true
+    )
     invite_link = request.form.get("invite_link", guild.invite_link)
 
     if invite_link is not None and invite_link.strip() == "":
@@ -325,7 +364,9 @@ def update_administrate_guild(guild_id):
 
     banned_word = request.form.get("banned_word", None)
     if banned_word:
-        delete_banned_word = request.form.get("delete_banned_word", False) in true
+        delete_banned_word = (
+            request.form.get("delete_banned_word", False) in true
+        )
         banned_words = set(json.loads(guild.banned_words))
         if delete_banned_word:
             banned_words.discard(banned_word)
@@ -377,11 +418,17 @@ def guilds():
         if not (rguild := redisqueue.get_guild(guild.guild_id)):
             continue
         guilds.append(
-            {"guild_id": guild.guild_id, "name": rguild["name"], "icon": rguild["icon"]}
+            {
+                "guild_id": guild.guild_id,
+                "name": rguild["name"],
+                "icon": rguild["icon"],
+            }
         )
 
     return render_template(
-        "admin_guilds.html.j2", servers=guilds, icon_generate=generate_guild_icon_url
+        "admin_guilds.html.j2",
+        servers=guilds,
+        icon_generate=generate_guild_icon_url,
     )
 
 
@@ -411,7 +458,9 @@ def manage_titan_tokens():
             )
         donators.append(row)
 
-    return render_template("admin_token_transactions.html.j2", donators=donators)
+    return render_template(
+        "admin_token_transactions.html.j2", donators=donators
+    )
 
 
 @admin.route("/tokens", methods=["POST"])
@@ -453,7 +502,9 @@ def patch_titan_tokens():
 @admin.route("/disabled_guilds", methods=["GET"])
 @is_admin
 def get_disabled_guilds():
-    return render_template("admin_disabled_guilds.html.j2", guilds=list_disabled_guilds())
+    return render_template(
+        "admin_disabled_guilds.html.j2", guilds=list_disabled_guilds()
+    )
 
 
 @admin.route("/disabled_guilds", methods=["POST"])
@@ -477,7 +528,11 @@ def delete_disabled_guilds():
     if guild_id not in list_disabled_guilds():
         abort(409)
 
-    guild = db.session.query(DisabledGuilds).filter(DisabledGuilds.guild_id == guild_id).first()
+    guild = (
+        db.session.query(DisabledGuilds)
+        .filter(DisabledGuilds.guild_id == guild_id)
+        .first()
+    )
     db.session.delete(guild)
     db.session.commit()
 
@@ -500,7 +555,9 @@ def edit_custom_css_get(css_id):
 
     variables = json.loads(css.css_variables) if css.css_variables else None
 
-    return render_template("usercss.html.j2", new=False, css=css, variables=variables, admin=True)
+    return render_template(
+        "usercss.html.j2", new=False, css=css, variables=variables, admin=True
+    )
 
 
 @admin.route("/custom_css/edit/<css_id>", methods=["POST"])
@@ -518,7 +575,10 @@ def edit_custom_css_post(css_id):
     dbcss.user_id = request.form.get("user_id", None) or dbcss.user_id
     dbcss.css = request.form.get("css", "").strip() or None
     dbcss.css_variables = request.form.get("variables", None)
-    dbcss.css_var_bool = request.form.get("variables_enabled", False) in ["true", True]
+    dbcss.css_var_bool = request.form.get("variables_enabled", False) in [
+        "true",
+        True,
+    ]
     db.session.commit()
 
     return jsonify({"id": dbcss.id})
@@ -575,8 +635,12 @@ def voting_get():
     if not datestart or not timestart or not dateend or not timeend:
         return render_template("admin_voting.html.j2")
 
-    start = datetime.datetime.strptime(datestart + " " + timestart, "%d %B, %Y %I:%M%p")
-    end = datetime.datetime.strptime(dateend + " " + timeend, "%d %B, %Y %I:%M%p")
+    start = datetime.datetime.strptime(
+        datestart + " " + timestart, "%d %B, %Y %I:%M%p"
+    )
+    end = datetime.datetime.strptime(
+        dateend + " " + timeend, "%d %B, %Y %I:%M%p"
+    )
     users = (
         db.session.query(DiscordBotsOrgTransactions)
         .filter(
@@ -608,7 +672,10 @@ def voting_get():
             overall_votes[uid] = overall_votes[uid] + 1
 
     sorted_overall_votes = [
-        u[0] for u in sorted(overall_votes.items(), key=operator.itemgetter(1), reverse=True)
+        u[0]
+        for u in sorted(
+            overall_votes.items(), key=operator.itemgetter(1), reverse=True
+        )
     ]
 
     overall = []
@@ -616,7 +683,9 @@ def voting_get():
         gmember = redisqueue.get_user(uid)
         u = {"user_id": uid, "votes": overall_votes[uid]}
         if gmember:
-            u["discord"] = gmember["username"] + "#" + str(gmember["discriminator"])
+            u["discord"] = (
+                gmember["username"] + "#" + str(gmember["discriminator"])
+            )
         overall.append(u)
 
     referrer = {}
@@ -629,7 +698,10 @@ def voting_get():
         referrer[refer] = referrer[refer] + 1
 
     sorted_referrers = [
-        u[0] for u in sorted(referrer.items(), key=operator.itemgetter(1), reverse=True)
+        u[0]
+        for u in sorted(
+            referrer.items(), key=operator.itemgetter(1), reverse=True
+        )
     ]
 
     referrals = []
@@ -637,7 +709,9 @@ def voting_get():
         gmember = redisqueue.get_user(uid)
         u = {"user_id": uid, "votes": referrer[uid]}
         if gmember:
-            u["discord"] = gmember["username"] + "#" + str(gmember["discriminator"])
+            u["discord"] = (
+                gmember["username"] + "#" + str(gmember["discriminator"])
+            )
         referrals.append(u)
 
     return render_template(

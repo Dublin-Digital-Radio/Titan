@@ -29,7 +29,9 @@ def upgrade():
     )
     op.add_column(
         "guilds",
-        sa.Column("send_rich_embed", sa.Boolean(), server_default="0", nullable=False),
+        sa.Column(
+            "send_rich_embed", sa.Boolean(), server_default="0", nullable=False
+        ),
     )
     # ### end Alembic commands ###
 

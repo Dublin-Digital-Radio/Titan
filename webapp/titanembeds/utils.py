@@ -53,7 +53,9 @@ def guild_accepts_visitors(guild_id):
 
 
 def guild_query_unauth_users_bool(guild_id):
-    dbGuild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+    dbGuild = (
+        db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+    )
     return dbGuild.unauth_users
 
 
@@ -136,7 +138,9 @@ def update_user_status(guild_id, username, user_key=None):
             )
         ).first()
 
-        redisqueue.bump_user_presence_timestamp(guild_id, "UnauthenticatedUsers", user_key)
+        redisqueue.bump_user_presence_timestamp(
+            guild_id, "UnauthenticatedUsers", user_key
+        )
         if db_user.username != username or db_user.ip_address != ip_address:
             db_user.username = username
             db_user.ip_address = ip_address
@@ -161,7 +165,9 @@ def update_user_status(guild_id, username, user_key=None):
         if dbMember := redisqueue.get_guild_member(guild_id, status["user_id"]):
             status["nickname"] = dbMember["nick"]
 
-        redisqueue.bump_user_presence_timestamp(guild_id, "AuthenticatedUsers", status["user_id"])
+        redisqueue.bump_user_presence_timestamp(
+            guild_id, "AuthenticatedUsers", status["user_id"]
+        )
 
     return status
 
@@ -217,7 +223,9 @@ def get_guild_channels(guild_id, force_everyone=False, forced_role=0):
     if not (guild := redisqueue.get_guild(guild_id)):
         return []
 
-    db_guild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+    db_guild = (
+        db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+    )
     guild_channels = guild["channels"]
     guild_roles = guild["roles"]
     guild_owner = guild["owner_id"]
@@ -247,7 +255,11 @@ def get_guild_channels(guild_id, force_everyone=False, forced_role=0):
                 result["write"] = False
             if not bot_result["mention_everyone"]:
                 result["mention_everyone"] = False
-            if not bot_result["attach_files"] or not db_guild.file_upload or not result["write"]:
+            if (
+                not bot_result["attach_files"]
+                or not db_guild.file_upload
+                or not result["write"]
+            ):
                 result["attach_files"] = False
             if (
                 not bot_result["embed_links"]
@@ -341,7 +353,9 @@ def get_channel_permission(
     # member specific
     for overwrite in remaining_overwrites:
         if overwrite["type"] == "member" and overwrite["id"] == str(user_id):
-            channel_perm = (channel_perm & ~overwrite["deny"]) | overwrite["allow"]
+            channel_perm = (channel_perm & ~overwrite["deny"]) | overwrite[
+                "allow"
+            ]
             break
 
     result["read"] = user_has_permission(channel_perm, 10)
@@ -362,7 +376,9 @@ def get_channel_permission(
 
 
 def get_forced_role(guild_id):
-    db_guild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+    db_guild = (
+        db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+    )
     if not session.get("unauthenticated", True):
         return db_guild.autorole_discord
 
@@ -392,7 +408,9 @@ def bot_can_create_webhooks(guild):
 
 
 def guild_webhooks_enabled(guild_id):
-    db_guild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+    db_guild = (
+        db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+    )
     if not db_guild.webhook_messages:
         return False
 
@@ -400,7 +418,9 @@ def guild_webhooks_enabled(guild_id):
 
 
 def guild_unauthcaptcha_enabled(guild_id):
-    db_guild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+    db_guild = (
+        db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+    )
     return db_guild.unauth_captcha
 
 

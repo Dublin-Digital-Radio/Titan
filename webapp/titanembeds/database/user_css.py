@@ -13,7 +13,9 @@ class UserCSS(db.Model):
     # CSS contents
     css = db.Column(db.Text().with_variant(db.Text(4294967295), "mysql"))
 
-    def __init__(self, name, user_id, css_var_bool=False, css_variables=None, css=None):
+    def __init__(
+        self, name, user_id, css_var_bool=False, css_variables=None, css=None
+    ):
         self.name = name
         self.user_id = user_id
         self.css_var_bool = css_var_bool

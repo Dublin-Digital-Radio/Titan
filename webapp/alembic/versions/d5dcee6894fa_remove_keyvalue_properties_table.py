@@ -36,7 +36,12 @@ def downgrade():
             nullable=False,
         ),
         sa.Column("value", sa.TEXT(), autoincrement=False, nullable=True),
-        sa.Column("expiration", postgresql.TIMESTAMP(), autoincrement=False, nullable=True),
+        sa.Column(
+            "expiration",
+            postgresql.TIMESTAMP(),
+            autoincrement=False,
+            nullable=True,
+        ),
         sa.PrimaryKeyConstraint("id", name="idx_25223_primary"),
     )
     # ### end Alembic commands ###

@@ -20,7 +20,9 @@ from titanembeds.decorators import discord_users_only
 @discord_users_only()
 def donate_get():
     cosmetics = (
-        db.session.query(Cosmetics).filter(Cosmetics.user_id == session["user_id"]).first()
+        db.session.query(Cosmetics)
+        .filter(Cosmetics.user_id == session["user_id"])
+        .first()
     )
     return render_template("donate.html.j2", cosmetics=cosmetics)
 
@@ -60,7 +62,10 @@ def donate_post():
     description = "Donate and support TitanEmbeds development."
     redirect_urls = {
         "return_url": url_for(
-            "user.donate_confirm", success="true", _external=True, _scheme="https"
+            "user.donate_confirm",
+            success="true",
+            _external=True,
+            _scheme="https",
         ),
         "cancel_url": url_for("index", _external=True, _scheme="https"),
     }
@@ -94,11 +99,15 @@ def donate_confirm():
     if not request.args.get("success"):
         return redirect(url_for("index"))
 
-    payment = paypalrestsdk.Payment.find(request.args.get("paymentId"), api=get_paypal_api())
+    payment = paypalrestsdk.Payment.find(
+        request.args.get("paymentId"), api=get_paypal_api()
+    )
     if not payment.execute({"payer_id": request.args.get("PayerID")}):
         return redirect(url_for("index"))
 
-    trans_id = str(payment.transactions[0]["related_resources"][0]["sale"]["id"])
+    trans_id = str(
+        payment.transactions[0]["related_resources"][0]["sale"]["id"]
+    )
     amount = float(payment.transactions[0]["amount"]["total"])
     tokens = int(amount * 100)
     action = "PAYPAL {}".format(trans_id)
@@ -114,7 +123,9 @@ def donate_confirm():
 def donate_thanks():
     tokens = get_titan_token(session["user_id"])
     transaction = request.args.get("transaction")
-    return render_template("donate_thanks.html.j2", tokens=tokens, transaction=transaction)
+    return render_template(
+        "donate_thanks.html.j2", tokens=tokens, transaction=transaction
+    )
 
 
 @user_bp.route("/donate", methods=["PATCH"])
@@ -127,7 +138,11 @@ def donate_patch():
         abort(400)
 
     subtract_amt = 0
-    entry = db.session.query(Cosmetics).filter(Cosmetics.user_id == session["user_id"]).first()
+    entry = (
+        db.session.query(Cosmetics)
+        .filter(Cosmetics.user_id == session["user_id"])
+        .first()
+    )
 
     if item == "custom_css_slots":
         subtract_amt = 100
@@ -141,7 +156,9 @@ def donate_patch():
             abort(400)
 
     amt_change = -1 * subtract_amt * amount
-    subtract = set_titan_token(session["user_id"], amt_change, "BUY " + item + " x" + str(amount))
+    subtract = set_titan_token(
+        session["user_id"], amt_change, "BUY " + item + " x" + str(amount)
+    )
     if not subtract:
         return "", 402
 
@@ -169,7 +186,9 @@ def donate_patch():
 @discord_users_only()
 def patreon_landing():
     return render_template(
-        "patreon.html.j2", pclient_id=config["patreon-client-id"], state="initial"
+        "patreon.html.j2",
+        pclient_id=config["patreon-client-id"],
+        state="initial",
     )
 
 
@@ -215,16 +234,19 @@ def format_patreon_user(user):
     }
 
     if usrobj["pledges"]:
-        usrobj["titan"]["total_cents_pledged"] = usrobj["pledges"][0]["attributes"][
-            "total_historical_amount_cents"
-        ]
+        usrobj["titan"]["total_cents_pledged"] = usrobj["pledges"][0][
+            "attributes"
+        ]["total_historical_amount_cents"]
 
-    dbpatreon = db.session.query(Patreon).filter(Patreon.user_id == user.id()).first()
+    dbpatreon = (
+        db.session.query(Patreon).filter(Patreon.user_id == user.id()).first()
+    )
     if dbpatreon:
         usrobj["titan"]["total_cents_synced"] = dbpatreon.total_synced
 
     usrobj["titan"]["eligible_tokens"] = (
-        usrobj["titan"]["total_cents_pledged"] - usrobj["titan"]["total_cents_synced"]
+        usrobj["titan"]["total_cents_pledged"]
+        - usrobj["titan"]["total_cents_synced"]
     )
 
     return usrobj
@@ -258,7 +280,9 @@ def patreon_sync_get():
         del session["patreon"]
         return redirect(url_for("user.patreon_landing"))
 
-    return render_template("patreon.html.j2", state="prepare", user=format_patreon_user(user))
+    return render_template(
+        "patreon.html.j2", state="prepare", user=format_patreon_user(user)
+    )
 
 
 @user_bp.route("/patreon/sync", methods=["POST"])
@@ -291,7 +315,9 @@ def patreon_sync_post():
     if usr["titan"]["eligible_tokens"] <= 0:
         return "", 402
 
-    dbpatreon = db.session.query(Patreon).filter(Patreon.user_id == usr["id"]).first()
+    dbpatreon = (
+        db.session.query(Patreon).filter(Patreon.user_id == usr["id"]).first()
+    )
     if not dbpatreon:
         dbpatreon = Patreon(usr["id"])
     dbpatreon.total_synced = usr["titan"]["total_cents_pledged"]

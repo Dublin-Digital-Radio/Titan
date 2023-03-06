@@ -207,7 +207,9 @@ def upgrade():
     )
     op.add_column(
         "user_css",
-        sa.Column("css_var_bool", sa.Boolean(), nullable=False, server_default="0"),
+        sa.Column(
+            "css_var_bool", sa.Boolean(), nullable=False, server_default="0"
+        ),
     )
     op.alter_column("user_css", "css_variables", existing_type=sa.TEXT())
     op.alter_column(
@@ -229,7 +231,9 @@ def downgrade():
         type_=sa.BIGINT(),
         autoincrement=True,
     )
-    op.alter_column("user_css", "css_variables", existing_type=sa.TEXT(), nullable=True)
+    op.alter_column(
+        "user_css", "css_variables", existing_type=sa.TEXT(), nullable=True
+    )
     op.drop_column("user_css", "css_var_bool")
     op.alter_column(
         "unauthenticated_users",

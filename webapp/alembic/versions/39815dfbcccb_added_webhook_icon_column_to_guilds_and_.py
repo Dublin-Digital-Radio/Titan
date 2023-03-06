@@ -27,7 +27,10 @@ def upgrade():
             nullable=False,
         ),
     )
-    op.add_column("guilds", sa.Column("webhook_icon", sa.String(length=255), nullable=True))
+    op.add_column(
+        "guilds",
+        sa.Column("webhook_icon", sa.String(length=255), nullable=True),
+    )
     # ### end Alembic commands ###
 
 

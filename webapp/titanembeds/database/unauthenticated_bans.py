@@ -25,7 +25,13 @@ class UnauthenticatedBans(db.Model):
     placer_id = db.Column(db.BigInteger, nullable=False)
 
     def __init__(
-        self, guild_id, ip_address, last_username, last_discriminator, reason, placer_id
+        self,
+        guild_id,
+        ip_address,
+        last_username,
+        last_discriminator,
+        reason,
+        placer_id,
     ):
         self.guild_id = guild_id
         self.ip_address = ip_address

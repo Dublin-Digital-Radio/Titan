@@ -36,7 +36,9 @@ embed = Blueprint("embed", __name__)
 
 def get_logingreeting():
     greetings = [
-        gettext("Let's get to know each other! My name is Titan, what's yours?"),
+        gettext(
+            "Let's get to know each other! My name is Titan, what's yours?"
+        ),
         gettext("Hello and welcome!"),
         gettext("What brings you here today?"),
         gettext("....what do you expect this text to say?"),
@@ -86,7 +88,9 @@ def parse_url_domain(url):
 
 def is_peak(guild_id):
     usrs = redisqueue.get_online_embed_user_keys(guild_id)
-    return (len(usrs["AuthenticatedUsers"]) + len(usrs["UnauthenticatedUsers"])) > 10
+    return (
+        len(usrs["AuthenticatedUsers"]) + len(usrs["UnauthenticatedUsers"])
+    ) > 10
 
 
 @embed.route("/<int:guild_id>")
@@ -96,7 +100,9 @@ def guild_embed(guild_id):
         abort(404)
 
     try:
-        db_guild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+        db_guild = (
+            db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+        )
     except sqlalchemy.exc.OperationalError:
         # we sometimes loose connection with the database and have to reconnect
         # This seems to be the first db query we hit when loading the embed
@@ -107,7 +113,9 @@ def guild_embed(guild_id):
         # sqlalchemy.exc.PendingRollbackError: Can't reconnect until invalid transaction is rolled back.
         # (Background on this error at: https://sqlalche.me/e/14/8s2b)
         db.session.begin()
-        db_guild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+        db_guild = (
+            db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+        )
         log.info("Reconnected to db")
 
     if not db_guild:
@@ -141,9 +149,14 @@ def guild_embed(guild_id):
         css=customcss,
         cssvariables=parse_css_variable(customcss),
         same_target=request.args.get("sametarget", False) == "true",
-        userscalable=request.args.get("userscalable", "True").lower().startswith("t"),
-        fixed_sidenav=request.args.get("fixedsidenav", "False").lower().startswith("t"),
-        is_peak=request.args.get("forcepeak", False) == "1" or is_peak(guild_id),
+        userscalable=request.args.get("userscalable", "True")
+        .lower()
+        .startswith("t"),
+        fixed_sidenav=request.args.get("fixedsidenav", "False")
+        .lower()
+        .startswith("t"),
+        is_peak=request.args.get("forcepeak", False) == "1"
+        or is_peak(guild_id),
         enable_code_highlighting=config["enable-code-highlighting"],
     )
 
@@ -161,7 +174,9 @@ def login_discord():
     return redirect(
         url_for(
             "user.login_authenticated",
-            redirect=url_for("embed.signin_complete", _external=True, _scheme="https"),
+            redirect=url_for(
+                "embed.signin_complete", _external=True, _scheme="https"
+            ),
         )
     )
 
@@ -174,10 +189,14 @@ def noscript():
 @embed.route("/cookietest1")
 def cookietest1():
     js = "window._3rd_party_test_step1_loaded();"
-    response = make_response(js, 200, {"Content-Type": "application/javascript"})
+    response = make_response(
+        js, 200, {"Content-Type": "application/javascript"}
+    )
 
     if not config.get("disable-samesite-cookie-flag", False):
-        response.set_cookie("third_party_c_t", "works", max_age=30, samesite="None")
+        response.set_cookie(
+            "third_party_c_t", "works", max_age=30, samesite="None"
+        )
     else:
         response.set_cookie("third_party_c_t", "works", max_age=30)
 
@@ -186,13 +205,18 @@ def cookietest1():
 
 @embed.route("/cookietest2")
 def cookietest2():
-    if "third_party_c_t" in request.cookies and request.cookies["third_party_c_t"] == "works":
+    if (
+        "third_party_c_t" in request.cookies
+        and request.cookies["third_party_c_t"] == "works"
+    ):
         res = "true"
     else:
         res = "false"
     js = f"window._3rd_party_test_step2_loaded({res})"
 
-    response = make_response(js, 200, {"Content-Type": "application/javascript"})
+    response = make_response(
+        js, 200, {"Content-Type": "application/javascript"}
+    )
 
     if not config.get("disable-samesite-cookie-flag", False):
         response.set_cookie("third_party_c_t", "", expires=0, samesite="None")

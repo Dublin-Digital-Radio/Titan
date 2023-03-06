@@ -28,7 +28,9 @@ def upgrade():
     # op.execute("ALTER TABLE administrators ALTER COLUMN user_id TYPE BIGINT USING user_id::bigint")
     op.drop_column("administrators", "id")
     op.execute("ALTER TABLE administrators ADD PRIMARY KEY (user_id);")
-    op.execute("ALTER TABLE authenticated_users ALTER COLUMN client_id DROP DEFAULT")
+    op.execute(
+        "ALTER TABLE authenticated_users ALTER COLUMN client_id DROP DEFAULT"
+    )
     op.alter_column(
         "authenticated_users",
         "client_id",
@@ -37,7 +39,9 @@ def upgrade():
         postgresql_using="client_id::bigint",
     )
     # op.execute("ALTER TABLE authenticated_users ALTER COLUMN client_id TYPE BIGINT USING client_id::bigint")
-    op.execute("ALTER TABLE authenticated_users ALTER COLUMN guild_id DROP DEFAULT")
+    op.execute(
+        "ALTER TABLE authenticated_users ALTER COLUMN guild_id DROP DEFAULT"
+    )
     op.alter_column(
         "authenticated_users",
         "guild_id",
@@ -157,7 +161,9 @@ def upgrade():
     # op.execute("ALTER TABLE titan_tokens ALTER COLUMN user_id TYPE BIGINT USING user_id::bigint")
     op.drop_column("titan_tokens", "id")
     op.execute("ALTER TABLE titan_tokens ADD PRIMARY KEY (user_id);")
-    op.execute("ALTER TABLE token_transactions ALTER COLUMN user_id DROP DEFAULT")
+    op.execute(
+        "ALTER TABLE token_transactions ALTER COLUMN user_id DROP DEFAULT"
+    )
     op.alter_column(
         "token_transactions",
         "user_id",
@@ -166,7 +172,9 @@ def upgrade():
         postgresql_using="user_id::bigint",
     )
     # op.execute("ALTER TABLE token_transactions ALTER COLUMN user_id TYPE BIGINT USING user_id::bigint")
-    op.execute("ALTER TABLE unauthenticated_bans ALTER COLUMN guild_id DROP DEFAULT")
+    op.execute(
+        "ALTER TABLE unauthenticated_bans ALTER COLUMN guild_id DROP DEFAULT"
+    )
     op.alter_column(
         "unauthenticated_bans",
         "guild_id",
@@ -175,7 +183,9 @@ def upgrade():
         postgresql_using="guild_id::bigint",
     )
     # op.execute("ALTER TABLE unauthenticated_bans ALTER COLUMN guild_id TYPE BIGINT USING guild_id::bigint")
-    op.execute("ALTER TABLE unauthenticated_bans ALTER COLUMN lifter_id DROP DEFAULT")
+    op.execute(
+        "ALTER TABLE unauthenticated_bans ALTER COLUMN lifter_id DROP DEFAULT"
+    )
     op.alter_column(
         "unauthenticated_bans",
         "lifter_id",
@@ -184,7 +194,9 @@ def upgrade():
         postgresql_using="lifter_id::bigint",
     )
     # op.execute("ALTER TABLE unauthenticated_bans ALTER COLUMN lifter_id TYPE BIGINT USING lifter_id::bigint")
-    op.execute("ALTER TABLE unauthenticated_bans ALTER COLUMN placer_id DROP DEFAULT")
+    op.execute(
+        "ALTER TABLE unauthenticated_bans ALTER COLUMN placer_id DROP DEFAULT"
+    )
     op.alter_column(
         "unauthenticated_bans",
         "placer_id",
@@ -193,7 +205,9 @@ def upgrade():
         postgresql_using="placer_id::bigint",
     )
     # op.execute("ALTER TABLE unauthenticated_bans ALTER COLUMN placer_id TYPE BIGINT USING placer_id::bigint")
-    op.execute("ALTER TABLE unauthenticated_users ALTER COLUMN guild_id DROP DEFAULT")
+    op.execute(
+        "ALTER TABLE unauthenticated_users ALTER COLUMN guild_id DROP DEFAULT"
+    )
     op.alter_column(
         "unauthenticated_bans",
         "guild_id",
@@ -335,7 +349,9 @@ def downgrade():
         existing_nullable=False,
         existing_server_default=sa.text("''::character varying"),
     )
-    op.add_column("disabled_guilds", sa.Column("id", sa.INTEGER(), nullable=False))
+    op.add_column(
+        "disabled_guilds", sa.Column("id", sa.INTEGER(), nullable=False)
+    )
     op.alter_column(
         "disabled_guilds",
         "guild_id",
@@ -367,7 +383,9 @@ def downgrade():
         existing_nullable=False,
         existing_server_default=sa.text("''::character varying"),
     )
-    op.add_column("administrators", sa.Column("id", sa.INTEGER(), nullable=False))
+    op.add_column(
+        "administrators", sa.Column("id", sa.INTEGER(), nullable=False)
+    )
     op.alter_column(
         "administrators",
         "user_id",

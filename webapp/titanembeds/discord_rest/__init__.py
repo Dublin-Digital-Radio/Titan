@@ -58,10 +58,16 @@ class DiscordREST:
         for tries in range(5):
             curepoch = time.time()
             if self._get_bucket("global_limited") == "True":
-                time.sleep(int(float(self._get_bucket("global_limit_expire"))) - curepoch)
+                time.sleep(
+                    int(float(self._get_bucket("global_limit_expire")))
+                    - curepoch
+                )
                 curepoch = time.time()
 
-            if self._bucket_contains(url) and float(int(self._get_bucket(url))) > curepoch:
+            if (
+                self._bucket_contains(url)
+                and float(int(self._get_bucket(url))) > curepoch
+            ):
                 time.sleep(int(self._get_bucket(url)) - curepoch)
 
             url_formatted = _DISCORD_API_BASE + url
@@ -69,11 +75,19 @@ class DiscordREST:
                 if "Content-Type" in headers:
                     del headers["Content-Type"]
                 req = requests.request(
-                    verb, url_formatted, params=params, files=data, headers=headers
+                    verb,
+                    url_formatted,
+                    params=params,
+                    files=data,
+                    headers=headers,
                 )
             else:
                 req = requests.request(
-                    verb, url_formatted, params=params, data=data, headers=headers
+                    verb,
+                    url_formatted,
+                    params=params,
+                    data=data,
+                    headers=headers,
                 )
 
             if "X-RateLimit-Remaining" in req.headers:
@@ -128,7 +142,11 @@ class DiscordREST:
         if file:
             payload = {
                 "payload_json": (None, json.dumps(payload)),
-                "file": (file.filename, file.read(), "application/octet-stream"),
+                "file": (
+                    file.filename,
+                    file.read(),
+                    "application/octet-stream",
+                ),
             }
 
         if richembed:
@@ -207,11 +225,19 @@ class DiscordREST:
         if wait:
             _endpoint += "?wait=true"
 
-        payload = {"content": content, "avatar_url": avatar, "username": username}
+        payload = {
+            "content": content,
+            "avatar_url": avatar,
+            "username": username,
+        }
         if file:
             payload = {
                 "payload_json": (None, json.dumps(payload)),
-                "file": (file.filename, file.read(), "application/octet-stream"),
+                "file": (
+                    file.filename,
+                    file.read(),
+                    "application/octet-stream",
+                ),
             }
 
         is_json = False

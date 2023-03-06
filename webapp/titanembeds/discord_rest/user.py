@@ -41,7 +41,9 @@ def get_user_guilds():
 
     cache = redisqueue.redis_store.get(cache_key)
     if cache:
-        log.debug("got user guilds from cache: '%s'", pformat(json.loads(cache)))
+        log.debug(
+            "got user guilds from cache: '%s'", pformat(json.loads(cache))
+        )
         return json.loads(cache)
 
     req = discordrest_from_user("/users/@me/guilds")
@@ -55,7 +57,11 @@ def get_user_guilds():
     result = req.json()
     redisqueue.redis_store.set(cache_key, json.dumps(result), 250)
 
-    log.debug("get_user_guilds - type '%s' - value: '%s'", type(result), pformat(result))
+    log.debug(
+        "get_user_guilds - type '%s' - value: '%s'",
+        type(result),
+        pformat(result),
+    )
     return result
 
 
@@ -64,7 +70,9 @@ def get_user_managed_servers():
 
     filtered = []
     for guild in guilds:
-        permission = guild["permissions"]  # Manage Server, Ban Members, Kick Members
+        permission = guild[
+            "permissions"
+        ]  # Manage Server, Ban Members, Kick Members
         if (
             guild["owner"]
             or user_has_permission(permission, PERMISSION_MANAGE)
@@ -83,6 +91,9 @@ def check_user_can_administrate_guild(guild_id):
 def check_user_permission(guild_id, permission_id):
     for guild in get_user_managed_servers():
         if guild["id"] == guild_id:
-            return user_has_permission(guild["permissions"], permission_id) or guild["owner"]
+            return (
+                user_has_permission(guild["permissions"], permission_id)
+                or guild["owner"]
+            )
 
     return False

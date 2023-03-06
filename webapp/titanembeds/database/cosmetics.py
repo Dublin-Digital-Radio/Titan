@@ -12,9 +12,13 @@ class Cosmetics(db.Model):
     # Custom CSS Limit
     css_limit = db.Column(db.Integer, nullable=False, server_default="0")
     # If they can set the guest icon for all guilds
-    guest_icon = db.Column(db.Boolean(), nullable=False, server_default=db.false())
+    guest_icon = db.Column(
+        db.Boolean(), nullable=False, server_default=db.false()
+    )
     # If they can set the send rich embed for all guilds
-    send_rich_embed = db.Column(db.Boolean(), nullable=False, server_default=db.false())
+    send_rich_embed = db.Column(
+        db.Boolean(), nullable=False, server_default=db.false()
+    )
     # JSON list of all the badges the user has
     badges = db.Column(db.String(255), nullable=False, server_default="[]")
 
@@ -48,7 +52,9 @@ class Cosmetics(db.Model):
 
 
 def set_badges(user_id, badges):
-    usr = db.session.query(Cosmetics).filter(Cosmetics.user_id == user_id).first()
+    usr = (
+        db.session.query(Cosmetics).filter(Cosmetics.user_id == user_id).first()
+    )
     if not usr:
         usr = Cosmetics(user_id)
     usr.badges = json.dumps(badges)
@@ -56,7 +62,9 @@ def set_badges(user_id, badges):
 
 
 def get_badges(user_id):
-    usr = db.session.query(Cosmetics).filter(Cosmetics.user_id == user_id).first()
+    usr = (
+        db.session.query(Cosmetics).filter(Cosmetics.user_id == user_id).first()
+    )
     if usr:
         return json.loads(usr.badges)
     return []

@@ -107,12 +107,16 @@ def format_post_content(guild_id, message, db_user):
     message = message.replace(">", "\>")
     message = parse_emoji(message, guild_id)
 
-    db_guild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+    db_guild = (
+        db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+    )
 
     max_len = get_post_content_max_len(guild_id)
     if len(message) > max_len:
         illegal_post = True
-        illegal_reasons.append(f"Exceeded the following message length: {max_len} characters")
+        illegal_reasons.append(
+            f"Exceeded the following message length: {max_len} characters"
+        )
 
     links = re.findall(
         "http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+",
@@ -127,10 +131,14 @@ def format_post_content(guild_id, message, db_user):
 
     mention_pattern = re.compile(r"\[@[0-9]+\]")
     all_mentions = re.findall(mention_pattern, message)
-    if db_guild.mentions_limit != -1 and len(all_mentions) > db_guild.mentions_limit:
+    if (
+        db_guild.mentions_limit != -1
+        and len(all_mentions) > db_guild.mentions_limit
+    ):
         illegal_post = True
         illegal_reasons.append(
-            "Mentions is capped at the following limit: " + str(db_guild.mentions_limit)
+            "Mentions is capped at the following limit: "
+            + str(db_guild.mentions_limit)
         )
 
     for match in all_mentions:
@@ -140,17 +148,23 @@ def format_post_content(guild_id, message, db_user):
     if db_guild.banned_words_enabled:
         banned_words = set(json.loads(db_guild.banned_words))
         if db_guild.banned_words_global_included:
-            banned_words = banned_words.union(set(constants.GLOBAL_BANNED_WORDS))
+            banned_words = banned_words.union(
+                set(constants.GLOBAL_BANNED_WORDS)
+            )
 
         for word in banned_words:
             regex = re.compile(rf"\b{word}\b", re.IGNORECASE)
             if regex.search(message):
                 illegal_post = True
-                illegal_reasons.append("The following word is prohibited: " + word)
+                illegal_reasons.append(
+                    "The following word is prohibited: " + word
+                )
 
     if not guild_webhooks_enabled(guild_id):
         if session["unauthenticated"]:
-            message = f"**[{session['username']}#{session['user_id']}]** {message}"
+            message = (
+                f"**[{session['username']}#{session['user_id']}]** {message}"
+            )
         else:
             username = session["username"]
             if db_user and db_user["nick"]:
@@ -173,7 +187,9 @@ def format_everyone_mention(channel, content):
 
 
 def filter_guild_channel(guild_id, channel_id, force_everyone=False):
-    for chan in get_guild_channels(guild_id, force_everyone, get_forced_role(guild_id)):
+    for chan in get_guild_channels(
+        guild_id, force_everyone, get_forced_role(guild_id)
+    ):
         if chan["channel"]["id"] == channel_id:
             return chan
 
@@ -181,7 +197,9 @@ def filter_guild_channel(guild_id, channel_id, force_everyone=False):
 
 
 def get_online_discord_users(guild_id, embed):
-    apimembers_filtered = {int(m["id"]): m for m in redisqueue.list_guild_members(guild_id)}
+    apimembers_filtered = {
+        int(m["id"]): m for m in redisqueue.list_guild_members(guild_id)
+    }
 
     for member in embed["members"]:
         member["hoist-role"] = None
@@ -257,7 +275,11 @@ def get_channel_webhook(guild_id, channel_id):
     if not guild_webhooks_enabled(guild_id):
         return None
 
-    discrim = session["user_id"] if user_unauthenticated() else session["discriminator"]
+    discrim = (
+        session["user_id"]
+        if user_unauthenticated()
+        else session["discriminator"]
+    )
     name = f"[Titan] {session['username'][:19]}#{discrim}"
 
     webhooks = redisqueue.get_guild(guild_id)["webhooks"]
@@ -294,7 +316,9 @@ def send_webhook(content, db_user, file, guild_id, rich_embed, webhook):
         username = f"{session['username'][:25]}#{session['user_id']}"
 
         if (
-            db_guild := db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+            db_guild := db.session.query(Guilds)
+            .filter(Guilds.guild_id == guild_id)
+            .first()
         ) and db_guild.guest_icon:
             avatar = db_guild.guest_icon
         else:
@@ -305,7 +329,11 @@ def send_webhook(content, db_user, file, guild_id, rich_embed, webhook):
                 _scheme="https",
             )
     else:
-        username = db_user["nick"] if db_user and db_user["nick"] else session["username"]
+        username = (
+            db_user["nick"]
+            if db_user and db_user["nick"]
+            else session["username"]
+        )
         username = f"{username[:25]}#{session['discriminator']}"
         avatar = session["avatar"]
 
@@ -331,7 +359,9 @@ def delete_webhook_if_too_much(guild_id):
         return
 
     guild = redisqueue.get_guild(guild_id)
-    titan_webhooks = [w for w in guild["webhooks"] if w["name"].startswith("[Titan] ")]
+    titan_webhooks = [
+        w for w in guild["webhooks"] if w["name"].startswith("[Titan] ")
+    ]
 
     if len(titan_webhooks) > 0 and len(guild["webhooks"]) >= 8:
         log.info(
@@ -342,7 +372,9 @@ def delete_webhook_if_too_much(guild_id):
         for wh in titan_webhooks:
             log.info("Deleting excess webhook %s", wh)
             try:
-                res = discord_api.delete_webhook(wh["id"], wh["token"], guild_id)
+                res = discord_api.delete_webhook(
+                    wh["id"], wh["token"], guild_id
+                )
                 log.info("delete_webhook result:  %s", pformat(res))
             except:
                 log.exception("Could not delete webhook")
@@ -356,7 +388,9 @@ def get_all_users(guild_id):
             {
                 "id": str(u["id"]),
                 "avatar": u["avatar"],
-                "avatar_url": generate_avatar_url(u["id"], u["avatar"], u["discriminator"], True),
+                "avatar_url": generate_avatar_url(
+                    u["id"], u["avatar"], u["discriminator"], True
+                ),
                 "username": u["username"],
                 "nickname": u["nick"],
                 "discriminator": u["discriminator"],
@@ -393,7 +427,9 @@ def fetch():
         if not chan.get("read") or chan["channel"]["type"] != "text":
             status_code = 401
         else:
-            messages = redisqueue.get_channel_messages(guild_id, channel_id, after_snowflake)
+            messages = redisqueue.get_channel_messages(
+                guild_id, channel_id, after_snowflake
+            )
             status_code = 200
 
     response = jsonify(messages=messages, status=status)
@@ -419,7 +455,9 @@ def fetch_visitor():
         messages = {}
         status_code = 401
     else:
-        messages = redisqueue.get_channel_messages(guild_id, channel_id, after_snowflake)
+        messages = redisqueue.get_channel_messages(
+            guild_id, channel_id, after_snowflake
+        )
         status_code = 200
 
     response = jsonify(messages=messages)
@@ -432,7 +470,9 @@ def get_guild_specific_post_limit():
     guild_id = int_or_none(request.form.get("guild_id", None))
 
     if guild_id and (
-        db_guild := db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+        db_guild := db.session.query(Guilds)
+        .filter(Guilds.guild_id == guild_id)
+        .first()
     ):
         seconds = db_guild.post_timeout
     else:
@@ -445,7 +485,9 @@ def get_post_content_max_len(guild_id):
     guild_id = int_or_none(guild_id)
 
     if guild_id and (
-        db_guild := db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
+        db_guild := db.session.query(Guilds)
+        .filter(Guilds.guild_id == guild_id)
+        .first()
     ):
         return db_guild.max_message_length
 
@@ -455,7 +497,9 @@ def get_post_content_max_len(guild_id):
 @api.route("/post", methods=["POST"])
 @valid_session_required(api=True)
 @abort_if_guild_disabled()
-@rate_limiter.limit(get_guild_specific_post_limit, key_func=channel_ratelimit_key)
+@rate_limiter.limit(
+    get_guild_specific_post_limit, key_func=channel_ratelimit_key
+)
 def post():
     guild_id = request.form.get("guild_id")
     channel_id = request.form.get("channel_id")
@@ -471,7 +515,9 @@ def post():
     key = session["user_keys"][guild_id] if user_unauthenticated() else None
 
     log.info("post: message is %s", pformat(content))
-    content, illegal_post, illegal_reasons = format_post_content(guild_id, content, db_user)
+    content, illegal_post, illegal_reasons = format_post_content(
+        guild_id, content, db_user
+    )
     chan = filter_guild_channel(guild_id, channel_id)
     content = format_everyone_mention(chan, content)
     log.info("post: message is now %s", pformat(content))
@@ -484,7 +530,9 @@ def post():
         return return_response(401, {}, status, illegal_reasons)
     elif not chan.get("write") or chan["channel"]["type"] != "text":
         return return_response(401, {}, status, illegal_reasons)
-    elif (file and not chan.get("attach_files")) or (rich_embed and not chan.get("embed_links")):
+    elif (file and not chan.get("attach_files")) or (
+        rich_embed and not chan.get("embed_links")
+    ):
         return return_response(406, {}, status, illegal_reasons)
     elif illegal_post:
         return return_response(417, {}, status, illegal_reasons)
@@ -496,13 +544,17 @@ def post():
         log.info("sending message by webhook '%s'", webhook)
         # https://discord.com/api/webhooks/1051803851684073502/-bMS3xabIBd7Bz6qdJ3psGVDSHJYqRvtSPp1dMntR1iiHFNYx5EDh9r2WaseDsdxeoLu
         # https://discord.com/api/webhooks/1051804042302599198/E3bq8_tm1eKV1B_STL5IykczUkVHAb5RtvZ53TarQRj-3thsc9Bk7mV9lTGxeGCzkce6
-        message = send_webhook(content, db_user, file, guild_id, rich_embed, webhook)
+        message = send_webhook(
+            content, db_user, file, guild_id, rich_embed, webhook
+        )
         if not message:
             webhook = None
 
     if not webhook:
         log.info("sending message by discord api")
-        message = discord_api.create_message(channel_id, content, file, rich_embed)
+        message = discord_api.create_message(
+            channel_id, content, file, rich_embed
+        )
 
     return return_response(message["code"], message, status, illegal_reasons)
 
@@ -542,7 +594,9 @@ def create_unauthenticated_user():
 
     if len(username) < 2 or len(username) > 32:
         abort(406)
-    if not all(x.isalnum() or x.isspace() or "-" == x or "_" == x for x in username):
+    if not all(
+        x.isalnum() or x.isspace() or "-" == x or "_" == x for x in username
+    ):
         abort(406)
     if not check_guild_existance(guild_id):
         abort(404)
@@ -550,7 +604,9 @@ def create_unauthenticated_user():
         abort(401)
 
     if guild_unauthcaptcha_enabled(guild_id):
-        if not verify_captcha_request(request.form["captcha_response"], request.remote_addr):
+        if not verify_captcha_request(
+            request.form["captcha_response"], request.remote_addr
+        ):
             abort(412)
 
     if not checkUserBanned(guild_id, ip_address):
@@ -558,7 +614,9 @@ def create_unauthenticated_user():
         if "user_id" not in session or len(str(session["user_id"])) > 4:
             session["user_id"] = random.randint(0, 9999)
 
-        user = UnauthenticatedUsers(guild_id, username, session["user_id"], ip_address)
+        user = UnauthenticatedUsers(
+            guild_id, username, session["user_id"], ip_address
+        )
         db.session.add(user)
 
         key = user.user_key
@@ -590,7 +648,9 @@ def change_unauthenticated_username():
 
     if len(username) < 2 or len(username) > 32:
         abort(406)
-    if not all(x.isalnum() or x.isspace() or "-" == x or "_" == x for x in username):
+    if not all(
+        x.isalnum() or x.isspace() or "-" == x or "_" == x for x in username
+    ):
         abort(406)
     if not check_guild_existance(guild_id):
         abort(404)
@@ -614,7 +674,9 @@ def change_unauthenticated_username():
         if "user_id" not in session or len(str(session["user_id"])) > 4:
             session["user_id"] = random.randint(0, 9999)
 
-        user = UnauthenticatedUsers(guild_id, username, session["user_id"], ip_address)
+        user = UnauthenticatedUsers(
+            guild_id, username, session["user_id"], ip_address
+        )
         db.session.add(user)
         key = user.user_key
         session["user_keys"][guild_id] = key
@@ -638,12 +700,23 @@ def change_unauthenticated_username():
 
 
 def get_guild_guest_icon(guild_id):
-    guest_icon = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first().guest_icon
-    return guest_icon if guest_icon else url_for("static", filename="img/titanembeds_square.png")
+    guest_icon = (
+        db.session.query(Guilds)
+        .filter(Guilds.guild_id == guild_id)
+        .first()
+        .guest_icon
+    )
+    return (
+        guest_icon
+        if guest_icon
+        else url_for("static", filename="img/titanembeds_square.png")
+    )
 
 
 def process_query_guild(guild_id, visitor=False):
-    channels = get_guild_channels(guild_id, visitor, forced_role=(get_forced_role(guild_id)))
+    channels = get_guild_channels(
+        guild_id, visitor, forced_role=(get_forced_role(guild_id))
+    )
 
     # Discord members & embed members listed here is moved to its own api endpoint
     if visitor:
@@ -815,7 +888,9 @@ def user_info(guild_id, user_id):
 
         roles = get_member_roles(guild_id, user_id)
         guild_roles = redisqueue.get_guild(guild_id)["roles"]
-        usr["roles"] = [gr for gr in guild_roles for r in roles if gr["id"] == r]
+        usr["roles"] = [
+            gr for gr in guild_roles for r in roles if gr["id"] == r
+        ]
 
         usr["badges"] = get_badges(user_id)
         if redisqueue.redis_store.get(f"DiscordBotsOrgVoted/{member['id']}"):
@@ -847,7 +922,9 @@ def webhook_discordbotsorg_vote():
 
     vote_type = str(incoming.get("type"))
     if vote_type == "upvote":
-        redisqueue.redis_store.set(f"DiscordBotsOrgVoted/{user_id}", "voted", 86400)
+        redisqueue.redis_store.set(
+            f"DiscordBotsOrgVoted/{user_id}", "voted", 86400
+        )
 
     dbl_trans = DiscordBotsOrgTransactions(
         int(user_id), vote_type, int_or_none(params.get("referrer"))
@@ -872,7 +949,9 @@ def bot_ban():
     if not guild_id or not placer_id or not username:
         return jsonify(error="Missing required parameters."), 400
 
-    db_user = query_unauthenticated_users_like(username, guild_id, discriminator)
+    db_user = query_unauthenticated_users_like(
+        username, guild_id, discriminator
+    )
     if not db_user:
         return jsonify(error="Guest user cannot be found."), 404
 
@@ -923,7 +1002,9 @@ def bot_unban():
     if not guild_id or not lifter_id or not username:
         return jsonify(error="Missing required parameters."), 400
 
-    db_user = query_unauthenticated_users_like(username, guild_id, discriminator)
+    db_user = query_unauthenticated_users_like(
+        username, guild_id, discriminator
+    )
     if not db_user:
         return jsonify(error="Guest user cannot be found."), 404
 
@@ -982,7 +1063,9 @@ def bot_revoke():
 
     dbuser.revoked = True
     db.session.commit()
-    return jsonify(success=f"Successfully kicked **{dbuser.username}#{dbuser.discriminator}**!")
+    return jsonify(
+        success=f"Successfully kicked **{dbuser.username}#{dbuser.discriminator}**!"
+    )
 
 
 @api.route("/bot/members")

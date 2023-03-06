@@ -29,10 +29,24 @@ def downgrade():
         sa.Column("id", sa.INTEGER(), nullable=False),
         sa.Column("guild_id", sa.BIGINT(), autoincrement=False, nullable=False),
         sa.Column("user_id", sa.BIGINT(), autoincrement=False, nullable=False),
-        sa.Column("username", sa.VARCHAR(length=255), autoincrement=False, nullable=False),
-        sa.Column("discriminator", sa.INTEGER(), autoincrement=False, nullable=False),
-        sa.Column("nickname", sa.VARCHAR(length=255), autoincrement=False, nullable=True),
-        sa.Column("avatar", sa.VARCHAR(length=255), autoincrement=False, nullable=True),
+        sa.Column(
+            "username",
+            sa.VARCHAR(length=255),
+            autoincrement=False,
+            nullable=False,
+        ),
+        sa.Column(
+            "discriminator", sa.INTEGER(), autoincrement=False, nullable=False
+        ),
+        sa.Column(
+            "nickname",
+            sa.VARCHAR(length=255),
+            autoincrement=False,
+            nullable=True,
+        ),
+        sa.Column(
+            "avatar", sa.VARCHAR(length=255), autoincrement=False, nullable=True
+        ),
         sa.Column(
             "active",
             sa.BOOLEAN(),

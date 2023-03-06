@@ -12,13 +12,17 @@ def get_client_ipaddr():
     else:
         ip = request.remote_addr
 
-    return hashlib.sha512((config["app-secret"] + ip).encode("utf-8")).hexdigest()[:15]
+    return hashlib.sha512(
+        (config["app-secret"] + ip).encode("utf-8")
+    ).hexdigest()[:15]
 
 
 def generate_session_key():
     sess = session.get("sessionunique", None)
     if not sess:
-        rand_str = lambda n: "".join([random.choice(string.ascii_lowercase) for i in range(n)])
+        rand_str = lambda n: "".join(
+            [random.choice(string.ascii_lowercase) for i in range(n)]
+        )
         session["sessionunique"] = rand_str(25)
         sess = session["sessionunique"]
     return sess  # Totally unique

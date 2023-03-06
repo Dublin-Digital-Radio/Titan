@@ -46,4 +46,6 @@ def get_token(state):
 def get_authorization_url(scope):
     discord = make_authenticated_session(scope=scope)
     # authorization_url, state
-    return discord.authorization_url(AUTHORIZE_URL, access_type="offline", prompt="none")
+    return discord.authorization_url(
+        AUTHORIZE_URL, access_type="offline", prompt="none"
+    )

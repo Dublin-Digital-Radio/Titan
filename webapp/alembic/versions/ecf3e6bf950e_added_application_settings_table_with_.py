@@ -21,8 +21,18 @@ def upgrade():
     op.create_table(
         "application_settings",
         sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("donation_goal_progress", sa.Integer(), server_default="0", nullable=False),
-        sa.Column("donation_goal_total", sa.Integer(), server_default="0", nullable=False),
+        sa.Column(
+            "donation_goal_progress",
+            sa.Integer(),
+            server_default="0",
+            nullable=False,
+        ),
+        sa.Column(
+            "donation_goal_total",
+            sa.Integer(),
+            server_default="0",
+            nullable=False,
+        ),
         sa.Column("donation_goal_end", sa.Date(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
     )

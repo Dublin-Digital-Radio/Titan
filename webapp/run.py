@@ -39,7 +39,9 @@ def init_debug():
     def session():
         cookie = request.cookies.get("session")
         if cookie:
-            decoded = decode_flask_cookie(app.secret_key, request.cookies.get("session"))
+            decoded = decode_flask_cookie(
+                app.secret_key, request.cookies.get("session")
+            )
         else:
             decoded = None
         return jsonify(session_cookie=decoded)

@@ -13,7 +13,11 @@ class TitanTokens(db.Model):
 
 
 def get_titan_token(user_id):
-    q = db.session.query(TitanTokens).filter(TitanTokens.user_id == user_id).first()
+    q = (
+        db.session.query(TitanTokens)
+        .filter(TitanTokens.user_id == user_id)
+        .first()
+    )
     if q:
         return q.tokens
     else:

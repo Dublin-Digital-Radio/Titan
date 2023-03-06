@@ -25,7 +25,9 @@ def get(key, resource, params, *, data_type="str"):
         if loop_count % 25 == 0:
             redis_store.publish(
                 "discord-api-req",
-                json.dumps({"key": key, "resource": resource, "params": params}),
+                json.dumps(
+                    {"key": key, "resource": resource, "params": params}
+                ),
             )
         time.sleep(0.1)
         data = _get(key)
@@ -67,9 +69,9 @@ def get_channel_messages(guild_id, channel_id, after_snowflake=0):
     guild_members = {}
 
     for channel_message in channel_messages:
-        if channel_message["id"] in snowflakes or int(channel_message["id"]) <= int(
-            after_snowflake
-        ):
+        if channel_message["id"] in snowflakes or int(
+            channel_message["id"]
+        ) <= int(after_snowflake):
             continue
 
         snowflakes.append(channel_message["id"])
@@ -134,7 +136,9 @@ def get_guild_member(guild_id, user_id):
 
 def get_guild_member_named(guild_id, query):
     key = f"/custom/guilds/{guild_id}/member_named/{query}"
-    guild_member_id = get(key, "get_guild_member_named", {"guild_id": guild_id, "query": query})
+    guild_member_id = get(
+        key, "get_guild_member_named", {"guild_id": guild_id, "query": query}
+    )
     if guild_member_id:
         return get_guild_member(guild_id, guild_member_id["user_id"])
     return None
@@ -142,8 +146,14 @@ def get_guild_member_named(guild_id, query):
 
 def list_guild_members(guild_id):
     key = f"/guilds/{guild_id}/members"
-    member_ids = get(key, "list_guild_members", {"guild_id": guild_id}, data_type="set")
-    return [m for m_id in member_ids if (m := get_guild_member(guild_id, m_id["user_id"]))]
+    member_ids = get(
+        key, "list_guild_members", {"guild_id": guild_id}, data_type="set"
+    )
+    return [
+        m
+        for m_id in member_ids
+        if (m := get_guild_member(guild_id, m_id["user_id"]))
+    ]
 
 
 def guild_clear_cache(guild_id):
@@ -178,11 +188,16 @@ def bump_user_presence_timestamp(guild_id, user_type, client_key):
 
 
 def get_online_embed_user_keys(guild_id="*", user_type=None):
-    user_type = [user_type] if user_type else ["AuthenticatedUsers", "UnauthenticatedUsers"]
+    user_type = (
+        [user_type]
+        if user_type
+        else ["AuthenticatedUsers", "UnauthenticatedUsers"]
+    )
 
     return {
         utype: [
-            k.split("/")[-1] for k in redis_store.keys(f"MemberPresence/{guild_id}/{utype}/*")
+            k.split("/")[-1]
+            for k in redis_store.keys(f"MemberPresence/{guild_id}/{utype}/*")
         ]
         for utype in user_type
     }

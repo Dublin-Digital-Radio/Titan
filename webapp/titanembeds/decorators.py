@@ -14,7 +14,10 @@ def valid_session_required(api=False):
                 or "username" not in session
             ):
                 if api:
-                    return jsonify(error=True, message="Unauthenticated session"), 401
+                    return (
+                        jsonify(error=True, message="Unauthenticated session"),
+                        401,
+                    )
 
                 redirect(url_for("user.logout"))
 
@@ -35,7 +38,10 @@ def discord_users_only(api=False):
             if "unauthenticated" not in session or session["unauthenticated"]:
                 if api:
                     return (
-                        jsonify(error=True, message="Not logged in as a discord user"),
+                        jsonify(
+                            error=True,
+                            message="Not logged in as a discord user",
+                        ),
                         401,
                     )
                 return redirect(url_for("user.login_authenticated"))

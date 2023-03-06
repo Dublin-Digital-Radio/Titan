@@ -13,4 +13,6 @@ class Patreon(db.Model):
         self.total_synced = total_synced
 
     def __repr__(self):
-        return "<Patreon {0} {1} {2}>".format(self.id, self.user_id, self.total_synced)
+        return "<Patreon {0} {1} {2}>".format(
+            self.id, self.user_id, self.total_synced
+        )

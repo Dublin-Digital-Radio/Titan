@@ -56,7 +56,9 @@ class RedisQueue:
             try:
                 async with async_timeout.timeout(1):
                     try:
-                        reply = await subscriber.get_message(ignore_subscribe_messages=True)
+                        reply = await subscriber.get_message(
+                            ignore_subscribe_messages=True
+                        )
                     except ConnectionError:
                         log.error("Redis connection lost... reconnecting")
                         await self.connect()
@@ -66,7 +68,9 @@ class RedisQueue:
                         continue
 
                     request = json.loads(reply["data"].decode())
-                    self.dispatch(request["resource"], request["key"], request["params"])
+                    self.dispatch(
+                        request["resource"], request["key"], request["params"]
+                    )
                     await asyncio.sleep(0.01)
             except asyncio.TimeoutError:
                 pass
@@ -96,7 +100,9 @@ class RedisQueue:
             pass
         except Exception:
             try:
-                log.exception("error running event\n  '%s' : '%s' : '%s'", pformat(params))
+                log.exception(
+                    "error running event\n  '%s' : '%s' : '%s'", pformat(params)
+                )
             except asyncio.CancelledError:
                 pass
 
@@ -142,12 +148,21 @@ class RedisQueue:
         messages = []
         if channel.permissions_for(me).read_messages:
             limit = int(params.get("limit", DEFAULT_CHANNEL_MESSAGES_LIMIT))
-            log.info("reading %s messages for channel %s", limit, params["channel_id"])
+            log.info(
+                "reading %s messages for channel %s",
+                limit,
+                params["channel_id"],
+            )
             async for message in channel.history(limit=limit):
-                messages.append(json.dumps(format_message(message), separators=(",", ":")))
+                messages.append(
+                    json.dumps(format_message(message), separators=(",", ":"))
+                )
             log.info("Read messages from channel %s", params["channel_id"])
         else:
-            log.error("Do not have permission to read messages from channel %s", channel.id)
+            log.error(
+                "Do not have permission to read messages from channel %s",
+                channel.id,
+            )
 
         log.info("Adding messages for channel to redis")
         await self.connection.sadd(key, "", *messages)
@@ -162,7 +177,9 @@ class RedisQueue:
             return
 
         message = format_message(message)
-        await self.connection.sadd(key, json.dumps(message, separators=(",", ":")))
+        await self.connection.sadd(
+            key, json.dumps(message, separators=(",", ":"))
+        )
 
     async def delete_message(self, message):
         if not message.guild:
@@ -172,7 +189,9 @@ class RedisQueue:
         if not await self.connection.exists(key):
             return
 
-        unformatted_item, formatted_item = await self.set_scan_json(key, "id", message.id)
+        unformatted_item, formatted_item = await self.set_scan_json(
+            key, "id", message.id
+        )
         if formatted_item:
             await self.connection.srem(key, unformatted_item)
 
@@ -185,7 +204,9 @@ class RedisQueue:
             return
 
         if not (member := guild.get_member(int(params["user_id"]))):
-            members = await guild.query_members(user_ids=[int(params["user_id"])], cache=True)
+            members = await guild.query_members(
+                user_ids=[int(params["user_id"])], cache=True
+            )
 
             if not len(members):
                 await self.connection.set(key, "")
@@ -194,7 +215,9 @@ class RedisQueue:
 
             member = members[0]
 
-        await self.connection.set(key, json.dumps(format_user(member), separators=(",", ":")))
+        await self.connection.set(
+            key, json.dumps(format_user(member), separators=(",", ":"))
+        )
         await self.enforce_expiring_key(key)
 
     async def on_get_guild_member_named(self, key, params):
@@ -206,7 +229,9 @@ class RedisQueue:
         if guild.members and len(query) > 5 and query[-5] == "#":
             potential_discriminator = query[-4:]
             members = discord.utils.get(
-                guild.members, name=query[:-5], discriminator=potential_discriminator
+                guild.members,
+                name=query[:-5],
+                discriminator=potential_discriminator,
             )
             if not members:
                 members = discord.utils.get(
@@ -218,10 +243,19 @@ class RedisQueue:
         if not members:
             result = ""
         else:
-            result = json.dumps({"user_id": (members.id)}, separators=(",", ":"))
-            get_guild_member_key = f"Queue/guilds/{guild.id}/members/{members.id}"
-            get_guild_member_param = {"guild_id": guild.id, "user_id": members.id}
-            await self.on_get_guild_member(get_guild_member_key, get_guild_member_param)
+            result = json.dumps(
+                {"user_id": (members.id)}, separators=(",", ":")
+            )
+            get_guild_member_key = (
+                f"Queue/guilds/{guild.id}/members/{members.id}"
+            )
+            get_guild_member_param = {
+                "guild_id": guild.id,
+                "user_id": members.id,
+            }
+            await self.on_get_guild_member(
+                get_guild_member_key, get_guild_member_param
+            )
 
         await self.connection.set(key, result)
         await self.enforce_expiring_key(key)
@@ -232,23 +266,41 @@ class RedisQueue:
 
         member_ids = []
         for member in guild.members:
-            member_ids.append(json.dumps({"user_id": member.id}, separators=(",", ":")))
-            get_guild_member_key = f"Queue/guilds/{guild.id}/members/{member.id}"
-            get_guild_member_param = {"guild_id": guild.id, "user_id": member.id}
-            await self.on_get_guild_member(get_guild_member_key, get_guild_member_param)
+            member_ids.append(
+                json.dumps({"user_id": member.id}, separators=(",", ":"))
+            )
+            get_guild_member_key = (
+                f"Queue/guilds/{guild.id}/members/{member.id}"
+            )
+            get_guild_member_param = {
+                "guild_id": guild.id,
+                "user_id": member.id,
+            }
+            await self.on_get_guild_member(
+                get_guild_member_key, get_guild_member_param
+            )
 
         await self.connection.sadd(key, *member_ids)
 
     async def add_member(self, member):
-        if await self.connection.exists(f"Queue/guilds/{member.guild.id}/members"):
+        if await self.connection.exists(
+            f"Queue/guilds/{member.guild.id}/members"
+        ):
             await self.connection.sadd(
                 f"Queue/guilds/{member.guild.id}/members",
                 json.dumps({"user_id": member.id}, separators=(",", ":")),
             )
 
-        get_guild_member_key = f"Queue/guilds/{member.guild.id}/members/{member.id}"
-        get_guild_member_param = {"guild_id": member.guild.id, "user_id": member.id}
-        await self.on_get_guild_member(get_guild_member_key, get_guild_member_param)
+        get_guild_member_key = (
+            f"Queue/guilds/{member.guild.id}/members/{member.id}"
+        )
+        get_guild_member_param = {
+            "guild_id": member.guild.id,
+            "user_id": member.id,
+        }
+        await self.on_get_guild_member(
+            get_guild_member_key, get_guild_member_param
+        )
 
     async def remove_member(self, member, guild=None):
         if not guild:
@@ -258,7 +310,9 @@ class RedisQueue:
             f"Queue/guilds/{guild.id}/members",
             json.dumps({"user_id": member.id}, separators=(",", ":")),
         )
-        await self.connection.delete(f"Queue/guilds/{guild.id}/members/{member.id}")
+        await self.connection.delete(
+            f"Queue/guilds/{guild.id}/members/{member.id}"
+        )
 
     async def update_member(self, member):
         await self.remove_member(member)
@@ -281,7 +335,10 @@ class RedisQueue:
             server_webhooks = []
 
         await self.connection.set(
-            key, json.dumps(format_guild(guild, server_webhooks), separators=(",", ":"))
+            key,
+            json.dumps(
+                format_guild(guild, server_webhooks), separators=(",", ":")
+            ),
         )
         await self.enforce_expiring_key(key)
 
@@ -307,5 +364,7 @@ class RedisQueue:
             "avatar": user.avatar.key if user.avatar else None,
             "bot": user.bot,
         }
-        await self.connection.set(key, json.dumps(user_formatted, separators=(",", ":")))
+        await self.connection.set(
+            key, json.dumps(user_formatted, separators=(",", ":"))
+        )
         await self.enforce_expiring_key(key)

@@ -18,7 +18,9 @@ class DiscordBots:
 
     async def post(self, count, shard_count, shard_id):
         if not self.token:
-            log.info(f"{self.__class__} cannot post stats because `token` is not defined")
+            log.info(
+                f"{self.__class__} cannot post stats because `token` is not defined"
+            )
             return
 
         headers = {"Authorization": self.token}

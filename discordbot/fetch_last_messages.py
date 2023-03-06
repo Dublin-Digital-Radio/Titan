@@ -79,7 +79,9 @@ class Titan(discord.Client):
         print("working on this...")
         all_channels = []
         if len(sys.argv) < 2:
-            print("fetch_last_messages.py <server/all> [server_id] [shard_id] [shard_count]")
+            print(
+                "fetch_last_messages.py <server/all> [server_id] [shard_id] [shard_count]"
+            )
             await self.logout()
             return
         if "server" == sys.argv[1]:
@@ -95,7 +97,9 @@ class Titan(discord.Client):
             print("Getting all channels")
             all_channels = list(self.get_all_channels())
         else:
-            print("fetch_last_messages.py <server/all> [server_id] [shard_id] [shard_count]")
+            print(
+                "fetch_last_messages.py <server/all> [server_id] [shard_id] [shard_count]"
+            )
             await self.logout()
             return
         for channel in all_channels:
@@ -109,8 +113,12 @@ class Titan(discord.Client):
                             channel.guild.name,
                         )
                     )
-                    await self.database.delete_all_messages_from_channel(channel.id)
-                    async for message in channel.history(limit=50, reverse=True):
+                    await self.database.delete_all_messages_from_channel(
+                        channel.id
+                    )
+                    async for message in channel.history(
+                        limit=50, reverse=True
+                    ):
                         await self.database.push_message(message)
             except:
                 continue

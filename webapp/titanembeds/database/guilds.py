@@ -3,8 +3,12 @@ from titanembeds.database import db
 
 class Guilds(db.Model):
     __tablename__ = "guilds"
-    guild_id = db.Column(db.BigInteger, nullable=False, primary_key=True)  # Discord guild id
-    unauth_users = db.Column(db.Boolean(), nullable=False, default=1)  # If allowed unauth users
+    guild_id = db.Column(
+        db.BigInteger, nullable=False, primary_key=True
+    )  # Discord guild id
+    unauth_users = db.Column(
+        db.Boolean(), nullable=False, default=1
+    )  # If allowed unauth users
     # If users are automatically "signed in" and can view chat
     visitor_view = db.Column(db.Boolean(), nullable=False, default=0)
     # Use webhooks to send messages instead of the bot
@@ -23,21 +27,33 @@ class Guilds(db.Model):
     # Seconds to elapse before another message can be posted from the widget
     post_timeout = db.Column(db.Integer, nullable=False, server_default="5")
     # Chars length the message should be before being rejected by the server
-    max_message_length = db.Column(db.Integer, nullable=False, server_default="300")
+    max_message_length = db.Column(
+        db.Integer, nullable=False, server_default="300"
+    )
     # If banned words are enforced
-    banned_words_enabled = db.Column(db.Boolean(), nullable=False, server_default="0")
+    banned_words_enabled = db.Column(
+        db.Boolean(), nullable=False, server_default="0"
+    )
     # Add global banned words to the list
-    banned_words_global_included = db.Column(db.Boolean(), nullable=False, server_default="0")
+    banned_words_global_included = db.Column(
+        db.Boolean(), nullable=False, server_default="0"
+    )
     # JSON list of strings to block from sending
     banned_words = db.Column(db.Text(), nullable=False, server_default="[]")
     # Automatic Role inherit for unauthenticated users
-    autorole_unauth = db.Column(db.BigInteger, nullable=True, server_default=None)
+    autorole_unauth = db.Column(
+        db.BigInteger, nullable=True, server_default=None
+    )
     # Automatic Role inherit for discord users
-    autorole_discord = db.Column(db.BigInteger, nullable=True, server_default=None)
+    autorole_discord = db.Column(
+        db.BigInteger, nullable=True, server_default=None
+    )
     # Allow file uploading for server
     file_upload = db.Column(db.Boolean(), nullable=False, server_default="0")
     # Allow sending rich embed messages
-    send_rich_embed = db.Column(db.Boolean(), nullable=False, server_default="0")
+    send_rich_embed = db.Column(
+        db.Boolean(), nullable=False, server_default="0"
+    )
 
     def __init__(self, guild_id):
         self.guild_id = guild_id

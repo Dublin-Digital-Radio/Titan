@@ -105,9 +105,13 @@ class Titan(discord.AutoShardedClient):
         self.redis_sub_task.add_done_callback(_handle_task_result)
 
         if config["discord-bots-org-token"]:
-            self.discordBotsOrg = DiscordBotsOrg(self.user.id, config["discord-bots-org-token"])
+            self.discordBotsOrg = DiscordBotsOrg(
+                self.user.id, config["discord-bots-org-token"]
+            )
         if config["bots-discord-pw-token"]:
-            self.botsDiscordPw = BotsDiscordPw(self.user.id, config["bots-discord-pw-token"])
+            self.botsDiscordPw = BotsDiscordPw(
+                self.user.id, config["bots-discord-pw-token"]
+            )
         if config["discord-bots-org-token"] or config["bots-discord-pw-token"]:
             self.post_stats_task = self.loop.create_task(self.auto_post_stats())
             self.post_stats_task.add_done_callback(_handle_task_result)
@@ -225,7 +229,9 @@ class Titan(discord.AutoShardedClient):
 
     async def on_guild_emojis_update(self, guild, before, after):
         await self.redisqueue.update_guild(guild)
-        await self.socketio.on_guild_emojis_update(after if len(after) else before)
+        await self.socketio.on_guild_emojis_update(
+            after if len(after) else before
+        )
 
     # async def on_webhooks_update(self, channel):
     #     await self.redisqueue.update_guild(channel.guild)
@@ -257,7 +263,9 @@ class Titan(discord.AutoShardedClient):
         await asyncio.sleep(1)
         for msg_id in [int(x) for x in payload.message_ids]:
             if not self.in_messages_cache(msg_id):
-                await self.process_raw_message_delete(msg_id, int(payload.channel_id))
+                await self.process_raw_message_delete(
+                    msg_id, int(payload.channel_id)
+                )
 
     async def process_raw_message_delete(self, msg_id, channel_id):
         if msg_id in self.delete_list:
@@ -280,7 +288,9 @@ class Titan(discord.AutoShardedClient):
             "nonce": None,
         }
         # Procreate a fake message object
-        msg = discord.Message(channel=channel, state=self._connection, data=data)
+        msg = discord.Message(
+            channel=channel, state=self._connection, data=data
+        )
         await self.on_message_delete(msg)
 
     async def on_raw_reaction_add(self, payload):
@@ -310,7 +320,9 @@ class Titan(discord.AutoShardedClient):
             return
 
         message = await channel.fetch_message(message_id)
-        message._add_reaction({"me": payload.user_id == self.user.id}, emoji, payload.user_id)
+        message._add_reaction(
+            {"me": payload.user_id == self.user.id}, emoji, payload.user_id
+        )
         reaction = message._remove_reaction({}, emoji, payload.user_id)
 
         await self.on_reaction_remove(reaction, None)

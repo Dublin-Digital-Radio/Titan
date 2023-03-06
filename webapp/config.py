@@ -11,7 +11,9 @@ config = {
     "database-uri": re.sub(
         "^postgres:",
         "postgresql:",
-        env.get("DATABASE_URL", "postgresql://titan:titan@localhost:5432/titan"),
+        env.get(
+            "DATABASE_URL", "postgresql://titan:titan@localhost:5432/titan"
+        ),
     ),
     "redis-uri": env.get("REDIS_URL", "redis://"),
     # Create an app over here https://discordapp.com/developers/applications/me
@@ -45,5 +47,7 @@ config = {
     "patreon-client-secret": "",
     # "" or "eventlet"
     "git-commit": env.get("GIT_COMMIT"),
-    "enable-code-highlighting": env.get("TITAN_WEBAPP_ENABLE_CODE_HIGHLIGHTING", False),
+    "enable-code-highlighting": env.get(
+        "TITAN_WEBAPP_ENABLE_CODE_HIGHLIGHTING", False
+    ),
 }

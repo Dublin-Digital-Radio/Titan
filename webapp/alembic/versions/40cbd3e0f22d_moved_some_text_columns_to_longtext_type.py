@@ -124,7 +124,9 @@ def downgrade():
     op.alter_column(
         "user_css",
         "css",
-        existing_type=sa.Text().with_variant(sa.Text(length=4294967295), "mysql"),
+        existing_type=sa.Text().with_variant(
+            sa.Text(length=4294967295), "mysql"
+        ),
         type_=mysql.MEDIUMTEXT(collation="utf8mb4_unicode_ci"),
         existing_nullable=True,
     )
@@ -139,7 +141,9 @@ def downgrade():
     op.alter_column(
         "guilds",
         "webhooks",
-        existing_type=sa.Text().with_variant(sa.Text(length=4294967295), "mysql"),
+        existing_type=sa.Text().with_variant(
+            sa.Text(length=4294967295), "mysql"
+        ),
         type_=mysql.TEXT(collation="utf8mb4_unicode_ci"),
         existing_nullable=False,
     )
@@ -161,14 +165,18 @@ def downgrade():
     op.alter_column(
         "guilds",
         "roles",
-        existing_type=sa.Text().with_variant(sa.Text(length=4294967295), "mysql"),
+        existing_type=sa.Text().with_variant(
+            sa.Text(length=4294967295), "mysql"
+        ),
         type_=mysql.MEDIUMTEXT(collation="utf8mb4_unicode_ci"),
         existing_nullable=False,
     )
     op.alter_column(
         "guilds",
         "emojis",
-        existing_type=sa.Text().with_variant(sa.Text(length=4294967295), "mysql"),
+        existing_type=sa.Text().with_variant(
+            sa.Text(length=4294967295), "mysql"
+        ),
         type_=mysql.TEXT(collation="utf8mb4_unicode_ci"),
         existing_nullable=False,
     )
@@ -183,7 +191,9 @@ def downgrade():
     op.alter_column(
         "guilds",
         "channels",
-        existing_type=sa.Text().with_variant(sa.Text(length=4294967295), "mysql"),
+        existing_type=sa.Text().with_variant(
+            sa.Text(length=4294967295), "mysql"
+        ),
         type_=mysql.MEDIUMTEXT(collation="utf8mb4_unicode_ci"),
         existing_nullable=False,
     )

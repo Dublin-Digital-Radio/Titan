@@ -17,7 +17,9 @@ log = logging.getLogger(__name__)
 
 class SocketIOInterface:
     def __init__(self, redis_uri):
-        self.io = socketio.AsyncRedisManager(redis_uri, write_only=True, channel="flask-socketio")
+        self.io = socketio.AsyncRedisManager(
+            redis_uri, write_only=True, channel="flask-socketio"
+        )
 
     async def on_mess(self, action, message):
         if not message.guild:
@@ -99,9 +101,9 @@ class SocketIOInterface:
         await self.on_channel(channel, "CHANNEL_CREATE")
 
     async def on_channel_update(self, channel):
-        if not isinstance(channel, discord.channel.TextChannel) and not isinstance(
-            channel, discord.channel.CategoryChannel
-        ):
+        if not isinstance(
+            channel, discord.channel.TextChannel
+        ) and not isinstance(channel, discord.channel.CategoryChannel):
             return
 
         await self.io.emit(

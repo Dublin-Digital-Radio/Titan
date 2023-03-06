@@ -28,11 +28,20 @@ def downgrade():
     op.create_table(
         "messages",
         sa.Column("guild_id", sa.BIGINT(), autoincrement=False, nullable=False),
-        sa.Column("channel_id", sa.BIGINT(), autoincrement=False, nullable=False),
-        sa.Column("message_id", sa.BIGINT(), autoincrement=False, nullable=False),
+        sa.Column(
+            "channel_id", sa.BIGINT(), autoincrement=False, nullable=False
+        ),
+        sa.Column(
+            "message_id", sa.BIGINT(), autoincrement=False, nullable=False
+        ),
         sa.Column("content", sa.TEXT(), autoincrement=False, nullable=False),
         sa.Column("author", sa.TEXT(), autoincrement=False, nullable=False),
-        sa.Column("timestamp", postgresql.TIMESTAMP(), autoincrement=False, nullable=False),
+        sa.Column(
+            "timestamp",
+            postgresql.TIMESTAMP(),
+            autoincrement=False,
+            nullable=False,
+        ),
         sa.Column(
             "edited_timestamp",
             postgresql.TIMESTAMP(),

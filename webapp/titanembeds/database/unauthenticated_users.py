@@ -25,7 +25,9 @@ class UnauthenticatedUsers(db.Model):
         self.guild_id = guild_id
         self.username = username
         self.discriminator = discriminator
-        self.user_key = "".join(random.choice(string.ascii_letters) for _ in range(0, 32))
+        self.user_key = "".join(
+            random.choice(string.ascii_letters) for _ in range(0, 32)
+        )
         self.ip_address = ip_address
         self.revoked = False
 
@@ -59,6 +61,8 @@ def query_unauthenticated_users_like(username, guild_id, discriminator):
         .filter(UnauthenticatedUsers.username.ilike(f"%{username}%"))
     )
     if discriminator:
-        query = query.filter(UnauthenticatedUsers.discriminator == discriminator)
+        query = query.filter(
+            UnauthenticatedUsers.discriminator == discriminator
+        )
     dbuser = query.order_by(UnauthenticatedUsers.id.desc()).first()
     return dbuser

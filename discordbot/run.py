@@ -23,9 +23,15 @@ def main():
     parser = argparse.ArgumentParser(
         description="Embed Discord like a True Titan (Discord Bot portion)"
     )
-    parser.add_argument("-sid", "--shard_id", help="ID of the shard", type=int, default=None)
     parser.add_argument(
-        "-sc", "--shard_count", help="Number of total shards", type=int, default=None
+        "-sid", "--shard_id", help="ID of the shard", type=int, default=None
+    )
+    parser.add_argument(
+        "-sc",
+        "--shard_count",
+        help="Number of total shards",
+        type=int,
+        default=None,
     )
     parser.add_argument(
         "-s",

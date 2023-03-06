@@ -59,7 +59,9 @@ if __name__ != "__main__":
     app.logger.handlers = gunicorn_logger.handlers
     app.logger.setLevel(gunicorn_logger.level)
     for handler in app.logger.handlers:
-        handler.setFormatter(logging.Formatter(" %(levelname)s %(name)s: %(message)s"))
+        handler.setFormatter(
+            logging.Formatter(" %(levelname)s %(name)s: %(message)s")
+        )
 
 log = logging.getLogger(__name__)
 log.info("starting up. git commit: %s", config["git-commit"])
@@ -115,9 +117,15 @@ with app.app_context():
     discord_api.init_discordrest()
 
 app.register_blueprint(api.api, url_prefix="/api", template_folder="/templates")
-app.register_blueprint(admin.admin, url_prefix="/admin", template_folder="/templates")
-app.register_blueprint(user.user_bp, url_prefix="/user", template_folder="/templates")
-app.register_blueprint(embed.embed, url_prefix="/embed", template_folder="/templates")
+app.register_blueprint(
+    admin.admin, url_prefix="/admin", template_folder="/templates"
+)
+app.register_blueprint(
+    user.user_bp, url_prefix="/user", template_folder="/templates"
+)
+app.register_blueprint(
+    embed.embed, url_prefix="/embed", template_folder="/templates"
+)
 socketio.on_namespace(gateway.Gateway("/gateway"))
 
 
@@ -152,7 +160,8 @@ def privacy():
 @app.route("/vote")
 def vote():
     return render_template(
-        "discordbotsorg_vote.html.j2", referrer=request.args.get("referrer", None)
+        "discordbotsorg_vote.html.j2",
+        referrer=request.args.get("referrer", None),
     )
 
 
