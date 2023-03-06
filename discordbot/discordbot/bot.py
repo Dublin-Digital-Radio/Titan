@@ -9,7 +9,7 @@ import discord
 from config import config
 from redis.exceptions import ConnectionError
 
-from discordbot.commands import Commands
+from discordbot import commands
 from discordbot.poststats import BotsDiscordPw, DiscordBotsOrg
 from discordbot.redisqueue import RedisQueue
 from discordbot.socketio import SocketIOInterface
@@ -59,7 +59,6 @@ class Titan(discord.AutoShardedClient):
         self.log = setup_logger(shard_ids)
         self.http.user_agent += " TitanEmbeds-Bot"
         self.redisqueue = RedisQueue(self, config["redis-uri"])
-        self.command = Commands(self)
         self.socketio = SocketIOInterface(config["redis-uri"])
 
         # List of msg ids to prevent duplicate delete
@@ -141,12 +140,12 @@ class Titan(discord.AutoShardedClient):
             message.guild
             # make sure it is mention
             and (msg[0] in [f"<@{self.user.id}>", f"<@!{self.user.id}>"])
-            and getattr(self.command, msg_cmd, None)
+            and getattr(commands, msg_cmd, None)
         ):
             self.log.info("running message %s", msg_cmd)
             async with message.channel.typing():  # this looks nice
                 # actually run cmd, passing in msg obj
-                await getattr(self.command, msg_cmd)(message)
+                await getattr(commands, msg_cmd)(message)
 
     async def on_message_edit(self, message_before, message_after):
         await self.redisqueue.update_message(message_after)
