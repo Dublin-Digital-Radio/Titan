@@ -24,23 +24,23 @@ class Web(discord.AutoShardedClient):
         self.web_app = web.Application()
         self.web_app.add_routes(
             [
-                web.get("/", self.handle),
-                web.get("/{name}", self.handle),
+                web.get("/", self.handle_http),
+                web.get("/{name}", self.handle_http),
                 web.get(
                     "/channel_messages/{channel_id}",
-                    self.on_get_channel_messages,
+                    self.on_get_channel_messages_http,
                 ),
                 web.get(
                     "/guild/{guild_id}/member/{user_id}",
-                    self.on_get_guild_member,
+                    self.on_get_guild_member_http,
                 ),
                 web.get(
                     "/guild/{guild_id}/member-name/{query}",
-                    self.on_get_guild_member_named,
+                    self.on_get_guild_member_named_http,
                 ),
-                web.get("/guild/members/", self.on_list_guild_members),
-                web.get("/guild/{guild_id}", self.on_get_guild),
-                web.get("/user/{user_id}", self.on_get_user),
+                web.get("/guild/members/", self.on_list_guild_members_http),
+                web.get("/guild/{guild_id}", self.on_get_guild_http),
+                web.get("/user/{user_id}", self.on_get_user_http),
             ]
         )
 
@@ -76,12 +76,12 @@ class Web(discord.AutoShardedClient):
 
         await self.connection.expire(key, new_ttl)
 
-    async def handle(self, request):
+    async def handle_http(self, request):
         name = request.match_info.get("name", "Anonymous")
         text = "Hello, " + name
         return web.Response(text=text)
 
-    async def on_get_channel_messages(self, request):
+    async def on_get_channel_messages_http(self, request):
         channel_id = request.match_info.get("channel_id")
         channel = self.get_channel(channel_id)
         if not channel or not isinstance(channel, discord.channel.TextChannel):
@@ -141,12 +141,15 @@ class Web(discord.AutoShardedClient):
         await self.delete_message(message)
         await self.push_message(message)
 
-    async def on_get_guild_member(self, request):
+    async def on_get_guild_member_http(self, request):
         guild_id = request.match_info.get("guild_id")
+        user_id = request.match_info.get("user_id")
+        return self.on_get_guild_member(guild_id, user_id)
+
+    async def on_get_guild_member(self, guild_id, user_id):
         if not (guild := self.get_guild(guild_id)):
             return
 
-        user_id = request.match_info.get("user_id")
         if not (member := guild.get_member(user_id)):
             members = await guild.query_members(user_ids=[user_id], cache=True)
 
@@ -157,7 +160,7 @@ class Web(discord.AutoShardedClient):
 
         return web.json_response(format_user(member))
 
-    async def on_get_guild_member_named(self, request):
+    async def on_get_guild_member_named_http(self, request):
         guild_id = request.match_info.get("guild_id")
 
         if not (guild := self.get_guild(guild_id)):
@@ -198,7 +201,7 @@ class Web(discord.AutoShardedClient):
 
         return web.json_response(result)
 
-    async def on_list_guild_members(self, request):
+    async def on_list_guild_members_http(self, request):
         guild_id = request.match_info.get("guild_id")
         if not (guild := self.get_guild(guild_id)):
             return
@@ -260,8 +263,11 @@ class Web(discord.AutoShardedClient):
     async def ban_member(self, guild, user):
         await self.remove_member(user, guild)
 
-    async def on_get_guild(self, request):
+    async def on_get_guild_http(self, request):
         guild_id = request.match_info.get("guild_id")
+        return self.on_get_guild(guild_id)
+
+    async def on_get_guild(self, guild_id):
         if not (guild := self.get_guild(guild_id)):
             return
 
@@ -284,10 +290,10 @@ class Web(discord.AutoShardedClient):
 
         if await self.connection.exists(key):
             await self.delete_guild(guild)
-            await self.on_get_guild(key, {"guild_id": guild.id})
+            await self.on_get_guild(guild.id)
         await self.enforce_expiring_key(key)
 
-    async def on_get_user(self, request):
+    async def on_get_user_http(self, request):
         user_id = request.match_info.get("user_id")
         if not (user := self.get_user(user_id)):
             return
