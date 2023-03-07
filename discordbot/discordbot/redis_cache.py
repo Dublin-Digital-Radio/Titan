@@ -11,6 +11,7 @@ connection = await Redis.from_url("redis://")
 async def init_redis(url):
     global connection
     connection = await Redis.from_url(url, decode_responses=True)
+    await connection.connect()
 
 
 async def set_scan_json(key, dict_key, dict_value_pattern):
@@ -27,6 +28,22 @@ async def set_scan_json(key, dict_key, dict_value_pattern):
             return the_member, parsed
 
     return None, None
+
+
+async def enforce_expiring_key(key, ttl_override=None):
+    if ttl_override:
+        await connection.expire(key, ttl_override)
+        return
+
+    ttl = await connection.ttl(key)
+    if ttl >= 0:
+        new_ttl = ttl
+    elif ttl == -1:
+        new_ttl = 60 * 5  # 5 minutes
+    else:
+        new_ttl = 0
+
+    await connection.expire(key, new_ttl)
 
 
 async def push_message(message):

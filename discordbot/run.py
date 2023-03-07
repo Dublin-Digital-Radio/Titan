@@ -4,7 +4,7 @@ import argparse
 import requests
 from config import config
 
-from discordbot.redisqueue import Web
+from discordbot.bot import Titan
 
 
 def print_shards():
@@ -46,7 +46,7 @@ def main():
         return
 
     print("Starting...")
-    te = Web(
+    te = Titan(
         shard_ids=[args.shard_id] if args.shard_id is not None else None,
         shard_count=args.shard_count,
     )
