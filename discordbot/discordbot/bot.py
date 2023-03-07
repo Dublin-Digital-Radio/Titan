@@ -69,13 +69,11 @@ class Titan(discord.AutoShardedClient):
         self.redis_sub_task = None
         self.post_stats_task = None
 
-    def _cleanup(self):
-        try:
-            self.loop.run_until_complete(self.logout())
-        except:  # Can be ignored
-            self.log.exception("run_until_complete")
-            pass
+        loop = asyncio.get_event_loop()
+        loop.call_later(3600, self.terminate)
 
+    def terminate(self):
+        self.log.warning("Terminating")
         pending = asyncio.Task.all_tasks()
         gathered = asyncio.gather(*pending)
 
@@ -86,6 +84,11 @@ class Titan(discord.AutoShardedClient):
         except:  # Can be ignored
             self.log.exception("gather")
             pass
+
+        self.redisqueue.connection.close(close_connection_pool=True)
+        self.socketio.io.disconnect()
+        self.close()
+        sys.exit()
 
     async def start(self, token: str, *, reconnect: bool = True) -> None:
         await self.redisqueue.connect()
