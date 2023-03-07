@@ -44,31 +44,26 @@ class DiscordREST:
             "User-Agent": self.user_agent,
             "Authorization": f"Bot {self.bot_token}",
         }
-        params = None
-        if "params" in kwargs:
-            params = kwargs["params"]
-
-        data = None
-        if "data" in kwargs:
-            data = kwargs["data"]
-        if "json" in kwargs and kwargs["json"] != False:
+        params = kwargs.get("params")
+        data = kwargs.get("data")
+        if kwargs.get("json"):
             headers["Content-Type"] = "application/json"
             data = json.dumps(data)
 
         for tries in range(5):
-            curepoch = time.time()
+            cur_epoch = time.time()
             if self._get_bucket("global_limited") == "True":
                 time.sleep(
                     int(float(self._get_bucket("global_limit_expire")))
-                    - curepoch
+                    - cur_epoch
                 )
-                curepoch = time.time()
+                cur_epoch = time.time()
 
             if (
                 self._bucket_contains(url)
-                and float(int(self._get_bucket(url))) > curepoch
+                and float(int(self._get_bucket(url))) > cur_epoch
             ):
-                time.sleep(int(self._get_bucket(url)) - curepoch)
+                time.sleep(int(self._get_bucket(url)) - cur_epoch)
 
             url_formatted = _DISCORD_API_BASE + url
             if data and "payload_json" in data:

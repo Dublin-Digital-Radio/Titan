@@ -48,7 +48,7 @@ var passedCookieTest = true; // If passed cross origin test
     var unauthenticated_users_list = []; // List of all guest users
     var discord_users_list = []; // List of all discord users that are probably online
     var guild_channels_list = []; // guild channels, but as a list of them
-    var message_users_cache = {}; // {"name#discrim": {"data": {}, "msgs": []} Cache of the users fetched from websockets to paint the messages
+    var message_users_cache = {}; //
     var shift_pressed = false; // Track down if shift pressed on messagebox
     var global_guest_icon = null; // Guest icon
     var notification_sound = null; // Sound Manager 2 demonstrative.mp3 object https://notificationsounds.com/message-tones/demonstrative-516
@@ -181,17 +181,18 @@ var passedCookieTest = true; // If passed cross origin test
     }
 
     function post(channel_id, content, file, richembed) {
-        if (content == "") {
+        if (content === "") {
             content = null;
         }
 
-        var data = null;
         var ajaxobj = {
             method: "POST",
             dataType: "json",
             beforeSend: ajax_before_send,
             url: "/api/post"
         }
+
+        let data;
         if (file) {
             data = new FormData();
             data.append("guild_id", guild_id);
@@ -1742,12 +1743,14 @@ var passedCookieTest = true; // If passed cross origin test
         if (replace === undefined) {
             replace = null;
         }
-        if (messages.length == 0) {
+        if (messages.length === 0) {
             return last_message_id;
         }
+
         var last = 0;
         var template = $('#mustache_usermessage').html();
         Mustache.parse(template);
+
         for (var i = messages.length-1; i >= 0; i--) {
             var message = messages[i];
             if (message.author.avatar) {
@@ -1767,7 +1770,7 @@ var passedCookieTest = true; // If passed cross origin test
             message.content = parse_emoji_in_message(message.content);
             message.content = message.content.replace(/&lt;https:\/\/(.*?)&gt;/g, "https://$1");
             message.content = message.content.replace(/&lt;http:\/\/(.*?)&gt;/g, "http://$1");
-            if (message.type == 7) {
+            if (message.type === 7) {
                 message.content = format_new_member_message(message);
             }
             var username = message.author.username;
@@ -1821,6 +1824,7 @@ var passedCookieTest = true; // If passed cross origin test
             message_users_cache[usrcachekey]["msgs"].push(message.id);
             last = message.id;
         }
+
         if (replace == null) {
             play_notification_sound("new");
         }
@@ -1851,9 +1855,7 @@ var passedCookieTest = true; // If passed cross origin test
             }
         }
         $("#chatcontent img").on("load", scroll_on_dom_update);
-        $('#chatcontent').linkify({
-            target: "_blank"
-        });
+        $('#chatcontent').linkify({target: "_blank"});
         $('.tooltipped').tooltip();
         $('.materialboxed').materialbox();
         process_message_users_cache();
