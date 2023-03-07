@@ -70,9 +70,9 @@ class Titan(discord.AutoShardedClient):
         self.post_stats_task = None
 
         loop = asyncio.get_event_loop()
-        loop.call_later(3600, self.terminate)
+        loop.call_later(30, self.terminate)
 
-    def terminate(self):
+    async def terminate(self):
         self.log.warning("Terminating")
         pending = asyncio.Task.all_tasks()
         gathered = asyncio.gather(*pending)
@@ -85,9 +85,9 @@ class Titan(discord.AutoShardedClient):
             self.log.exception("gather")
             pass
 
-        self.redisqueue.connection.close(close_connection_pool=True)
-        self.socketio.io.disconnect()
-        self.close()
+        await self.redisqueue.connection.close(close_connection_pool=True)
+        await self.socketio.io.disconnect()
+        await self.close()
         sys.exit()
 
     async def start(self, token: str, *, reconnect: bool = True) -> None:
