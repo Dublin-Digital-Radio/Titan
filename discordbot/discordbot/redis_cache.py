@@ -1,10 +1,9 @@
 import re
 import json
+
 from redis.asyncio import Redis
 
-
 from discordbot.utils import format_message
-
 
 connection = await Redis.from_url("redis://")
 

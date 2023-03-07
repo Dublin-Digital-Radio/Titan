@@ -10,10 +10,9 @@ import discord
 from config import config
 from redis.exceptions import ConnectionError
 
-from discordbot import commands
+from discordbot import commands, redis_cache
 from discordbot.poststats import BotsDiscordPw, DiscordBotsOrg
 from discordbot.socketio import SocketIOInterface
-from discordbot import redis_cache
 
 # try:
 #     raven_client = RavenClient(config["sentry-dsn"])

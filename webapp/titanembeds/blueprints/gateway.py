@@ -4,11 +4,10 @@ import logging
 
 from flask import session
 from flask_socketio import Namespace, disconnect, emit, join_room, leave_room
-from titanembeds import redis_cache
+from titanembeds import redis_cache, redisqueue
 from titanembeds.cache_keys import get_client_ipaddr
 from titanembeds.database import db
 from titanembeds.discord_rest import discord_api
-from titanembeds import redisqueue
 from titanembeds.utils import (
     check_user_in_guild,
     get_forced_role,
