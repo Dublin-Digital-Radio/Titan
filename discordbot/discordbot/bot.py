@@ -67,7 +67,6 @@ class Titan(discord.AutoShardedClient):
         )
         self.log = setup_logger(shard_ids)
         self.http.user_agent += " TitanEmbeds-Bot"
-        redis_cache.init_redis(config["redis-uri"])
         self.web = Web(self)
         self.socketio = SocketIOInterface(config["redis-uri"])
 
@@ -76,10 +75,11 @@ class Titan(discord.AutoShardedClient):
         self.discordBotsOrg = None
         self.botsDiscordPw = None
 
-        self.redis_sub_task = None
         self.post_stats_task = None
 
     async def start(self, token: str, *, reconnect: bool = True) -> None:
+        await redis_cache.init_redis(config["redis-uri"])
+        await self.web.start()
         await super().start(config["bot-token"], reconnect=reconnect)
 
     async def on_shard_ready(self, shard_id):
@@ -110,7 +110,7 @@ class Titan(discord.AutoShardedClient):
             await redis_cache.push_message(message)
         except ConnectionError:
             self.log.error("Retrying one time after redis connection error")
-            await redis_cache.connection.connect()
+            await redis_cache.redis_store.connect()
             await redis_cache.push_message(message)
 
         # See if there is a command we recognise

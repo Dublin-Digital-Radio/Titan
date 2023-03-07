@@ -20,4 +20,5 @@ config = {
     "discord-bots-org-token": env.get("DISCORDBOTS_POST_STATS_TOKEN"),
     "bots-discord-pw-token": env.get("BOTS.DISCORD.PW_POST_STATS_TOKEN"),
     "sentry-dsn": env.get("TITAN_WEBAPP_SENTRY_DSN", ""),
+    "bot-http-port": env.get("TITAN_BOT_PORT", 8080)
 }

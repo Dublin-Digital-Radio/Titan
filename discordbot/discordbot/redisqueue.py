@@ -6,6 +6,7 @@ from aiohttp import web
 
 from discordbot import redis_cache
 from discordbot.utils import format_guild, format_message, format_user
+from config import config
 
 log = logging.getLogger(__name__)
 
@@ -15,7 +16,7 @@ DEFAULT_CHANNEL_MESSAGES_LIMIT = 50
 
 class Web:
     def __init__(self, bot):
-        self.bot = bot
+        self.bot = bot  # not happy about this
 
         self.web_app = web.Application()
         self.web_app.add_routes(
@@ -43,7 +44,11 @@ class Web:
             ]
         )
 
-        web.run_app(self.web_app)
+    async def start(self):
+        runner = web.AppRunner(self.web_app)
+        await runner.setup()
+        site = web.TCPSite(runner, "localhost", config["bot-http-port"])
+        await site.start()
 
     async def on_get_channel_messages(
         self, channel_id, limit=DEFAULT_CHANNEL_MESSAGES_LIMIT
@@ -54,7 +59,7 @@ class Web:
             log.error("Could not find channel %s", channel_id)
             return
 
-        await redis_cache.connection.delete(key)
+        await redis_cache.redis_store.delete(key)
         me = channel.guild.get_member(self.bot.user.id)
 
         messages = []
@@ -72,7 +77,7 @@ class Web:
             )
 
         log.info("Adding messages for channel to redis")
-        await redis_cache.connection.sadd(key, "", *messages)
+        await redis_cache.redis_store.sadd(key, "", *messages)
         log.info("Done messages for channel to redis")
 
         return messages
@@ -87,13 +92,13 @@ class Web:
             members = await guild.query_members(user_ids=[user_id], cache=True)
 
             if not len(members):
-                await redis_cache.connection.set(key, "")
+                await redis_cache.redis_store.set(key, "")
                 await redis_cache.enforce_expiring_key(key, 15)
                 return {}
 
             member = members[0]
 
-        await redis_cache.connection.set(
+        await redis_cache.redis_store.set(
             key, json.dumps(format_user(member), separators=(",", ":"))
         )
         await redis_cache.enforce_expiring_key(key)
@@ -137,7 +142,7 @@ class Web:
                 get_guild_member_key, get_guild_member_param
             )
 
-        await redis_cache.connection.set(key, result)
+        await redis_cache.redis_store.set(key, result)
         await redis_cache.enforce_expiring_key(key)
 
         return result
@@ -165,7 +170,7 @@ class Web:
                 get_guild_member_key, get_guild_member_param
             )
 
-        await redis_cache.connection.sadd(key, *member_ids)
+        await redis_cache.redis_store.sadd(key, *member_ids)
 
         return member_ids
 
@@ -184,7 +189,7 @@ class Web:
         else:
             server_webhooks = []
 
-        await redis_cache.connection.set(
+        await redis_cache.redis_store.set(
             key,
             json.dumps(
                 format_guild(guild, server_webhooks), separators=(",", ":")
@@ -198,7 +203,7 @@ class Web:
         key = f"Queue/users/{user_id}"
 
         if not (user := self.bot.get_user(user_id)):
-            return
+            return {}
 
         user_formatted = {
             "id": user.id,
@@ -208,7 +213,7 @@ class Web:
             "bot": user.bot,
         }
 
-        await redis_cache.connection.set(
+        await redis_cache.redis_store.set(
             key, json.dumps(user_formatted, separators=(",", ":"))
         )
         await redis_cache.enforce_expiring_key(key)
@@ -222,7 +227,7 @@ class Web:
 
     async def on_get_channel_messages_http(self, request):
         channel_id = request.match_info.get("channel_id")
-        messages = self.on_get_channel_messages(
+        messages = await self.on_get_channel_messages(
             channel_id,
             request.match_info.get("limit", DEFAULT_CHANNEL_MESSAGES_LIMIT),
         )
@@ -231,27 +236,27 @@ class Web:
     async def on_get_guild_member_http(self, request):
         guild_id = request.match_info.get("guild_id")
         user_id = request.match_info.get("user_id")
-        result = self.on_get_guild_member(guild_id, user_id)
+        result = await self.on_get_guild_member(guild_id, user_id)
         return web.json_response(result)
 
     async def on_get_guild_member_named_http(self, request):
         guild_id = request.match_info.get("guild_id")
         query = request.match_info.get("query")
-        result = self.on_get_guild_member_named(guild_id, query)
+        result = await self.on_get_guild_member_named(guild_id, query)
 
         return web.json_response(result)
 
     async def on_list_guild_members_http(self, request):
         guild_id = request.match_info.get("guild_id")
-        member_ids = self.on_list_guild_members(guild_id)
+        member_ids = await self.on_list_guild_members(guild_id)
         return web.json_response(member_ids)
 
     async def on_get_guild_http(self, request):
         guild_id = request.match_info.get("guild_id")
-        guild = self.on_get_guild(guild_id)
+        guild = await self.on_get_guild(guild_id)
         return web.json_response(guild)
 
     async def on_get_user_http(self, request):
         user_id = request.match_info.get("user_id")
-        user_formatted = self.on_get_user(user_id)
+        user_formatted = await self.on_get_user(user_id)
         return web.json_response(user_formatted)

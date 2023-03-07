@@ -2,14 +2,19 @@ import logging
 
 import requests
 
+from config import config
+
+
 log = logging.getLogger(__name__)
 
-URL = "https://foo.bar"
+
+def get_url():
+    return f'{config["bot-http-url"]}:{config["bot-http-port"]}'
 
 
 def get_channel_messages(guild_id, channel_id, after_snowflake=0):
     log.info("get_channel_messages")
-    response = requests.get(f"{URL}/channel_messages/{channel_id}")
+    response = requests.get(f"{get_url()}/channel_messages/{channel_id}")
     channel_messages = response.json()
 
     if not channel_messages:
@@ -80,12 +85,12 @@ def get_channel_messages(guild_id, channel_id, after_snowflake=0):
 
 
 def get_guild_member(guild_id, user_id):
-    response = requests.get(f"{URL}/guild/{guild_id}/member/{user_id}")
+    response = requests.get(f"{get_url()}/guild/{guild_id}/member/{user_id}")
     return response.json()
 
 
 def get_guild_member_named(guild_id, query):
-    response = requests.get(f"{URL}/guild/{guild_id}/member-name/{query}")
+    response = requests.get(f"{get_url()}/guild/{guild_id}/member-name/{query}")
     guild_member_id = response.json()
 
     if guild_member_id:
@@ -95,7 +100,7 @@ def get_guild_member_named(guild_id, query):
 
 
 def list_guild_members(guild_id):
-    response = requests.get(f"{URL}/guild/{guild_id}/members")
+    response = requests.get(f"{get_url()}/guild/{guild_id}/members")
     member_ids = response.json()
 
     return [
@@ -111,10 +116,10 @@ def get_guild(guild_id):
     except (TypeError, ValueError):
         return None
 
-    response = requests.get(f"{URL}/guild/{guild_id}")
+    response = requests.get(f"{get_url()}/guild/{guild_id}")
     return response.json()
 
 
 def get_user(user_id):
-    response = requests.get(f"{URL}/user/{user_id}")
+    response = requests.get(f"{get_url()}/user/{user_id}")
     return response.json()
