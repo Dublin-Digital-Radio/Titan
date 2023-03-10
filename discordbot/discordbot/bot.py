@@ -166,6 +166,7 @@ class Titan(discord.AutoShardedClient):
         await self.postStats()
 
     async def on_guild_update(self, guildbefore, guildafter):
+        # TODO
         await redis_cache.update_guild(guildafter)
         await self.web.on_get_guild(guildafter.id)
         await self.socketio.on_guild_update(guildafter)
