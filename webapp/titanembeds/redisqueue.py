@@ -1,3 +1,4 @@
+from functools import wraps
 import logging
 
 import requests
@@ -8,6 +9,18 @@ from config import config
 log = logging.getLogger(__name__)
 
 
+def catch_json_exception(func):
+    @wraps(func)
+    def inner(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except requests.exceptions.JSONDecodeError:
+            log.exception("Could not decode json")
+            return {}
+
+    return inner
+
+
 def get_url():
     return f'{config["bot-http-url"]}:{config["bot-http-port"]}'
 
@@ -15,7 +28,11 @@ def get_url():
 def get_channel_messages(guild_id, channel_id, after_snowflake=0):
     log.info("get_channel_messages")
     response = requests.get(f"{get_url()}/channel_messages/{channel_id}")
-    channel_messages = response.json()
+    try:
+        channel_messages = response.json()
+    except requests.exceptions.JSONDecodeError:
+        log.exception("No JSON data returned")
+        channel_messages = []
 
     if not channel_messages:
         log.warning("Got none from channel messages")
@@ -84,11 +101,13 @@ def get_channel_messages(guild_id, channel_id, after_snowflake=0):
     return sorted_msgs[:50]  # only return last 50 messages in cache please
 
 
+@catch_json_exception
 def get_guild_member(guild_id, user_id):
     response = requests.get(f"{get_url()}/guild/{guild_id}/member/{user_id}")
     return response.json()
 
 
+@catch_json_exception
 def get_guild_member_named(guild_id, query):
     response = requests.get(f"{get_url()}/guild/{guild_id}/member-name/{query}")
     guild_member_id = response.json()
@@ -99,6 +118,7 @@ def get_guild_member_named(guild_id, query):
     return None
 
 
+@catch_json_exception
 def list_guild_members(guild_id):
     response = requests.get(f"{get_url()}/guild/{guild_id}/members")
     member_ids = response.json()
@@ -110,6 +130,7 @@ def list_guild_members(guild_id):
     ]
 
 
+@catch_json_exception
 def get_guild(guild_id):
     try:
         guild_id = int(guild_id)
@@ -120,6 +141,7 @@ def get_guild(guild_id):
     return response.json()
 
 
+@catch_json_exception
 def get_user(user_id):
     response = requests.get(f"{get_url()}/user/{user_id}")
     return response.json()
