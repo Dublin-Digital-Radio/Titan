@@ -60,7 +60,9 @@ if __name__ != "__main__":
     app.logger.setLevel(gunicorn_logger.level)
     for handler in app.logger.handlers:
         handler.setFormatter(
-            logging.Formatter(" %(levelname)s %(name)s: %(message)s")
+            logging.Formatter(
+                " %(levelname)s %(name)s.%(funcName)s:%(lineno)d: %(message)s"
+            )
         )
 
 log = logging.getLogger(__name__)
