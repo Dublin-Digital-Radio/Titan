@@ -12,11 +12,11 @@ log = logging.getLogger(__name__)
 def catch_json_exception(func):
     @wraps(func)
     def inner(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except requests.exceptions.JSONDecodeError:
-            log.exception("Could not decode json")
-            return {}
+        # try:
+        return func(*args, **kwargs)
+        # except requests.exceptions.JSONDecodeError:
+        #    log.exception("Could not decode json")
+        #    return {}
 
     return inner
 
