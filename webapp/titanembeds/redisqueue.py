@@ -1,10 +1,8 @@
-import logging
 import socket
+import logging
 
 import requests
-
 from config import config
-
 
 log = logging.getLogger(__name__)
 

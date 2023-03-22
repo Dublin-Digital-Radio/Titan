@@ -4,10 +4,10 @@ from pprint import pformat
 
 import discord
 from aiohttp import web
+from config import config
 
 from discordbot import redis_cache
 from discordbot.utils import format_guild, format_message, format_user
-from config import config
 
 log = logging.getLogger(__name__)
 
@@ -62,14 +62,14 @@ class Web:
         await site.start()
 
     async def on_get_channel_messages(
-        self, channel_id, limit=DEFAULT_CHANNEL_MESSAGES_LIMIT
+        self, channel_id: int, limit=DEFAULT_CHANNEL_MESSAGES_LIMIT
     ):
-        key = (f"Queue/channels/{channel_id}/messages",)
         channel = self.bot.get_channel(channel_id)
         if not channel or not isinstance(channel, discord.channel.TextChannel):
             log.error("Could not find channel %s", channel_id)
             return
 
+        key = (f"Queue/channels/{channel_id}/messages",)
         await redis_cache.redis_store.delete(key)
         me = channel.guild.get_member(self.bot.user.id)
 
@@ -93,11 +93,8 @@ class Web:
 
         return messages
 
-    async def on_get_guild_member(self, guild_id, user_id):
-        key = f"Queue/guilds/{guild_id}/members/{user_id}"
-
-        if not (guild := self.bot.get_guild(guild_id)):
-            return
+    async def on_get_guild_member(self, guild, user_id: int):
+        key = f"Queue/guilds/{guild.id}/members/{user_id}"
 
         if not (member := guild.get_member(user_id)):
             members = await guild.query_members(user_ids=[user_id], cache=True)
@@ -116,9 +113,7 @@ class Web:
 
         return format_user(member)
 
-    async def on_get_guild_member_named(self, guild_id, query):
-        key = f"Queue/custom/guilds/{guild_id}/member_named/{query}"
-
+    async def on_get_guild_member_named(self, guild_id: int, query):
         if not (guild := self.bot.get_guild(guild_id)):
             return
 
@@ -141,26 +136,15 @@ class Web:
             result = ""
         else:
             result = json.dumps({"user_id": members.id}, separators=(",", ":"))
-            get_guild_member_key = (
-                f"Queue/guilds/{guild.id}/members/{members.id}"
-            )
-            get_guild_member_param = {
-                "guild_id": guild.id,
-                "user_id": members.id,
-            }
-            # TODO
-            await self.on_get_guild_member(
-                get_guild_member_key, get_guild_member_param
-            )
+            await self.on_get_guild_member(guild, members.id)
 
+        key = f"Queue/custom/guilds/{guild_id}/member_named/{query}"
         await redis_cache.redis_store.set(key, result)
         await redis_cache.enforce_expiring_key(key)
 
         return result
 
-    async def on_list_guild_members(self, guild_id):
-        key = f"Queue/guilds/{guild_id}/members"
-
+    async def on_list_guild_members(self, guild_id: int):
         if not (guild := self.bot.get_guild(guild_id)):
             return
 
@@ -169,25 +153,14 @@ class Web:
             member_ids.append(
                 json.dumps({"user_id": member.id}, separators=(",", ":"))
             )
-            get_guild_member_key = (
-                f"Queue/guilds/{guild.id}/members/{member.id}"
-            )
-            get_guild_member_param = {
-                "guild_id": guild.id,
-                "user_id": member.id,
-            }
-            # TODO
-            await self.on_get_guild_member(
-                get_guild_member_key, get_guild_member_param
-            )
+            await self.on_get_guild_member(guild, member.id)
 
+        key = f"Queue/guilds/{guild_id}/members"
         await redis_cache.redis_store.sadd(key, *member_ids)
 
         return member_ids
 
-    async def on_get_guild(self, guild_id):
-        key = f"Queue/guilds/{guild_id}"
-
+    async def on_get_guild(self, guild_id: int):
         log.info("looking up guild %s", guild_id)
         if not (guild := self.bot.get_guild(guild_id)):
             log.info("no guild found")
@@ -202,6 +175,7 @@ class Web:
         else:
             server_webhooks = []
 
+        key = f"Queue/guilds/{guild_id}"
         await redis_cache.redis_store.set(
             key,
             json.dumps(
@@ -212,9 +186,7 @@ class Web:
 
         return format_guild(guild, server_webhooks)
 
-    async def on_get_user(self, user_id):
-        key = f"Queue/users/{user_id}"
-
+    async def on_get_user(self, user_id: int):
         if not (user := self.bot.get_user(user_id)):
             return {}
 
@@ -226,6 +198,7 @@ class Web:
             "bot": user.bot,
         }
 
+        key = f"Queue/users/{user_id}"
         await redis_cache.redis_store.set(
             key, json.dumps(user_formatted, separators=(",", ":"))
         )
@@ -253,10 +226,16 @@ class Web:
 
     async def on_get_guild_member_http(self, request):
         log.info("on_get_guild_member_http")
+
         guild_id = request.match_info.get("guild_id")
         user_id = request.match_info.get("user_id")
-        result = await self.on_get_guild_member(guild_id, user_id)
+
+        if not (guild := self.bot.get_guild(guild_id)):
+            return
+
+        result = await self.on_get_guild_member(guild, user_id)
         log.info("on_get_guild_member_http returning\n%s", pformat(result))
+
         return web.json_response(result)
 
     async def on_get_guild_member_named_http(self, request):

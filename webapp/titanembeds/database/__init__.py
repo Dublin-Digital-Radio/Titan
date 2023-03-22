@@ -5,13 +5,7 @@ db = SQLAlchemy()
 from .administrators import Administrators, get_administrators_list
 from .application_settings import ApplicationSettings
 from .authenticated_users import AuthenticatedUsers
-from .cosmetics import (
-    Cosmetics,
-    add_badge,
-    get_badges,
-    remove_badge,
-    set_badges,
-)
+from .cosmetics import Cosmetics, add_badge, get_badges, remove_badge, set_badges
 from .disabled_guilds import DisabledGuilds, list_disabled_guilds
 from .discordbotsorg_transactions import DiscordBotsOrgTransactions
 from .guilds import Guilds
