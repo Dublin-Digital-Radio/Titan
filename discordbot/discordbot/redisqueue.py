@@ -1,5 +1,6 @@
 import json
 import logging
+from pprint import pformat
 
 import discord
 from aiohttp import web
@@ -47,7 +48,17 @@ class Web:
     async def start(self):
         runner = web.AppRunner(self.web_app)
         await runner.setup()
-        site = web.TCPSite(runner, "localhost", config["bot-http-port"])
+
+        if config["bot-http-listen-interfaces"] == "None":
+            listen = None
+        else:
+            listen = config["bot-http-listen-interfaces"]
+
+        log.info(
+            "Starting HTTP service on %s:%s", listen, config["bot-http-port"]
+        )
+        site = web.TCPSite(runner, listen, config["bot-http-port"])
+
         await site.start()
 
     async def on_get_channel_messages(
@@ -177,7 +188,9 @@ class Web:
     async def on_get_guild(self, guild_id):
         key = f"Queue/guilds/{guild_id}"
 
+        log.info("looking up guild %s", guild_id)
         if not (guild := self.bot.get_guild(guild_id)):
+            log.info("no guild found")
             return
 
         if guild.me and guild.me.guild_permissions.manage_webhooks:
@@ -221,42 +234,61 @@ class Web:
         return user_formatted
 
     async def handle_http(self, request):
+        log.info("handle_http")
         name = request.match_info.get("name", "Anonymous")
         text = "Hello, " + name
         return web.Response(text=text)
 
     async def on_get_channel_messages_http(self, request):
+        log.info("on_get_channel_messages_http")
         channel_id = request.match_info.get("channel_id")
         messages = await self.on_get_channel_messages(
             channel_id,
             request.match_info.get("limit", DEFAULT_CHANNEL_MESSAGES_LIMIT),
         )
+        log.info(
+            "on_get_channel_messages_http returning\n%s", pformat(messages)
+        )
         return web.json_response(messages)
 
     async def on_get_guild_member_http(self, request):
+        log.info("on_get_guild_member_http")
         guild_id = request.match_info.get("guild_id")
         user_id = request.match_info.get("user_id")
         result = await self.on_get_guild_member(guild_id, user_id)
+        log.info("on_get_guild_member_http returning\n%s", pformat(result))
         return web.json_response(result)
 
     async def on_get_guild_member_named_http(self, request):
+        log.info("on_get_guild_member_named_http")
         guild_id = request.match_info.get("guild_id")
         query = request.match_info.get("query")
         result = await self.on_get_guild_member_named(guild_id, query)
 
+        log.info(
+            "on_get_guild_member_named_http returning\n%s", pformat(result)
+        )
         return web.json_response(result)
 
     async def on_list_guild_members_http(self, request):
+        log.info("on_list_guild_members_http")
         guild_id = request.match_info.get("guild_id")
         member_ids = await self.on_list_guild_members(guild_id)
+        log.info(
+            "on_list_guild_members_http returning\n%s", pformat(member_ids)
+        )
         return web.json_response(member_ids)
 
     async def on_get_guild_http(self, request):
+        log.info("on_get_guild_http")
         guild_id = request.match_info.get("guild_id")
         guild = await self.on_get_guild(guild_id)
+        log.info("on_get_guild_http returning\n%s", pformat(guild))
         return web.json_response(guild)
 
     async def on_get_user_http(self, request):
+        log.info("on_get_user_http")
         user_id = request.match_info.get("user_id")
         user_formatted = await self.on_get_user(user_id)
+        log.info("on_get_user_http returning\n%s", pformat(user_formatted))
         return web.json_response(user_formatted)

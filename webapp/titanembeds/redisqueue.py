@@ -1,5 +1,5 @@
-from functools import wraps
 import logging
+import socket
 
 import requests
 
@@ -9,30 +9,58 @@ from config import config
 log = logging.getLogger(__name__)
 
 
-def catch_json_exception(func):
-    @wraps(func)
-    def inner(*args, **kwargs):
-        # try:
-        return func(*args, **kwargs)
-        # except requests.exceptions.JSONDecodeError:
-        #    log.exception("Could not decode json")
-        #    return {}
-
-    return inner
+# old_getaddrinfo = socket.getaddrinfo
+#
+#
+# def new_getaddrinfo(*args, **kwargs):
+#     responses = old_getaddrinfo(*args, **kwargs)
+#     return [
+#         response for response in responses if response[0] == socket.AF_INET6
+#     ]
+#
+#
+# socket.getaddrinfo = new_getaddrinfo
 
 
 def get_url():
-    return f'{config["bot-http-url"]}:{config["bot-http-port"]}'
+    if config["bot-http-over-ipv6"]:
+        ipv6_addr = get_ipv6_addr(
+            config["bot-http-url"], config["bot-http-port"]
+        )
+        if not ipv6_addr:
+            return None
+        return f'http://[{ipv6_addr}]:{config["bot-http-port"]}'
+    else:
+        return f'http://{config["bot-http-url"]}:{config["bot-http-port"]}'
+
+
+def get_ipv6_addr(host, port):
+    log.info("looking up %s:%s", host, port)
+    addrs = socket.getaddrinfo(host, port)
+    # ipv4_addrs = [addr[4][0] for addr in addrs if addr[0] == socket.AF_INET]
+    ipv6_addrs = [addr[4][0] for addr in addrs if addr[0] == socket.AF_INET6]
+    return ipv6_addrs[0] if ipv6_addrs else None
+
+
+def http_get(path):
+    url = f"{get_url()}/{path}"
+    log.info("GET %s", url)
+    response = requests.get(url)
+
+    try:
+        json = response.json()
+    except requests.exceptions.JSONDecodeError:
+        log.error("No valid json in response")
+        return None
+
+    log.info("response:\n%s", json)
+    return json
 
 
 def get_channel_messages(guild_id, channel_id, after_snowflake=0):
     log.info("get_channel_messages")
-    response = requests.get(f"{get_url()}/channel_messages/{channel_id}")
-    try:
-        channel_messages = response.json()
-    except requests.exceptions.JSONDecodeError:
-        log.exception("No JSON data returned")
-        channel_messages = []
+    response = http_get(f"channel_messages/{channel_id}")
+    channel_messages = response if response else []
 
     if not channel_messages:
         log.warning("Got none from channel messages")
@@ -101,16 +129,12 @@ def get_channel_messages(guild_id, channel_id, after_snowflake=0):
     return sorted_msgs[:50]  # only return last 50 messages in cache please
 
 
-@catch_json_exception
 def get_guild_member(guild_id, user_id):
-    response = requests.get(f"{get_url()}/guild/{guild_id}/member/{user_id}")
-    return response.json()
+    return http_get(f"guild/{guild_id}/member/{user_id}")
 
 
-@catch_json_exception
 def get_guild_member_named(guild_id, query):
-    response = requests.get(f"{get_url()}/guild/{guild_id}/member-name/{query}")
-    guild_member_id = response.json()
+    guild_member_id = http_get(f"guild/{guild_id}/member-name/{query}")
 
     if guild_member_id:
         return get_guild_member(guild_id, guild_member_id["user_id"])
@@ -118,10 +142,10 @@ def get_guild_member_named(guild_id, query):
     return None
 
 
-@catch_json_exception
 def list_guild_members(guild_id):
-    response = requests.get(f"{get_url()}/guild/{guild_id}/members")
-    member_ids = response.json()
+    member_ids = http_get(f"guild/{guild_id}/members")
+    if not member_ids:
+        return []
 
     return [
         m
@@ -130,18 +154,14 @@ def list_guild_members(guild_id):
     ]
 
 
-@catch_json_exception
 def get_guild(guild_id):
     try:
         guild_id = int(guild_id)
     except (TypeError, ValueError):
         return None
 
-    response = requests.get(f"{get_url()}/guild/{guild_id}")
-    return response.json()
+    return http_get(f"guild/{guild_id}")
 
 
-@catch_json_exception
 def get_user(user_id):
-    response = requests.get(f"{get_url()}/user/{user_id}")
-    return response.json()
+    return http_get(f"user/{user_id}")

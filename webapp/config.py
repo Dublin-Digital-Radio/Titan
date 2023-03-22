@@ -22,7 +22,8 @@ config = {
     "client-secret": env["DISCORD_CLIENT_SECRET"],
     "bot-token": env["DISCORD_BOT_TOKEN"],
     "bot-http-port": env.get("TITAN_BOT_PORT", 8080),
-    "bot-http-url": env.get("TITAN_BOT_URL", "http://localhost"),
+    "bot-http-url": env.get("TITAN_BOT_ADDR", "localhost"),
+    "bot-http-over-ipv6": env.get("TITAN_BOT_IPV6", False),
     # are we running behind a proxy which terminates TLS - cannot be used with `enable-ssl`
     "https-proxy": env.get("TITAN_HTTPS_PROXY", False),
     # redirect all http to https - cannot be used with `https-proxy`
