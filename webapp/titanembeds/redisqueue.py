@@ -7,18 +7,30 @@ import redis
 log = logging.getLogger(__name__)
 
 redis_store = redis.Redis()
+redis_url = ""
 
 
 def init_redis(url):
     global redis_store
+    global redis_url
     redis_store = redis.Redis.from_url(url, decode_responses=True)
+    redis_url = url
 
 
 def get(key, resource, params, *, data_type="str"):
     key = "Queue" + key
     _get = redis_store.smembers if data_type == "set" else redis_store.get
 
-    data = _get(key)
+    try:
+        data = _get(key)
+    except redis.exceptions.ConnectionError:
+        log.error("lost redis connection - retrying")
+        if redis_url:
+            init_redis(redis_url)
+        else:
+            log.error("no redis url")
+            raise
+        data = _get(key)
 
     loop_count = 0
     while (not data and data != "") and loop_count < 50:
