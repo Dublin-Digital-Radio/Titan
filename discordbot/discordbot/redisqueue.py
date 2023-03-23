@@ -67,7 +67,7 @@ class Web:
         channel = self.bot.get_channel(channel_id)
         if not channel or not isinstance(channel, discord.channel.TextChannel):
             log.error("Could not find channel %s", channel_id)
-            return
+            return []
 
         key = (f"Queue/channels/{channel_id}/messages",)
         await redis_cache.redis_store.delete(key)
@@ -115,7 +115,7 @@ class Web:
 
     async def on_get_guild_member_named(self, guild_id: int, query):
         if not (guild := self.bot.get_guild(guild_id)):
-            return
+            return {}
 
         members = None
         if guild.members and len(query) > 5 and query[-5] == "#":
@@ -164,7 +164,7 @@ class Web:
         log.info("looking up guild %s", guild_id)
         if not (guild := self.bot.get_guild(guild_id)):
             log.info("no guild found")
-            return
+            return {}
 
         if guild.me and guild.me.guild_permissions.manage_webhooks:
             try:
@@ -231,7 +231,7 @@ class Web:
         user_id = request.match_info.get("user_id")
 
         if not (guild := self.bot.get_guild(guild_id)):
-            return
+            return {}
 
         result = await self.on_get_guild_member(guild, user_id)
         log.info("on_get_guild_member_http returning\n%s", pformat(result))
