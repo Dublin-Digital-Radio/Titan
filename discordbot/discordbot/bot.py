@@ -25,13 +25,21 @@ intents.message_content = True
 
 def setup_logger(shard_ids=None):
     # shard_ids = "-".join(str(x) for x in shard_ids) if shard_ids is not None else ""
-    logging.basicConfig(
-        # filename="titanbot{}.log".format(shard_ids),
-        stream=sys.stdout,
-        level=logging.INFO,
-        format="%(levelname)s %(name)s %(message)s",
+    handler = logging.StreamHandler(stream=sys.stdout)
+    if discord.utils.stream_supports_colour(handler.stream):
+        format_cls = discord.utils._ColourFormatter
+    else:
+        format_cls = logging.Formatter
+
+    level = logging.INFO
+    formatter = format_cls(
+        fmt="%(levelname)s %(name)s %(message)s",
         datefmt="%m/%d/%Y %I:%M:%S %p",
     )
+    discord.utils.setup_logging(
+        handler=handler, formatter=formatter, level=level, root=True
+    )
+
     return logging.getLogger("TitanBot")
 
 
