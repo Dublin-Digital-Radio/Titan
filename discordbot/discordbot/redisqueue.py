@@ -322,7 +322,10 @@ class RedisQueue:
         await self.remove_member(user, guild)
 
     async def on_get_guild(self, key, params):
+        log.info("on_get_guild: %s", int(params["guild_id"]))
+
         if not (guild := self.bot.get_guild(int(params["guild_id"]))):
+            log.info("Could not get guild")
             return
 
         if guild.me and guild.me.guild_permissions.manage_webhooks:
@@ -341,6 +344,7 @@ class RedisQueue:
             ),
         )
         await self.enforce_expiring_key(key)
+        log.info("Found guild\n%s", pformat(guild))
 
     async def delete_guild(self, guild):
         await self.connection.delete(f"Queue/guilds/{guild.id}")
