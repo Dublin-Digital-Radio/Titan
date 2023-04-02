@@ -27,3 +27,8 @@ def get_online_embed_user_keys(guild_id="*", user_type=None):
         ]
         for utype in user_type
     }
+
+
+def guild_clear_cache(guild_id):
+    key = f"Queue/guilds/{guild_id}"
+    redis_store.delete(key)
