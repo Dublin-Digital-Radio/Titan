@@ -62,7 +62,6 @@
             <a href="#" data-activates="guild-nav" class="button-collapse {% if fixed_sidenav %}hide-on-large-only{% endif %}" id="guild-btn"><i class="material-icons">menu</i></a>
             <div class="container">
               <a href="{{ url_for("index") }}" target="_blank">
-                <img src="{{ url_for('static', filename='img/titanembeds_shield.png') }}" />
                 <span class="brand-logo-text"><strong class="align-top">DDR</strong>
                 <span class="align-top">Discord</span>
                 <span class="betatag align-top">BETA</span></span>
@@ -660,6 +659,20 @@
     {% endraw %}
 
     <script>
+        function pathJoin(parts, sep){
+          const separator = sep || '/';
+          parts = parts.map((part, index)=>{
+            if (index) {
+              part = part.replace(new RegExp('^' + separator), '');
+            }
+            if (index !== parts.length - 1) {
+              part = part.replace(new RegExp(separator + '$'), '');
+            }
+            return part;
+          })
+          return parts.join(separator);
+        }
+
         const disabled = {{ disabled|tojson|safe }};
         const guild_id = "{{ guild_id }}";
         const bot_client_id = "{{ client_id }}";
@@ -668,6 +681,7 @@
         const unauth_captcha_enabled = {% if unauth_captcha_enabled %}true{% else %}false{% endif %};
         const is_peak = {{ is_peak|tojson|safe }};
         const cookie_test_s2_URL = {{ url_for("embed.cookietest2", _external=True)|tojson|safe }};
+        const cdn_domain = "{{ cdn_domain }}" || '/';
     </script>
 
     <script type="text/javascript" src="{{ url_for('static', filename='js/embed.js', t=app_start_stamp) }}"></script>

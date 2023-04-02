@@ -3,6 +3,7 @@ import random
 import logging
 import datetime
 from datetime import timedelta
+from urllib.parse import urlparse
 
 from config import config
 from flask_babel import Babel
@@ -40,6 +41,7 @@ from .blueprints import admin, api, embed, gateway, user
 from .database import db
 from .discord_rest import discord_api
 from .redisqueue import init_redis
+from .flask_cdn import CDN
 
 
 class Error(Exception):
@@ -82,6 +84,17 @@ app.config["MAX_CONTENT_LENGTH"] = 4 * 1024 * 1024  # Limit upload size to 4mb
 if not config.get("disable-samesite-cookie-flag", False):
     app.config["SESSION_COOKIE_SAMESITE"] = "None"
 app.secret_key = config["app-secret"]
+
+
+def strip_scheme(url):
+    parsed = urlparse(url)
+    scheme = "%s://" % parsed.scheme
+    return parsed.geturl().replace(scheme, "", 1)
+
+
+if config["cdn-domain"]:
+    app.config["CDN_DOMAIN"] = strip_scheme(config["cdn-domain"])
+    CDN(app)
 
 # sentry.init_app(app)
 db.init_app(app)

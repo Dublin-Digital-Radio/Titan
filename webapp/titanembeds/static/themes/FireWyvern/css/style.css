@@ -149,10 +149,6 @@ background-color: rgb(0,0,0);
 background-color: rgba(0,0,0,0.9)
 }
 
-[src="/static/img/titanembeds_shield.png"]{
-display: none
-}
-
 [type="checkbox"].filled-in:checked+label:after {
   border: 2px solid rgb(255,95,20);
   background-color: rgb(255,95,20);
@@ -164,27 +160,27 @@ display: none
 }
 
 /* Backdrop filter support for Webkit browsers */
-@supports (-webkit-backdrop-filter: blur(0px)) {  
-  .nav-wrapper { background-color: rgba(0,0,0,0.7); } 
+@supports (-webkit-backdrop-filter: blur(0px)) {
+  .nav-wrapper { background-color: rgba(0,0,0,0.7); }
   .nav-wrapper { -webkit-backdrop-filter: blur(10px); }
-  #footer { background-color: rgba(0,0,0,0.7); }  
+  #footer { background-color: rgba(0,0,0,0.7); }
   #footer { -webkit-backdrop-filter: blur(10px); }
   #members-nav { background-color: rgba(0,0,0,0.6); }
   #members-nav { -webkit-backdrop-filter: blur(10px); }
-  #guild-nav { background-color: rgba(0,0,0,0.6); }  
-  #guild-nav { -webkit-backdrop-filter: blur(10px); }  
+  #guild-nav { background-color: rgba(0,0,0,0.6); }
+  #guild-nav { -webkit-backdrop-filter: blur(10px); }
 }
 
 /* Backdrop filter support for other browsers */
 @supports (backdrop-filter: blur(0px)) {
-  .nav-wrapper { background-color: rgba(0,0,0,0.7); } 
+  .nav-wrapper { background-color: rgba(0,0,0,0.7); }
   .nav-wrapper { backdrop-filter: blur(10px); }
-  #footer { background-color: rgba(0,0,0,0.7); }  
+  #footer { background-color: rgba(0,0,0,0.7); }
   #footer { backdrop-filter: blur(10px); }
   #members-nav { background-color: rgba(0,0,0,0.6); }
   #members-nav { backdrop-filter: blur(10px); }
-  #guild-nav { background-color: rgba(0,0,0,0.6); }  
-  #guild-nav { backdrop-filter: blur(10px); }  
+  #guild-nav { background-color: rgba(0,0,0,0.6); }
+  #guild-nav { backdrop-filter: blur(10px); }
 }
 
 :root {

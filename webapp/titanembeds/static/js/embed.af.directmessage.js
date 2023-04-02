@@ -1,6 +1,6 @@
 (function () {
     /* global $, Mustache, soundManager, Materialize */
-    
+
     const MODAL_TEMPLATE = `
         <div id="af_dm_modal" class="modal">
           <div class="modal-content">
@@ -14,7 +14,7 @@
           </div>
         </div>
     `;
-    
+
     const MESSAGE_TEMPLATE = `
         <div style="border-top: solid 1px rgba(0, 0, 0, 0.1); padding-top: 5px;">
             <img class="authoravatar" src="{{ avatar }}">
@@ -22,15 +22,15 @@
             <span class="chatmessage">{{ message }}</span>
         </div>
     `;
-    
+
     var notification_sound = soundManager.createSound({
         id: 'notification_sound_id',
-        url: "/static/audio/demonstrative.mp3",
+        url: pathJoin([cdn_domain , "static/audio/demonstrative.mp3"]),
         volume: 8,
     });
-    
+
     var dmStorage = {}; // {"EndenDragon#1337": {cs: "code", conversation: [{me: true, message: "stuff"}, ...]}, ...}
-    
+
     function cleverJax(cs, input) {
         var data = {"input": input};
         if (cs) {
@@ -44,36 +44,36 @@
         });
         return funct.promise();
     }
-    
+
     function getRandomInt(min, max) {
         return Math.floor(Math.random() * (max - min + 1)) + min;
     }
-    
+
     function getID(user) {
         return user.username + "#" + user.discriminator;
     }
-    
+
     function getCS(id) {
         if (!dmStorage[id]) {
             return null;
         }
         return dmStorage[id].cs;
     }
-    
+
     function setCS(id, cs) {
         if (!dmStorage[id]) {
             createDM(id);
         }
         dmStorage[id].cs = cs;
     }
-    
+
     function createDM(id) {
         dmStorage[id] = {
             cs: null,
             conversation: [],
         };
     }
-    
+
     function populateDM(id) {
         $("#af_dm_modal .dmcontent").empty();
         if (!dmStorage[id]) {
@@ -96,7 +96,7 @@
             $("#af_dm_modal .dmcontent").append(rendered);
         }
     }
-    
+
     function addMessage(id, me, message) {
         if (!dmStorage[id]) {
             createDM(id);
@@ -107,7 +107,7 @@
         });
         populateDM(id);
     }
-    
+
     function getMySelfUser() {
         var username = $("#curuser_name").text();
         var discriminator = $("#curuser_discrim").text();
@@ -118,7 +118,7 @@
             "avatar": avatar,
         };
     }
-    
+
     function getCurrentUser() {
         var username = $("#usercard .identity .username").text();
         var discriminator = $("#usercard .identity .discriminator").text();
@@ -129,7 +129,7 @@
             "avatar": avatar,
         };
     }
-    
+
     function sendDM(value) {
         var id = getID(getCurrentUser());
         var cs = getCS(id);
@@ -145,7 +145,7 @@
             }, getRandomInt(2000, 3500));
         });
     }
-    
+
     function openDM() {
         var curUser = getCurrentUser();
         $("#af_dm_modal h4 .username").text(curUser.username);
@@ -153,7 +153,7 @@
         populateDM(getID(curUser));
         $('#af_dm_modal').modal('open');
     }
-    
+
     $(function() {
         $(MODAL_TEMPLATE).insertAfter("#usercard").modal({
             dismissible: true,

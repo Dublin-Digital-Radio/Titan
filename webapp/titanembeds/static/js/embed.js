@@ -25,6 +25,20 @@
 
 var passedCookieTest = true; // If passed cross origin test
 
+function pathJoin(parts, sep){
+    const separator = sep || '/';
+    parts = parts.map((part, index)=>{
+        if (index) {
+            part = part.replace(new RegExp('^' + separator), '');
+        }
+        if (index !== parts.length - 1) {
+            part = part.replace(new RegExp(separator + '$'), '');
+        }
+        return part;
+    })
+    return parts.join(separator);
+ }
+
 (function () {
     const theme_options = ["DiscordDark", "FireWyvern", "IceWyvern", "MetroEdge", "BetterTitan"]; // All the avaliable theming names
     const badges_options = ["administrator", "partner", "supporter", "discordbotsorgvoted"]; // All badges avaliable
@@ -562,7 +576,7 @@ var passedCookieTest = true; // If passed cross origin test
 
         notification_sound = soundManager.createSound({
             id: 'notification_sound_id',
-            url: "/static/audio/demonstrative.mp3",
+            url: pathJoin([cdn_domain , "static/audio/demonstrative.mp3"]),
             volume: 8,
         });
 
@@ -697,7 +711,7 @@ var passedCookieTest = true; // If passed cross origin test
                 $("#user-defined-css").text(user_def_css);
             }
             if (theme) {
-                $("#css-theme").attr("href", "/static/themes/" + theme + "/css/style.css");
+                $("#css-theme").attr("href", pathJoin([cdn_domain , "static/themes/" , theme , "/css/style.css"]));
                 if (modifyLocalStore && localstorage_avaliable) {
                     localStorage.setItem("theme", theme);
                 }

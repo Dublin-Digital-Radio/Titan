@@ -158,6 +158,7 @@ def guild_embed(guild_id):
         is_peak=request.args.get("forcepeak", False) == "1"
         or is_peak(guild_id),
         enable_code_highlighting=config["enable-code-highlighting"],
+        cdn_domain=config["cdn-domain"],
     )
 
 

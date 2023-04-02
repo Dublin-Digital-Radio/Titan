@@ -50,4 +50,5 @@ config = {
     "enable-code-highlighting": env.get(
         "TITAN_WEBAPP_ENABLE_CODE_HIGHLIGHTING", False
     ),
+    "cdn-domain": env.get("TITAN_CDN_DOMAIN"),
 }

@@ -192,10 +192,6 @@ a {
   color: #4688f7;
 }
 
-[src="/static/img/titanembeds_shield.png"]{
-  display: none
-}
-
 /* Backdrop filter support for Webkit browsers */
 @supports (-webkit-backdrop-filter: blur(0px)) {
   .nav-wrapper { background-color: rgba(255,255,255,0.7); }
