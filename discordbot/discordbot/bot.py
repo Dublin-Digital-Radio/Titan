@@ -78,8 +78,11 @@ class Titan(discord.AutoShardedClient):
         self.post_stats_task = None
 
     async def start(self, token: str, *, reconnect: bool = True) -> None:
+        self.log.info("init redis")
         await redis_cache.init_redis(config["redis-uri"])
+        self.log.info("starting web")
         await self.web.start()
+        self.log.info("connecting to discord")
         await super().start(config["bot-token"], reconnect=reconnect)
 
     async def on_shard_ready(self, shard_id):

@@ -23,7 +23,7 @@ class Web:
         self.web_app.add_routes(
             [
                 web.get("/", self.handle_http),
-                web.get("/{name}", self.handle_http),
+                # web.get("/{name}", self.handle_http),
                 web.get(
                     "/channel_messages/{channel_id}",
                     self.on_get_channel_messages_http,
@@ -42,6 +42,7 @@ class Web:
                 ),
                 web.get("/guild/{guild_id}", self.on_get_guild_http),
                 web.get("/user/{user_id}", self.on_get_user_http),
+                web.get("/guilds", self.on_guilds_http),
             ]
         )
 
@@ -186,6 +187,10 @@ class Web:
 
         return format_guild(guild, server_webhooks)
 
+    async def on_get_guilds(self):
+        log.info("on get guilds")
+        return self.bot.guilds
+
     async def on_get_user(self, user_id: int):
         if not (user := self.bot.get_user(user_id)):
             return {}
@@ -216,8 +221,10 @@ class Web:
         log.info("on_get_channel_messages_http")
         channel_id = request.match_info.get("channel_id")
         messages = await self.on_get_channel_messages(
-            channel_id,
-            request.match_info.get("limit", DEFAULT_CHANNEL_MESSAGES_LIMIT),
+            int(channel_id),
+            int(
+                request.match_info.get("limit", DEFAULT_CHANNEL_MESSAGES_LIMIT)
+            ),
         )
         log.info(
             "on_get_channel_messages_http returning\n%s", pformat(messages)
@@ -230,10 +237,10 @@ class Web:
         guild_id = request.match_info.get("guild_id")
         user_id = request.match_info.get("user_id")
 
-        if not (guild := self.bot.get_guild(guild_id)):
+        if not (guild := self.bot.get_guild(int(guild_id))):
             return {}
 
-        result = await self.on_get_guild_member(guild, user_id)
+        result = await self.on_get_guild_member(guild, int(user_id))
         log.info("on_get_guild_member_http returning\n%s", pformat(result))
 
         return web.json_response(result)
@@ -242,7 +249,7 @@ class Web:
         log.info("on_get_guild_member_named_http")
         guild_id = request.match_info.get("guild_id")
         query = request.match_info.get("query")
-        result = await self.on_get_guild_member_named(guild_id, query)
+        result = await self.on_get_guild_member_named(int(guild_id), query)
 
         log.info(
             "on_get_guild_member_named_http returning\n%s", pformat(result)
@@ -252,7 +259,7 @@ class Web:
     async def on_list_guild_members_http(self, request):
         log.info("on_list_guild_members_http")
         guild_id = request.match_info.get("guild_id")
-        member_ids = await self.on_list_guild_members(guild_id)
+        member_ids = await self.on_list_guild_members(int(guild_id))
         log.info(
             "on_list_guild_members_http returning\n%s", pformat(member_ids)
         )
@@ -261,13 +268,17 @@ class Web:
     async def on_get_guild_http(self, request):
         log.info("on_get_guild_http")
         guild_id = request.match_info.get("guild_id")
-        guild = await self.on_get_guild(guild_id)
+        guild = await self.on_get_guild(int(guild_id))
         log.info("on_get_guild_http returning\n%s", pformat(guild))
         return web.json_response(guild)
 
     async def on_get_user_http(self, request):
         log.info("on_get_user_http")
         user_id = request.match_info.get("user_id")
-        user_formatted = await self.on_get_user(user_id)
+        user_formatted = await self.on_get_user(int(user_id))
         log.info("on_get_user_http returning\n%s", pformat(user_formatted))
         return web.json_response(user_formatted)
+
+    async def on_guilds_http(self, request):
+        guilds = await self.on_get_guilds()
+        return web.json_response([repr(x) for x in guilds])
