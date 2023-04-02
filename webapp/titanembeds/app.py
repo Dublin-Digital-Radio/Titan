@@ -39,8 +39,8 @@ from . import rate_limiter
 from .blueprints import admin, api, embed, gateway, user
 from .database import db
 from .discord_rest import discord_api
-from .redis_cache import init_redis
 from .flask_cdn import CDN
+from .redis_cache import init_redis
 
 
 class Error(Exception):

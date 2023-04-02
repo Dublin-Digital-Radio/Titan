@@ -2,8 +2,8 @@
 
 import os
 
-from flask import url_for as flask_url_for
 from flask import current_app, request
+from flask import url_for as flask_url_for
 
 
 def endpoint_match(endpoint, endpoints):
