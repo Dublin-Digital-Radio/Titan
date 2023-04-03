@@ -94,6 +94,7 @@ def strip_scheme(url):
 
 if config["cdn-domain"]:
     app.config["CDN_DOMAIN"] = strip_scheme(config["cdn-domain"])
+    app.config["CDN_TIMESTAMP"] = False
     CDN(app)
 
 # sentry.init_app(app)
