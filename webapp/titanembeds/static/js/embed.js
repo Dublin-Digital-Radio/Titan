@@ -757,8 +757,10 @@ function pathJoin(parts, sep){
     function primeEmbed() {
         lock_login_fields();
 
+        console.log('primeEmbed - query_guild')
         var guild = query_guild();
         guild.fail(function(data) {
+            console.log('primeEmbed - query_guild failed')
             unlock_login_fields();
             if (data.status == 403 && getParameterByName("create_authenticated_user") == "true" && getParameterByName("sametarget") == "true") {
                 wait_for_discord_login();
@@ -766,17 +768,21 @@ function pathJoin(parts, sep){
                 $("#custom_username_field").trigger(jQuery.Event("keyup", { keyCode: 13 } ));
             } else if (visitors_enabled) {
                 setVisitorMode(true);
+                console.log('primeEmbed - query_guild 2')
                 var guild2 = query_guild();
                 guild2.done(function(data) {
+                    console.log('primeEmbed - query_guild 2 returned')
                     initialize_embed(data);
                 });
                 guild2.fail(function() {
+                    console.log('primeEmbed - query_guild 2 failed')
                     setVisitorMode(false);
                 });
             }
         });
 
         guild.done(function(data) {
+            console.log('primeEmbed - query_guild returned')
             initialize_embed(data);
         });
     }
@@ -805,8 +811,10 @@ function pathJoin(parts, sep){
             socket = null;
         }
         if (guildobj === undefined) {
+            console.log('initialize_embed - query_guild')
             var guild = query_guild();
             guild.done(function(data) {
+                console.log('initialize_embed - query_guild returned')
                 switch_to_default_channel(data.channels);
                 prepare_guild(data);
                 $('#loginmodal').modal('close');
@@ -1912,8 +1920,10 @@ function pathJoin(parts, sep){
             } else {
                 $("#administrate_link").hide();
             }
+            console.log('run_fetch_routine - query_guild')
             var guild = query_guild();
             guild.done(function(guildobj) {
+                console.log('run_fetch_routine - query_guild returned')
                 fill_channels(guildobj.channels);
                 fill_discord_members(guildobj.discordmembers);
                 fill_authenticated_users(guildobj.embedmembers.authenticated);
