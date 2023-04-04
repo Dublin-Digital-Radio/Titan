@@ -70,19 +70,21 @@ if __name__ != "__main__":
 log = logging.getLogger(__name__)
 log.info("starting up. git commit: %s", config["git-commit"])
 
+app.config["REDIS_URL"] = config["redis-uri"]
+app.config["MAX_CONTENT_LENGTH"] = 4 * 1024 * 1024  # Limit upload size to 4mb
 app.config["SQLALCHEMY_DATABASE_URI"] = config["database-uri"]
 # Suppress the warning/no need this on for now.
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["RATELIMIT_HEADERS_ENABLED"] = True
 app.config["SQLALCHEMY_POOL_RECYCLE"] = 100
 app.config["SQLALCHEMY_POOL_SIZE"] = 500
 app.config["SQLALCHEMY_MAX_OVERFLOW"] = -1
+app.config["RATELIMIT_HEADERS_ENABLED"] = True
 app.config["RATELIMIT_STORAGE_URL"] = config["redis-uri"]
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=3)
-app.config["REDIS_URL"] = config["redis-uri"]
-app.config["MAX_CONTENT_LENGTH"] = 4 * 1024 * 1024  # Limit upload size to 4mb
 if not config.get("disable-samesite-cookie-flag", False):
+    log.info("setting SESSION_COOKIE_SAMESITE to None")
     app.config["SESSION_COOKIE_SAMESITE"] = "None"
+    app.config["SESSION_COOKIE_SECURE"] = True
 app.secret_key = config["app-secret"]
 
 
