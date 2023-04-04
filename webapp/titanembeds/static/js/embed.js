@@ -810,34 +810,31 @@ function pathJoin(parts, sep){
             socket.disconnect();
             socket = null;
         }
+
         if (guildobj === undefined) {
             console.log('initialize_embed - query_guild')
-            var guild = query_guild();
-            guild.done(function(data) {
-                console.log('initialize_embed - query_guild returned')
-                switch_to_default_channel(data.channels);
-                prepare_guild(data);
-                $('#loginmodal').modal('close');
-                unlock_login_fields();
-            });
+            const guild = query_guild();
+            guild.done(do_guild);
         } else {
-            switch_to_default_channel(guildobj.channels);
-            prepare_guild(guildobj);
-            $('#loginmodal').modal('close');
-            unlock_login_fields();
+            do_guild(guildobj)
         }
+    }
+
+    function do_guild(guildobj) {
+        switch_to_default_channel(guildobj.channels);
+        prepare_guild(guildobj);
+        $('#loginmodal').modal('close');
+        unlock_login_fields();
     }
 
     function switch_to_default_channel(guildchannels) {
         var defaultChannel = getParameterByName("defaultchannel");
-        if (!defaultChannel) {
-            return;
-        }
+        if (!defaultChannel) return;
+
         for (var i = 0; i < guildchannels.length; i++) {
             if (guildchannels[i].channel.id == defaultChannel) {
-                if (!guildchannels[i].read || guildchannels[i].channel.type != "text") {
-                    return;
-                }
+                if (!guildchannels[i].read || guildchannels[i].channel.type != "text") return;
+
                 selected_channel = defaultChannel;
                 return;
             }
@@ -850,7 +847,7 @@ function pathJoin(parts, sep){
         update_emoji_picker();
         guild_roles_list = guildobj.roles;
         fill_channels(guildobj.channels);
-        run_fetch_routine();
+        run_fetch_routine(guildobj);
         initiate_websockets();
     }
 
@@ -908,7 +905,7 @@ function pathJoin(parts, sep){
             children.sort(function(a, b) {
               return parseInt(a.channel.position) - parseInt(b.channel.position);
             });
-            if (i != 0) {
+            if (i !== 0) {
                 if (cate.read) {
                     var rendered_category = Mustache.render(template_category, {"name": cate.channel.name});
                     $("#channels-list").append(rendered_category);
@@ -1884,14 +1881,14 @@ function pathJoin(parts, sep){
         return last;
     }
 
-    function run_fetch_routine() {
+    function run_fetch_routine(guildobj) {
         var channel_id = selected_channel;
-        var fet;
-        var jumpscroll;
-        if (channel_id == null) {
-            return;
-        }
+        if (channel_id == null) return;
+
+        var fet, jumpscroll;
+
         $("#message-spinner").fadeIn();
+
         if (last_message_id == null) {
             $("#chatcontent").empty();
             fet = fetch(channel_id);
@@ -1903,9 +1900,11 @@ function pathJoin(parts, sep){
                 jumpscroll = element_in_view($('#discordmessage_'+last_message_id).parent());
             }
         }
+
         fet.done(function(data) {
             socket_error_should_refetch = false;
             var status = data.status;
+
             if (visitor_mode) {
                 update_embed_userchip(false, null, "Titan", null, "0001", null);
                 update_change_username_modal();
@@ -1914,24 +1913,34 @@ function pathJoin(parts, sep){
                 update_change_username_modal(status.authenticated, status.username);
                 current_user_discord_id = status.user_id;
             }
+
             last_message_id = fill_discord_messages(data.messages, jumpscroll);
+
             if (!visitor_mode && status.manage_embed) {
                 $("#administrate_link").show();
             } else {
                 $("#administrate_link").hide();
             }
-            console.log('run_fetch_routine - query_guild')
-            var guild = query_guild();
-            guild.done(function(guildobj) {
-                console.log('run_fetch_routine - query_guild returned')
-                fill_channels(guildobj.channels);
-                fill_discord_members(guildobj.discordmembers);
-                fill_authenticated_users(guildobj.embedmembers.authenticated);
-                fill_unauthenticated_users(guildobj.embedmembers.unauthenticated);
-            });
-            $("#message-spinner").removeClass("error");
-            $("#message-spinner").fadeOut();
+
+            function doGuildObj(guildob) {
+                  console.log('run_fetch_routine - doGuildObj')
+                  fill_channels(guildob.channels);
+                  fill_discord_members(guildob.discordmembers);
+                  fill_authenticated_users(guildob.embedmembers.authenticated);
+                  fill_unauthenticated_users(guildob.embedmembers.unauthenticated);
+            }
+
+            if (!guildobj) {
+              console.log('run_fetch_routine - query_guild')
+              const guild = query_guild();
+              guild.done(doGuildObj);
+            } else {
+                doGuildObj(guildobj)
+            }
+
+            $("#message-spinner").removeClass("error").fadeOut();
         });
+
         fet.fail(function(data) {
             if (data.status == 403) {
                 setTimeout(function () {$('#loginmodal').modal('open');}, 2000);
