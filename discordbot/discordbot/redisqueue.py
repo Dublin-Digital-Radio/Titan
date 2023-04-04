@@ -70,7 +70,7 @@ class Web:
             log.error("Could not find channel %s", channel_id)
             return []
 
-        key = (f"Queue/channels/{channel_id}/messages",)
+        key = f"Queue/channels/{channel_id}/messages"
         await redis_cache.redis_store.delete(key)
         me = channel.guild.get_member(self.bot.user.id)
 
@@ -78,9 +78,7 @@ class Web:
         if channel.permissions_for(me).read_messages:
             log.info("reading %s messages for channel %s", limit, channel_id)
             async for message in channel.history(limit=limit):
-                messages.append(
-                    json.dumps(format_message(message), separators=(",", ":"))
-                )
+                messages.append(format_message(message))
             log.info("Read messages from channel %s", channel_id)
         else:
             log.error(
@@ -89,7 +87,11 @@ class Web:
             )
 
         log.info("Adding messages for channel to redis")
-        await redis_cache.redis_store.sadd(key, "", *messages)
+        await redis_cache.redis_store.sadd(
+            key,
+            "",
+            *[json.dumps(m, separators=(",", ":")) for m in messages],
+        )
         log.info("Done messages for channel to redis")
 
         return messages
@@ -226,9 +228,7 @@ class Web:
                 request.match_info.get("limit", DEFAULT_CHANNEL_MESSAGES_LIMIT)
             ),
         )
-        log.info(
-            "on_get_channel_messages_http returning\n%s", pformat(messages)
-        )
+        log.info("on_get_channel_messages_http returning %s", len(messages))
         return web.json_response(messages)
 
     async def on_get_guild_member_http(self, request):
