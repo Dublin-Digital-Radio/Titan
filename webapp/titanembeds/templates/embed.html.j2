@@ -47,6 +47,8 @@
     {% endwith %}
 
     <title>{{ guild['name']|e }} - Embed - Titan Embeds for Discord</title>
+    <link rel="preconnect" href="https://www.google.com">
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
     {% include 'google_analytics.html.j2' %}
 
     <script src='https://www.google.com/recaptcha/api.js' async defer></script>
@@ -491,11 +493,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/caret/1.0.0/jquery.caret.min.js" integrity="sha256-NfP6KWI/oETcPbLcLXVAamn8K2wJrYH8ZIRrOf1XNUE=" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/post-robot/10.0.42/post-robot.min.js" integrity="sha512-8rkatbA3uOONyiRqBiT5dvzaE7hWX6m0SpVr/4rpAxxuZX+Vjuvqp+DSmF1sQX3268hMk8BZxHVRdgHmuoDhXQ==" crossorigin="anonymous"></script>
 
-    <script src="https://titan-git-master-dublin-digital-radio.vercel.app/static/js/vendor/twemoji.min.js"></script>
+    <script src="{{ url_for("static", filename="js/vendor/twemoji.min.js") }}"></script>
     {% if enable_code_highlighting %}
     <script src="{{ url_for("static", filename="js/vendor/highlight.pack.js") }}"></script>
     {% endif %}
-    <script src="{{ url_for("static", filename="js/vendor/jquery.balloon.min.js") }}"></script>
     <script src="{{ url_for('static', filename='js/vendor/emoji.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/vendor/wdt-emoji-bundle.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/vendor/jquery.mCustomScrollbar.min.js') }}"></script>
