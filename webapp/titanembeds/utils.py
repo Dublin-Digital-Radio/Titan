@@ -5,7 +5,7 @@ from config import config
 from flask import session
 from itsdangerous import URLSafeSerializer
 from sqlalchemy import and_
-from titanembeds import redisqueue
+from titanembeds import bot_http_client
 from titanembeds.cache_keys import get_client_ipaddr
 from titanembeds.database import (
     AuthenticatedUsers,
@@ -36,7 +36,7 @@ def check_guild_existance(guild_id):
     except (TypeError, ValueError):
         return False
 
-    return bool(redisqueue.get_guild(guild_id))
+    return bool(bot_http_client.get_guild(guild_id))
 
 
 def guild_accepts_visitors(guild_id):
@@ -74,7 +74,7 @@ def checkUserRevoke(guild_id, user_key=None):
         banned = checkUserBanned(guild_id)
         if banned:
             return revoked
-        dbUser = redisqueue.get_guild_member(guild_id, session["user_id"])
+        dbUser = bot_http_client.get_guild_member(guild_id, session["user_id"])
         return not dbUser
 
 
@@ -96,7 +96,7 @@ def checkUserBanned(guild_id, ip_address=None):
                     banned = False
     else:
         banned = False
-        # dbUser = redisqueue.get_guild_member(guild_id, session["user_id"])
+        # dbUser = bot_http_client.get_guild_member(guild_id, session["user_id"])
         # if not dbUser:
         #    banned = True # TODO: Figure out ban logic with guild member
     return banned
@@ -152,7 +152,9 @@ def update_user_status(guild_id, username, user_key=None):
         if status["banned"] or status["revoked"]:
             return status
 
-        if dbMember := redisqueue.get_guild_member(guild_id, status["user_id"]):
+        if dbMember := bot_http_client.get_guild_member(
+            guild_id, status["user_id"]
+        ):
             status["nickname"] = dbMember["nick"]
 
         bump_user_presence_timestamp(
@@ -186,7 +188,7 @@ def check_user_in_guild(guild_id):
 
 
 def get_member_roles(guild_id, user_id):
-    q = redisqueue.get_guild_member(guild_id, user_id)
+    q = bot_http_client.get_guild_member(guild_id, user_id)
     return [str(role) for role in (q["roles"])] if q else []
 
 
@@ -204,7 +206,7 @@ def get_guild_channels(guild_id, force_everyone=False, forced_role=0):
     if guild_id not in bot_member_roles:
         bot_member_roles.append(guild_id)
 
-    if not (guild := redisqueue.get_guild(guild_id)):
+    if not (guild := bot_http_client.get_guild(guild_id)):
         return []
 
     db_guild = (
@@ -398,7 +400,7 @@ def guild_webhooks_enabled(guild_id):
     if not db_guild.webhook_messages:
         return False
 
-    return bot_can_create_webhooks(redisqueue.get_guild(guild_id))
+    return bot_can_create_webhooks(bot_http_client.get_guild(guild_id))
 
 
 def guild_unauthcaptcha_enabled(guild_id):

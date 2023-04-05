@@ -4,7 +4,7 @@ import time
 
 import requests
 from config import config
-from titanembeds import redis_cache, redisqueue
+from titanembeds import bot_http_client, redis_cache
 
 _DISCORD_API_BASE = "https://discordapp.com/api/v6"
 

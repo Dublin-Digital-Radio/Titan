@@ -15,7 +15,7 @@ from flask import jsonify, request, session, url_for
 from flask_socketio import emit
 from itsdangerous.exc import BadSignature
 from sqlalchemy import and_
-from titanembeds import rate_limiter, redis_cache, redisqueue
+from titanembeds import bot_http_client, rate_limiter, redis_cache
 from titanembeds.cache_keys import (
     channel_ratelimit_key,
     get_client_ipaddr,
@@ -198,7 +198,7 @@ def filter_guild_channel(guild_id, channel_id, force_everyone=False):
 
 def get_online_discord_users(guild_id, embed):
     apimembers_filtered = {
-        int(m["id"]): m for m in redisqueue.list_guild_members(guild_id)
+        int(m["id"]): m for m in bot_http_client.list_guild_members(guild_id)
     }
 
     for member in embed["members"]:
@@ -249,7 +249,7 @@ def get_online_embed_users(guild_id):
         else []
     )
     for user in auths:
-        usrdb = redisqueue.get_guild_member(guild_id, user.client_id)
+        usrdb = bot_http_client.get_guild_member(guild_id, user.client_id)
         meta = {
             "id": str(usrdb["id"]),
             "username": usrdb["username"],
@@ -263,11 +263,11 @@ def get_online_embed_users(guild_id):
 
 
 def get_guild_emojis(guild_id):
-    return redisqueue.get_guild(guild_id)["emojis"]
+    return bot_http_client.get_guild(guild_id)["emojis"]
 
 
 def get_guild_roles(guild_id):
-    return redisqueue.get_guild(guild_id)["roles"]
+    return bot_http_client.get_guild(guild_id)["roles"]
 
 
 # Returns webhook url if exists and can post w/webhooks, otherwise None
@@ -282,7 +282,7 @@ def get_channel_webhook(guild_id, channel_id):
     )
     name = f"[Titan] {session['username'][:19]}#{discrim}"
 
-    webhooks = redisqueue.get_guild(guild_id)["webhooks"]
+    webhooks = bot_http_client.get_guild(guild_id)["webhooks"]
     log.info("checking webhook for channel %s and name '%s'", channel_id, name)
     for webhook in webhooks:
         log.info(
@@ -358,7 +358,7 @@ def delete_webhook_if_too_much(guild_id):
     if not guild_webhooks_enabled(guild_id):
         return
 
-    guild = redisqueue.get_guild(guild_id)
+    guild = bot_http_client.get_guild(guild_id)
     titan_webhooks = [
         w for w in guild["webhooks"] if w["name"].startswith("[Titan] ")
     ]
@@ -383,7 +383,7 @@ def delete_webhook_if_too_much(guild_id):
 
 def get_all_users(guild_id):
     mem = []
-    for u in redisqueue.list_guild_members(guild_id):
+    for u in bot_http_client.list_guild_members(guild_id):
         mem.append(
             {
                 "id": str(u["id"]),
@@ -428,7 +428,7 @@ def fetch():
         if not chan.get("read") or chan["channel"]["type"] != "text":
             status_code = 401
         else:
-            messages = redisqueue.get_channel_messages(
+            messages = bot_http_client.get_channel_messages(
                 guild_id, channel_id, after_snowflake
             )
             status_code = 200
@@ -456,7 +456,7 @@ def fetch_visitor():
         messages = {}
         status_code = 401
     else:
-        messages = redisqueue.get_channel_messages(
+        messages = bot_http_client.get_channel_messages(
             guild_id, channel_id, after_snowflake
         )
         status_code = 200
@@ -509,7 +509,7 @@ def post():
     rich_embed = json.loads(request.form.get("richembed", "{}"))
 
     db_user = (
-        redisqueue.get_guild_member(guild_id, session["user_id"])
+        bot_http_client.get_guild_member(guild_id, session["user_id"])
         if "user_id" in session
         else None
     )
@@ -876,7 +876,7 @@ def user_info(guild_id, user_id):
         "badges": [],
     }
 
-    member = redisqueue.get_guild_member(guild_id, user_id)
+    member = bot_http_client.get_guild_member(guild_id, user_id)
     if member:
         usr["id"] = str(member["id"])
         usr["username"] = member["username"]
@@ -888,7 +888,7 @@ def user_info(guild_id, user_id):
         )
 
         roles = get_member_roles(guild_id, user_id)
-        guild_roles = redisqueue.get_guild(guild_id)["roles"]
+        guild_roles = bot_http_client.get_guild(guild_id)["roles"]
         usr["roles"] = [
             gr for gr in guild_roles for r in roles if gr["id"] == r
         ]

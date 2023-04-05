@@ -18,7 +18,7 @@ from flask import (
     url_for,
 )
 from flask_babel import gettext
-from titanembeds import redisqueue
+from titanembeds import bot_http_client
 from titanembeds.database import Guilds, UserCSS, db, list_disabled_guilds
 from titanembeds.redis_cache import get_online_embed_user_keys
 from titanembeds.utils import (
@@ -96,7 +96,7 @@ def is_peak(guild_id):
 
 @embed.route("/<int:guild_id>")
 def guild_embed(guild_id):
-    if not (guild := redisqueue.get_guild(guild_id)):
+    if not (guild := bot_http_client.get_guild(guild_id)):
         log.warning("could not get guild '%s' from redis", guild_id)
         abort(404)
 

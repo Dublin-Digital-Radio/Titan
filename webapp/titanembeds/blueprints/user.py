@@ -13,6 +13,7 @@ from flask import (
     url_for,
 )
 from flask_socketio import emit
+from titanembeds import bot_http_client
 from titanembeds.database import (
     Cosmetics,
     Guilds,
@@ -41,7 +42,6 @@ from titanembeds.utils import (
     generate_avatar_url,
     generate_bot_invite_url,
     generate_guild_icon_url,
-    redisqueue,
 )
 
 log = logging.getLogger(__name__)
@@ -297,7 +297,7 @@ def administrate_guild(guild_id):
     if not check_user_can_administrate_guild(guild_id):
         return redirect(url_for("user.dashboard"))
 
-    guild = redisqueue.get_guild(guild_id)
+    guild = bot_http_client.get_guild(guild_id)
     if not guild:
         session["redirect"] = url_for(
             "user.administrate_guild",

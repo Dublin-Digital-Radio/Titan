@@ -14,7 +14,7 @@ from flask import (
     url_for,
 )
 from flask_socketio import emit
-from titanembeds import redisqueue
+from titanembeds import bot_http_client
 from titanembeds.database import (
     ApplicationSettings,
     Cosmetics,
@@ -224,7 +224,7 @@ def prepare_guild_members_list(members, bans):
 @admin.route("/administrate_guild/<guild_id>", methods=["GET"])
 @is_admin
 def administrate_guild(guild_id):
-    guild = redisqueue.get_guild(guild_id)
+    guild = bot_http_client.get_guild(guild_id)
     if not guild:
         abort(404)
         return
@@ -415,7 +415,7 @@ def update_administrate_guild(guild_id):
 def guilds():
     guilds = []
     for guild in db.session.query(Guilds).all():
-        if not (rguild := redisqueue.get_guild(guild.guild_id)):
+        if not (rguild := bot_http_client.get_guild(guild.guild_id)):
             continue
         guilds.append(
             {
@@ -680,7 +680,7 @@ def voting_get():
 
     overall = []
     for uid in sorted_overall_votes:
-        gmember = redisqueue.get_user(uid)
+        gmember = bot_http_client.get_user(uid)
         u = {"user_id": uid, "votes": overall_votes[uid]}
         if gmember:
             u["discord"] = (
@@ -706,7 +706,7 @@ def voting_get():
 
     referrals = []
     for uid in sorted_referrers:
-        gmember = redisqueue.get_user(uid)
+        gmember = bot_http_client.get_user(uid)
         u = {"user_id": uid, "votes": referrer[uid]}
         if gmember:
             u["discord"] = (

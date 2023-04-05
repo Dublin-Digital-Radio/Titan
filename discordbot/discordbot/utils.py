@@ -287,3 +287,10 @@ def get_partial_emoji(emoji):
         "id": str(emoji.id),
         "name": emoji.name,
     }
+
+
+async def guild_webhooks(guild):
+    if guild.me and guild.me.guild_permissions.manage_webhooks:
+        return await guild.webhooks()
+    else:
+        return []

@@ -3,7 +3,7 @@ import json
 
 from redis.asyncio import Redis
 
-from discordbot.utils import format_message
+from discordbot.utils import format_guild, format_message, format_user
 
 redis_store = None
 
@@ -57,6 +57,15 @@ async def push_message(message):
     await redis_store.sadd(key, json.dumps(message, separators=(",", ":")))
 
 
+async def add_messages(channel, messages):
+    key = f"Queue/channels/{channel.id}/messages"
+    await redis_store.sadd(
+        key,
+        "",
+        *[json.dumps(m, separators=(",", ":")) for m in messages],
+    )
+
+
 async def delete_message(message):
     if not message.guild:
         return
@@ -72,9 +81,19 @@ async def delete_message(message):
         await redis_store.srem(key, unformatted_item)
 
 
+async def delete_messages(channel):
+    key = f"Queue/channels/{channel.id}/messages"
+    await redis_store.delete(key)
+
+
 async def update_message(message):
     await delete_message(message)
     await push_message(message)
+
+
+async def add_members(guild_id, member_ids):
+    key = f"Queue/guilds/{guild_id}/members"
+    await redis_store.sadd(key, *member_ids)
 
 
 async def add_member(member):
@@ -96,6 +115,20 @@ async def remove_member(member, guild=None):
     await redis_store.delete(f"Queue/guilds/{guild.id}/members/{member.id}")
 
 
+async def add_member_to_guild(guild, member):
+    key = f"Queue/guilds/{guild.id}/members/{member.id}"
+    await redis_store.set(
+        key, json.dumps(format_user(member), separators=(",", ":"))
+    )
+    await enforce_expiring_key(key)
+
+
+async def remove_member_from_guild(guild, user_id):
+    key = f"Queue/guilds/{guild.id}/members/{user_id}"
+    await redis_store.set(key, "")
+    await enforce_expiring_key(key, 15)
+
+
 async def update_member(member):
     await remove_member(member)
     await add_member(member)
@@ -105,18 +138,40 @@ async def ban_member(guild, user):
     await remove_member(user, guild)
 
 
+async def add_named_member_to_guild(guild, query, member_id):
+    key = f"Queue/custom/guilds/{guild.id}/member_named/{query}"
+    await redis_store.set(key, member_id)
+    await enforce_expiring_key(key)
+
+
 async def delete_guild(guild):
     await redis_store.delete(f"Queue/guilds/{guild.id}")
 
 
-async def update_guild(guild):
+async def update_guild(guild, server_webhooks=None):
     key = f"Queue/guilds/{guild.id}"
 
     if await redis_store.exists(key):
         await delete_guild(guild)
+
+    await redis_store.set(
+        key,
+        json.dumps(format_guild(guild, server_webhooks), separators=(",", ":")),
+    )
+
+    await enforce_expiring_key(key)
 
 
 # Queue/channels/{channel.id}/messages"
 # Queue/guilds/{guild.id}/members
 # Queue/guilds/{guild.id}/members/{member.id}
 # Queue/guilds/{guild.id}
+
+
+async def add_user(user_id, user_formatted):
+    key = f"Queue/users/{user_id}"
+
+    await redis_store.set(
+        key, json.dumps(user_formatted, separators=(",", ":"))
+    )
+    await enforce_expiring_key(key)

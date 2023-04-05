@@ -1,4 +1,5 @@
 import sys
+import json
 import asyncio
 import logging
 from collections import deque
@@ -9,11 +10,12 @@ import discord
 # import raven
 from config import config
 from redis.exceptions import ConnectionError
+from web_app import web_start
 
 from discordbot import commands, redis_cache
 from discordbot.poststats import BotsDiscordPw, DiscordBotsOrg
-from discordbot.redisqueue import Web
 from discordbot.socketio import SocketIOInterface
+from discordbot.utils import format_guild, format_message, format_user, guild_webhooks
 
 # try:
 #     raven_client = RavenClient(config["sentry-dsn"])
@@ -22,6 +24,8 @@ from discordbot.socketio import SocketIOInterface
 
 intents = discord.Intents.default()
 intents.message_content = True
+
+DEFAULT_CHANNEL_MESSAGES_LIMIT = 50
 
 
 def setup_logger(shard_ids=None):
@@ -67,7 +71,6 @@ class Titan(discord.AutoShardedClient):
         )
         self.log = setup_logger(shard_ids)
         self.http.user_agent += " TitanEmbeds-Bot"
-        self.web = Web(self)
         self.socketio = SocketIOInterface(config["redis-uri"])
 
         # List of msg ids to prevent duplicate delete
@@ -81,7 +84,7 @@ class Titan(discord.AutoShardedClient):
         self.log.info("init redis")
         await redis_cache.init_redis(config["redis-uri"])
         self.log.info("starting web")
-        await self.web.start()
+        await web_start(self)
         self.log.info("connecting to discord")
         await super().start(config["bot-token"], reconnect=reconnect)
 
@@ -160,8 +163,9 @@ class Titan(discord.AutoShardedClient):
         await self.socketio.on_reaction_clear(message)
 
     async def on_guild_join(self, guild):
-        await redis_cache.update_guild(guild)
-        await self.web.on_get_guild(guild.id)
+        await redis_cache.update_guild(
+            guild, server_webhooks=(await guild_webhooks(guild))
+        )
         await self.postStats()
 
     async def on_guild_remove(self, guild):
@@ -170,49 +174,61 @@ class Titan(discord.AutoShardedClient):
 
     async def on_guild_update(self, guildbefore, guildafter):
         # TODO
-        await redis_cache.update_guild(guildafter)
-        await self.web.on_get_guild(guildafter.id)
+        await redis_cache.update_guild(
+            guildafter.guild,
+            server_webhooks=(await guild_webhooks(guildafter.guild)),
+        )
         await self.socketio.on_guild_update(guildafter)
 
     async def on_guild_role_create(self, role):
         if role.name == self.user.name and role.managed:
             await asyncio.sleep(2)
-        await redis_cache.update_guild(role.guild)
-        await self.web.on_get_guild(role.guild.id)
+        await redis_cache.update_guild(
+            role.guild, server_webhooks=(await guild_webhooks(role.guild))
+        )
         await self.socketio.on_guild_role_create(role)
 
     async def on_guild_role_delete(self, role):
         if role.guild.me not in role.guild.members:
             return
-        await redis_cache.update_guild(role.guild)
-        await self.web.on_get_guild(role.guild.id)
+        await redis_cache.update_guild(
+            role.guild, server_webhooks=(await guild_webhooks(role.guild))
+        )
         await self.socketio.on_guild_role_delete(role)
 
     async def on_guild_role_update(self, rolebefore, roleafter):
-        await redis_cache.update_guild(roleafter.guild)
-        await self.web.on_get_guild(roleafter.guild.id)
+        await redis_cache.update_guild(
+            roleafter.guild,
+            server_webhooks=(await guild_webhooks(roleafter.guild)),
+        )
         await self.socketio.on_guild_role_update(roleafter)
 
     async def on_guild_channel_delete(self, channel):
         if channel.guild:
-            await redis_cache.update_guild(channel.guild)
-            await self.web.on_get_guild(channel.guild.id)
+            await redis_cache.update_guild(
+                channel.guild,
+                server_webhooks=(await guild_webhooks(channel.guild)),
+            )
             await self.socketio.on_channel_delete(channel)
 
     async def on_guild_channel_create(self, channel):
         if channel.guild:
-            await redis_cache.update_guild(channel.guild)
-            await self.web.on_get_guild(channel.guild.id)
+            await redis_cache.update_guild(
+                channel.guild,
+                server_webhooks=(await guild_webhooks(channel.guild)),
+            )
             await self.socketio.on_channel_create(channel)
 
     async def on_guild_channel_update(self, channelbefore, channelafter):
-        await redis_cache.update_guild(channelafter.guild)
-        await self.web.on_get_guild(channelafter.guild.id)
+        await redis_cache.update_guild(
+            channelafter.guild,
+            server_webhooks=(await guild_webhooks(channelafter.guild)),
+        )
         await self.socketio.on_channel_update(channelafter)
 
     async def on_member_join(self, member):
         await redis_cache.add_member(member)
-        await self.web.on_get_guild_member(member.guild.id, member.id)
+        await redis_cache.add_member_to_guild(member.guild, member)
         await self.socketio.on_guild_member_add(member)
 
     async def on_member_remove(self, member):
@@ -229,15 +245,17 @@ class Titan(discord.AutoShardedClient):
         await redis_cache.ban_member(guild, user)
 
     async def on_guild_emojis_update(self, guild, before, after):
-        await redis_cache.update_guild(guild)
-        await self.web.on_get_guild(guild.id)
+        await redis_cache.update_guild(
+            guild, server_webhooks=(await guild_webhooks(guild))
+        )
         await self.socketio.on_guild_emojis_update(
             after if len(after) else before
         )
 
     # async def on_webhooks_update(self, channel):
     #     await redis_cache.update_guild(channel.guild)
-    #     await self.web.on_get_guild(channel.guild.id)
+    #     await redis_cache.update_guild(channel.guild,
+    #       server_webhooks=(await guild_webhooks(channel.guild)))
 
     async def on_raw_message_edit(self, payload):
         message_id = payload.message_id
@@ -350,8 +368,9 @@ class Titan(discord.AutoShardedClient):
         guild_id = int(msg["d"]["guild_id"])
         guild = self.get_guild(guild_id)
         if guild:
-            await redis_cache.update_guild(guild)
-            await self.web.on_get_guild(guild.id)
+            await redis_cache.update_guild(
+                guild, server_webhooks=(await guild_webhooks(guild))
+            )
 
     def in_messages_cache(self, msg_id):
         return any(x.id == msg_id for x in self._connection._messages)
