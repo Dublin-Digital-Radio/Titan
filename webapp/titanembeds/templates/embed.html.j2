@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html prefix="og: http://ogp.me/ns#">
   <head>
+    <link rel="preconnect" href="https://www.google.com">
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+
     <!--Import Google Icon Font-->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <!--Import materialize.css-->
@@ -45,7 +48,8 @@
 
     <title>{{ guild['name']|e }} - Embed - Titan Embeds for Discord</title>
     {% include 'google_analytics.html.j2' %}
-    <script src='https://www.google.com/recaptcha/api.js'></script>
+
+    <script src='https://www.google.com/recaptcha/api.js' async defer></script>
 
     <style id="user-defined-css">
       {% if css is not none %}
