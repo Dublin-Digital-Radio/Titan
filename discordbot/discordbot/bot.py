@@ -1,5 +1,4 @@
 import sys
-import json
 import asyncio
 import logging
 from collections import deque
@@ -10,12 +9,11 @@ import discord
 # import raven
 from config import config
 from redis.exceptions import ConnectionError
-from web_app import web_init
 
 from discordbot import commands, redis_cache
 from discordbot.poststats import BotsDiscordPw, DiscordBotsOrg
 from discordbot.socketio import SocketIOInterface
-from discordbot.utils import format_guild, format_message, format_user, guild_webhooks
+from discordbot.utils import guild_webhooks
 
 # try:
 #     raven_client = RavenClient(config["sentry-dsn"])
