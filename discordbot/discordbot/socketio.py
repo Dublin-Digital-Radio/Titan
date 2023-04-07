@@ -21,7 +21,7 @@ class SocketIOInterface:
             redis_uri, write_only=True, channel="flask-socketio"
         )
 
-    async def on_mess(self, action, message):
+    async def _on_mess(self, action, message):
         if not message.guild:
             log.error(
                 'missing guild from message: %s - "%s"',
@@ -38,24 +38,24 @@ class SocketIOInterface:
         )
 
     async def on_message(self, message):
-        await self.on_mess("MESSAGE_CREATE", message)
+        await self._on_mess("MESSAGE_CREATE", message)
 
     async def on_message_delete(self, message):
-        await self.on_mess("MESSAGE_DELETE", message)
+        await self._on_mess("MESSAGE_DELETE", message)
 
     async def on_message_update(self, message):
-        await self.on_mess("MESSAGE_UPDATE", message)
+        await self._on_mess("MESSAGE_UPDATE", message)
 
     async def on_reaction_add(self, message):
-        await self.on_mess("MESSAGE_REACTION_ADD", message)
+        await self._on_mess("MESSAGE_REACTION_ADD", message)
 
     async def on_reaction_remove(self, message):
-        await self.on_mess("MESSAGE_REACTION_REMOVE", message)
+        await self._on_mess("MESSAGE_REACTION_REMOVE", message)
 
     async def on_reaction_clear(self, message):
-        await self.on_mess("MESSAGE_REACTION_REMOVE_ALL", message)
+        await self._on_mess("MESSAGE_REACTION_REMOVE_ALL", message)
 
-    async def on_guild_member(self, message, member):
+    async def _on_guild_member(self, message, member):
         await self.io.emit(
             message,
             data=format_user(member),
@@ -64,13 +64,13 @@ class SocketIOInterface:
         )
 
     async def on_guild_member_add(self, member):
-        await self.on_guild_member("GUILD_MEMBER_ADD", member)
+        await self._on_guild_member("GUILD_MEMBER_ADD", member)
 
     async def on_guild_member_remove(self, member):
-        await self.on_guild_member("GUILD_MEMBER_REMOVE", member)
+        await self._on_guild_member("GUILD_MEMBER_REMOVE", member)
 
     async def on_guild_member_update(self, member):
-        await self.on_guild_member("GUILD_MEMBER_UPDATE", member)
+        await self._on_guild_member("GUILD_MEMBER_UPDATE", member)
 
     async def on_guild_emojis_update(self, emojis):
         if len(emojis) == 0:
@@ -83,7 +83,7 @@ class SocketIOInterface:
             namespace="/gateway",
         )
 
-    async def on_channel(self, channel, message):
+    async def _on_channel(self, channel, message):
         if str(channel.type) != "text":
             return
 
@@ -95,10 +95,10 @@ class SocketIOInterface:
         )
 
     async def on_channel_delete(self, channel):
-        await self.on_channel(channel, "CHANNEL_DELETE")
+        await self._on_channel(channel, "CHANNEL_DELETE")
 
     async def on_channel_create(self, channel):
-        await self.on_channel(channel, "CHANNEL_CREATE")
+        await self._on_channel(channel, "CHANNEL_CREATE")
 
     async def on_channel_update(self, channel):
         if not isinstance(
@@ -121,7 +121,7 @@ class SocketIOInterface:
             namespace="/gateway",
         )
 
-    async def on_guild_role(self, role, message):
+    async def _on_guild_role(self, role, message):
         await self.io.emit(
             message,
             data=format_role(role),
@@ -130,10 +130,10 @@ class SocketIOInterface:
         )
 
     async def on_guild_role_create(self, role):
-        await self.on_guild_role(role, "GUILD_ROLE_CREATE")
+        await self._on_guild_role(role, "GUILD_ROLE_CREATE")
 
     async def on_guild_role_update(self, role):
-        await self.on_guild_role(role, "GUILD_ROLE_UPDATE")
+        await self._on_guild_role(role, "GUILD_ROLE_UPDATE")
 
     async def on_guild_role_delete(self, role):
-        await self.on_guild_role(role, "GUILD_ROLE_DELETE")
+        await self._on_guild_role(role, "GUILD_ROLE_DELETE")
