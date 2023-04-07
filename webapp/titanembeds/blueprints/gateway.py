@@ -34,6 +34,19 @@ def teardown_db_session(func):
     return wrapped
 
 
+def check_guild_in_session(func):
+    @wraps(func)
+    def wrapped(*args, **kwargs):
+        if "socket_guild_id" not in session:
+            log.info("disconnect because socket_guild_id not in session:")
+            disconnect()
+            return
+
+        return func(*args, **kwargs)
+
+    return wrapped
+
+
 class Gateway(Namespace):
     def on_connect(self):
         gateway_identifier = os.environ.get("TITAN_GATEWAY_ID", None)
@@ -135,12 +148,8 @@ class Gateway(Namespace):
                 )
 
     @teardown_db_session
+    @check_guild_in_session
     async def on_heartbeat(self, data):
-        if "socket_guild_id" not in session:
-            log.info("disconnect because socket_guild_id not in session:")
-            disconnect()
-            return
-
         guild_id = data["guild_id"]
         visitor_mode = data["visitor_mode"]
         if not visitor_mode:
@@ -174,12 +183,8 @@ class Gateway(Namespace):
                 return
 
     @teardown_db_session
+    @check_guild_in_session
     def on_channel_list(self, data):
-        if "socket_guild_id" not in session:
-            log.info("disconnect because socket_guild_id not in session")
-            disconnect()
-            return
-
         guild_id = data["guild_id"]
         forced_role = get_forced_role(guild_id)
         force_everyone = data["visitor_mode"] or session.get(
@@ -198,12 +203,8 @@ class Gateway(Namespace):
         emit("channel_list", channels)
 
     @teardown_db_session
+    @check_guild_in_session
     def on_current_user_info(self, data):
-        if "socket_guild_id" not in session:
-            log.info("disconnect because socket_guild_id not in session")
-            disconnect()
-            return
-
         guild_id = data["guild_id"]
         if "user_keys" in session and not session["unauthenticated"]:
             db_member = bot_http_client.get_guild_member(
@@ -242,12 +243,8 @@ class Gateway(Namespace):
         return color
 
     @teardown_db_session
+    @check_guild_in_session
     def on_lookup_user_info(self, data):
-        if "socket_guild_id" not in session:
-            log.info("disconnect because socket_guild_id not in session")
-            disconnect()
-            return
-
         guild_id = data["guild_id"]
         name = data["name"]
         discriminator = data["discriminator"]
