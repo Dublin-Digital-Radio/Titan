@@ -125,6 +125,8 @@ def default_socketio_error_handler(e):
     log.error("Socketio error", exc_info=(type(e), e, e.__traceback__))
 
 
+socketio.on_namespace(gateway.Gateway("/gateway"))
+
 babel = Babel()
 babel.init_app(app)
 
@@ -143,7 +145,6 @@ app.register_blueprint(
 app.register_blueprint(
     embed.embed, url_prefix="/embed", template_folder="/templates"
 )
-socketio.on_namespace(gateway.Gateway("/gateway"))
 
 
 @babel.localeselector
