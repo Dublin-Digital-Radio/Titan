@@ -22,6 +22,6 @@ config = {
     "sentry-dsn": env.get("TITAN_WEBAPP_SENTRY_DSN", ""),
     "bot-http-port": env.get("TITAN_BOT_PORT", 8080),
     "bot-http-listen-interfaces": env.get(
-        "TITAN_BOT_HTTP_LISTEN_INTERFACES", "localhost"
+        "TITAN_BOT_HTTP_LISTEN_INTERFACES", "127.0.0.1"
     ),
 }

@@ -10,7 +10,7 @@ import discord
 # import raven
 from config import config
 from redis.exceptions import ConnectionError
-from web_app import web_start
+from web_app import web_init
 
 from discordbot import commands, redis_cache
 from discordbot.poststats import BotsDiscordPw, DiscordBotsOrg
@@ -83,8 +83,6 @@ class Titan(discord.AutoShardedClient):
     async def start(self, token: str, *, reconnect: bool = True) -> None:
         self.log.info("init redis")
         await redis_cache.init_redis(config["redis-uri"])
-        self.log.info("starting web")
-        await web_start(self)
         self.log.info("connecting to discord")
         await super().start(config["bot-token"], reconnect=reconnect)
 

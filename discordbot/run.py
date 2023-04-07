@@ -1,8 +1,9 @@
-import gc
+import asyncio
 import argparse
 
 import requests
 from config import config
+from web_app import web_app, web_init
 
 from discordbot.bot import Titan
 
@@ -19,7 +20,7 @@ def print_shards():
         print(r.text)
 
 
-def main():
+async def main():
     parser = argparse.ArgumentParser(
         description="Embed Discord like a True Titan (Discord Bot portion)"
     )
@@ -46,13 +47,31 @@ def main():
         return
 
     print("Starting...")
-    te = Titan(
+    bot = Titan(
         shard_ids=[args.shard_id] if args.shard_id is not None else None,
         shard_count=args.shard_count,
     )
-    te.run(config["bot-token"])
-    gc.collect()
+
+    web_init(bot)
+
+    async with bot:
+        listen = config["bot-http-listen-interfaces"]
+        if not listen:
+            bot.log.info("Not Starting HTTP service")
+        else:
+            bot.log.info(
+                "Starting HTTP service on %s:%s",
+                listen,
+                config["bot-http-port"],
+            )
+            bot.loop.create_task(
+                web_app.run_task(
+                    host=config["bot-http-listen-interfaces"],
+                    port=config["bot-http-port"],
+                )
+            )
+        await bot.start(config["bot-token"])
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

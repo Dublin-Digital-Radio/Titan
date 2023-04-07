@@ -6,7 +6,7 @@ kill_timeout = 5
 processes = []
 
 [env]
-TITAN_BOT_HTTP_LISTEN_INTERFACES="None"
+TITAN_BOT_HTTP_LISTEN_INTERFACES="[::]"
 
 [[services]]
     http_checks = []

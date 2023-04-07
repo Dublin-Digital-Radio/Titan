@@ -3,6 +3,7 @@ import logging
 
 import requests
 from config import config
+from requests.exceptions import ConnectionError
 
 log = logging.getLogger(__name__)
 
@@ -37,13 +38,21 @@ def get_ipv6_addr(host, port):
     addrs = socket.getaddrinfo(host, port)
     # ipv4_addrs = [addr[4][0] for addr in addrs if addr[0] == socket.AF_INET]
     ipv6_addrs = [addr[4][0] for addr in addrs if addr[0] == socket.AF_INET6]
-    return ipv6_addrs[0] if ipv6_addrs else None
+
+    ret = ipv6_addrs[0] if ipv6_addrs else None
+    log.info("found '%s'", ret)
+    return ret
 
 
 def http_get(path):
     url = f"{get_url()}/{path}"
     log.info("GET %s", url)
-    response = requests.get(url)
+
+    try:
+        response = requests.get(url)
+    except ConnectionError:
+        log.error("Could not connect to %s", url)
+        return None
 
     try:
         json = response.json()
