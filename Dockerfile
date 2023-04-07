@@ -97,6 +97,6 @@ RUN cd webapp && python bin/tr_compile.py
 
 USER titan
 WORKDIR /home/titan/Titan/webapp
-CMD ["gunicorn", "--worker-class", "eventlet", "-w", "1", "-b", "0.0.0.0:8080", "--log-level", "info", "--access-logfile", "-", "--error-logfile", "-", "--access-logformat", "%(h)s %(l)s %(u)s '%(r)s' %(s)s %(b)s '%(f)s' '%(a)s'" , "titanembeds.app:app"]
+CMD ["hypercorn", "-w", "1", "-b", "0.0.0.0:8080", "--log-level", "info", "--access-logfile", "-", "--error-logfile", "-", "--access-logformat", "%(h)s %(l)s %(u)s '%(r)s' %(s)s %(b)s '%(f)s' '%(a)s'" , "titanembeds.app:app"]
 
 

@@ -9,13 +9,13 @@ from urllib.parse import urlsplit, parse_qsl
 import requests
 import titanembeds.constants as constants
 from config import config
-from flask import Blueprint, abort
-from flask import current_app as app
-from flask import jsonify, request, session, url_for
 from flask_socketio import emit
 from itsdangerous.exc import BadSignature
+from quart import Blueprint, abort
+from quart import current_app as app
+from quart import jsonify, request, session, url_for
 from sqlalchemy import and_
-from titanembeds import bot_http_client, rate_limiter, redis_cache
+from titanembeds import bot_http_client, redis_cache
 from titanembeds.cache_keys import (
     channel_ratelimit_key,
     get_client_ipaddr,
@@ -37,6 +37,7 @@ from titanembeds.decorators import (
     valid_session_required,
 )
 from titanembeds.discord_rest import discord_api
+from titanembeds.rate_limiter import rate_limiter
 from titanembeds.utils import (
     check_guild_existance,
     check_user_in_guild,
@@ -63,9 +64,9 @@ api = Blueprint("api", __name__)
 
 
 @api.after_request
-def after_request(response):
+async def after_request(response):
     if response.is_json:
-        data = response.get_json()
+        data = await response.get_json()
 
         try:
             data["session"] = serializer.dumps(copy.deepcopy(dict(session)))
@@ -78,7 +79,7 @@ def after_request(response):
 
 
 @api.before_request
-def before_request():
+async def before_request():
     if not (authorization := request.headers.get("authorization", None)):
         return
 
@@ -406,7 +407,7 @@ def get_all_users(guild_id):
 @rate_limiter.limit("2 per 2 second", key_func=channel_ratelimit_key)
 # GET
 # 	https://ddr-titan.fly.dev/api/fetch?guild_id=1022123131948769430&channel_id=1022123131948769436&after=
-def fetch():
+async def fetch():
     log.info("fetch")
     guild_id = request.args.get("guild_id")
     channel_id = request.args.get("channel_id")
@@ -442,7 +443,7 @@ def fetch():
 @api.route("/fetch_visitor", methods=["GET"])
 @abort_if_guild_disabled()
 @rate_limiter.limit("2 per 2 second", key_func=channel_ratelimit_key)
-def fetch_visitor():
+async def fetch_visitor():
     guild_id = request.args.get("guild_id")
     channel_id = request.args.get("channel_id")
     after_snowflake = request.args.get("after", 0, type=int)
@@ -467,8 +468,9 @@ def fetch_visitor():
     return response
 
 
-def get_guild_specific_post_limit():
-    guild_id = int_or_none(request.form.get("guild_id", None))
+async def get_guild_specific_post_limit():
+    form = await request.form
+    guild_id = int_or_none(form.get("guild_id", None))
 
     if guild_id and (
         db_guild := db.session.query(Guilds)
@@ -498,15 +500,21 @@ def get_post_content_max_len(guild_id):
 @api.route("/post", methods=["POST"])
 @valid_session_required(api=True)
 @abort_if_guild_disabled()
-@rate_limiter.limit(
-    get_guild_specific_post_limit, key_func=channel_ratelimit_key
-)
-def post():
-    guild_id = request.form.get("guild_id")
-    channel_id = request.form.get("channel_id")
-    content = request.form.get("content", "")
-    file = getattr(request.files.get("file"), "filename", None) or None
-    rich_embed = json.loads(request.form.get("richembed", "{}"))
+# todo  get_guild_specific_post_limit is now async
+# @rate_limiter.limit(
+#    get_guild_specific_post_limit,
+#    key_func=channel_ratelimit_key,
+# )
+async def post():
+    form = await request.form
+    guild_id = form.get("guild_id")
+    channel_id = form.get("channel_id")
+    content = form.get("content", "")
+
+    files = await request.files
+    file = getattr(files.get("file"), "filename", None) or None
+
+    rich_embed = json.loads(form.get("richembed", "{}"))
 
     db_user = (
         bot_http_client.get_guild_member(guild_id, session["user_id"])
@@ -587,10 +595,11 @@ def verify_captcha_request(captcha_response, ip_address):
 @api.route("/create_unauthenticated_user", methods=["POST"])
 @rate_limiter.limit("6 per 30 minute", key_func=guild_ratelimit_key)
 @abort_if_guild_disabled()
-def create_unauthenticated_user():
+async def create_unauthenticated_user():
+    form = await request.form
     session["unauthenticated"] = True
-    username = request.form["username"].strip()
-    guild_id = request.form["guild_id"]
+    username = form["username"].strip()
+    guild_id = form["guild_id"]
     ip_address = get_client_ipaddr()
 
     if len(username) < 2 or len(username) > 32:
@@ -606,7 +615,7 @@ def create_unauthenticated_user():
 
     if guild_unauthcaptcha_enabled(guild_id):
         if not verify_captcha_request(
-            request.form["captcha_response"], request.remote_addr
+            form["captcha_response"], request.remote_addr
         ):
             abort(412)
 
@@ -642,9 +651,10 @@ def create_unauthenticated_user():
 @api.route("/change_unauthenticated_username", methods=["POST"])
 @rate_limiter.limit("1 per 10 minute", key_func=guild_ratelimit_key)
 @abort_if_guild_disabled()
-def change_unauthenticated_username():
-    username = request.form["username"].strip()
-    guild_id = request.form["guild_id"]
+async def change_unauthenticated_username():
+    form = await request.form
+    username = form["username"].strip()
+    guild_id = form["guild_id"]
     ip_address = get_client_ipaddr()
 
     if len(username) < 2 or len(username) > 32:
@@ -738,7 +748,7 @@ def process_query_guild(guild_id, visitor=False):
 @api.route("/query_guild", methods=["GET"])
 @valid_session_required(api=True)
 @abort_if_guild_disabled()
-def query_guild():
+async def query_guild():
     guild_id = request.args.get("guild_id")
 
     if not check_guild_existance(guild_id):
@@ -753,7 +763,7 @@ def query_guild():
 
 @api.route("/query_guild_visitor", methods=["GET"])
 @abort_if_guild_disabled()
-def query_guild_visitor():
+async def query_guild_visitor():
     guild_id = request.args.get("guild_id")
 
     if not check_guild_existance(guild_id):
@@ -767,7 +777,7 @@ def query_guild_visitor():
 @api.route("/server_members", methods=["GET"])
 @abort_if_guild_disabled()
 @valid_session_required(api=True)
-def server_members():
+async def server_members():
     guild_id = request.args.get("guild_id", None)
 
     if not check_guild_existance(guild_id):
@@ -780,7 +790,7 @@ def server_members():
 
 @api.route("/server_members_visitor", methods=["GET"])
 @abort_if_guild_disabled()
-def server_members_visitor():
+async def server_members_visitor():
     abort(404)
     guild_id = request.args.get("guild_id", None)
 
@@ -818,13 +828,14 @@ def query_server_members(guild_id):
 @api.route("/create_authenticated_user", methods=["POST"])
 @discord_users_only(api=True)
 @abort_if_guild_disabled()
-def create_authenticated_user():
+async def create_authenticated_user():
     if session["unauthenticated"]:
         response = jsonify(error=True)
         response.status_code = 401
         return response
 
-    guild_id = request.form.get("guild_id")
+    form = await request.form
+    guild_id = form.get("guild_id")
     if not check_guild_existance(guild_id):
         abort(404)
 
@@ -864,7 +875,7 @@ def create_authenticated_user():
 
 @api.route("/user/<guild_id>/<user_id>")
 @abort_if_guild_disabled()
-def user_info(guild_id, user_id):
+async def user_info(guild_id, user_id):
     usr = {
         "id": None,
         "username": None,
@@ -903,13 +914,13 @@ def user_info(guild_id, user_id):
 @api.route("/user/<guild_id>")
 @abort_if_guild_disabled()
 @valid_session_required(api=True)
-def list_users(guild_id):
+async def list_users(guild_id):
     return jsonify(get_all_users(guild_id))
 
 
 @api.route("/webhook/discordbotsorg/vote", methods=["POST"])
-def webhook_discordbotsorg_vote():
-    incoming = request.get_json()
+async def webhook_discordbotsorg_vote():
+    incoming = await request.get_json()
 
     if str(config["client-id"]) != str(incoming.get("bot")):
         abort(401)
@@ -937,7 +948,7 @@ def webhook_discordbotsorg_vote():
 
 
 @api.route("/bot/ban", methods=["POST"])
-def bot_ban():
+async def bot_ban():
     if request.headers.get("Authorization", "") != config.get("app-secret", ""):
         return jsonify(error="Authorization header does not match."), 403
 
@@ -990,7 +1001,7 @@ def bot_ban():
 
 
 @api.route("/bot/unban", methods=["POST"])
-def bot_unban():
+async def bot_unban():
     if request.headers.get("Authorization", "") != config.get("app-secret", ""):
         return jsonify(error="Authorization header does not match."), 403
 
@@ -1040,7 +1051,7 @@ def bot_unban():
 
 
 @api.route("/bot/revoke", methods=["POST"])
-def bot_revoke():
+async def bot_revoke():
     if request.headers.get("Authorization", "") != config.get("app-secret", ""):
         return jsonify(error="Authorization header does not match."), 403
     incoming = request.get_json()
@@ -1070,7 +1081,7 @@ def bot_revoke():
 
 
 @api.route("/bot/members")
-def bot_members():
+async def bot_members():
     if request.headers.get("Authorization", "") != config.get("app-secret", ""):
         return jsonify(error="Authorization header does not match."), 403
 
@@ -1078,11 +1089,12 @@ def bot_members():
 
 
 @api.route("/af/direct_message", methods=["POST"])
-def af_direct_message_post():
+async def af_direct_message_post():
+    form = await request.form
     payload = {
         "key": config["cleverbot-api-key"],
-        "cs": request.form.get("cs", None),
-        "input": request.form.get("input"),
+        "cs": form.get("cs", None),
+        "input": form.get("input"),
     }
     r = requests.get(CLEVERBOT_URL, params=payload)
 

@@ -29,7 +29,6 @@ config = {
     # redirect all http to https - cannot be used with `https-proxy`
     "enable-ssl": env.get("TITAN_ENABLE_SSL", False),
     #
-    "websockets-mode": env.get("WEBSOCKETS_MODE", "eventlet"),
     "engineio-logging": True,
     # https://titanembeds.com/api/webhook/discordbotsorg/vote
     # Secret code used in the authorization header for DBL webhook

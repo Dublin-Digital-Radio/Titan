@@ -1,7 +1,7 @@
 import logging
 
 from config import config
-from flask import request, session, url_for
+from quart import request, session, url_for
 from requests_oauthlib import OAuth2Session
 
 log = logging.getLogger(__name__)

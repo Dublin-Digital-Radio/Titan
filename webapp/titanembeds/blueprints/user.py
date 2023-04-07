@@ -2,7 +2,8 @@ import json
 import logging
 from pprint import pformat
 
-from flask import (
+from flask_socketio import emit
+from quart import (
     Blueprint,
     abort,
     jsonify,
@@ -12,7 +13,6 @@ from flask import (
     session,
     url_for,
 )
-from flask_socketio import emit
 from titanembeds import bot_http_client
 from titanembeds.database import (
     Cosmetics,
@@ -49,7 +49,7 @@ user_bp = Blueprint("user", __name__)
 
 
 @user_bp.route("/login_authenticated", methods=["GET"])
-def login_authenticated():
+async def login_authenticated():
     session["redirect"] = request.args.get("redirect")
     authorization_url, state = get_authorization_url(
         ["identify", "guilds", "guilds.join"]
@@ -60,15 +60,16 @@ def login_authenticated():
 
 
 @user_bp.route("/callback", methods=["GET"])
-def callback():
+async def callback():
     if not (state := session.get("oauth2_state")):
         return redirect(url_for("user.logout", error="state_error"))
 
-    if request.values.get("error"):
+    values = await request.values
+    if await values.get("error"):
         return redirect(
             url_for(
                 "user.logout",
-                error=f"discord_error {request.values.get('error')}",
+                error=f"discord_error {await values.get('error')}",
             )
         )
 
@@ -105,7 +106,7 @@ def callback():
 
 
 @user_bp.route("/logout", methods=["GET"])
-def logout():
+async def logout():
     session.clear()
     if redir := session.get("redirect", None) or request.args.get(
         "redirect", None
@@ -127,7 +128,7 @@ def count_user_premium_css():
 
 @user_bp.route("/dashboard")
 @discord_users_only()
-def dashboard():
+async def dashboard():
     error = request.args.get("error")
     if session["redirect"] and not (error and error == "access_denied"):
         redir = session["redirect"]
@@ -150,7 +151,7 @@ def dashboard():
     else:
         css_list = None
 
-    return render_template(
+    return await render_template(
         "dashboard.html.j2",
         servers=get_user_managed_servers(),
         icon_generate=generate_guild_icon_url,
@@ -162,7 +163,7 @@ def dashboard():
 
 @user_bp.route("/custom_css/new", methods=["GET"])
 @discord_users_only()
-def new_custom_css_get():
+async def new_custom_css_get():
     cosmetics = (
         db.session.query(Cosmetics)
         .filter(Cosmetics.user_id == session["user_id"])
@@ -171,7 +172,7 @@ def new_custom_css_get():
     if not cosmetics or not cosmetics.css:
         abort(403)
 
-    return render_template(
+    return await render_template(
         "usercss.html.j2",
         new=True,
         cosmetics=cosmetics,
@@ -181,7 +182,7 @@ def new_custom_css_get():
 
 @user_bp.route("/custom_css/new", methods=["POST"])
 @discord_users_only()
-def new_custom_css_post():
+async def new_custom_css_post():
     cosmetics = (
         db.session.query(Cosmetics)
         .filter(Cosmetics.user_id == session["user_id"])
@@ -190,11 +191,12 @@ def new_custom_css_post():
     if not cosmetics or not cosmetics.css:
         abort(403)
 
-    name = request.form.get("name", "").strip()
+    form = await request.form
+    name = form.get("name", "").strip()
     user_id = session["user_id"]
-    css = request.form.get("css", "").strip() or None
-    variables = request.form.get("variables", None)
-    variables_enabled = request.form.get("variables_enabled", False) in [
+    css = form.get("css", "").strip() or None
+    variables = form.get("variables", None)
+    variables_enabled = form.get("variables_enabled", False) in [
         "true",
         True,
     ]
@@ -211,7 +213,7 @@ def new_custom_css_post():
 
 @user_bp.route("/custom_css/edit/<css_id>", methods=["GET"])
 @discord_users_only()
-def edit_custom_css_get(css_id):
+async def edit_custom_css_get(css_id):
     cosmetics = (
         db.session.query(Cosmetics)
         .filter(Cosmetics.user_id == session["user_id"])
@@ -226,7 +228,7 @@ def edit_custom_css_get(css_id):
     if str(css.user_id) != str(session["user_id"]):
         abort(403)
 
-    return render_template(
+    return await render_template(
         "usercss.html.j2",
         new=False,
         css=css,
@@ -238,7 +240,7 @@ def edit_custom_css_get(css_id):
 
 @user_bp.route("/custom_css/edit/<css_id>", methods=["POST"])
 @discord_users_only()
-def edit_custom_css_post(css_id):
+async def edit_custom_css_post(css_id):
     cosmetics = (
         db.session.query(Cosmetics)
         .filter(Cosmetics.user_id == session["user_id"])
@@ -254,13 +256,14 @@ def edit_custom_css_post(css_id):
     if db_css.user_id != session["user_id"]:
         abort(403)
 
-    if not (name := request.form.get("name", "").strip()):
+    form = await request.form
+    if not (name := form.get("name", "").strip()):
         abort(400)
 
     db_css.name = name
-    db_css.css = request.form.get("css", "").strip() or None
-    db_css.css_variables = request.form.get("variables", None)
-    db_css.css_var_bool = request.form.get("variables_enabled", False) in [
+    db_css.css = form.get("css", "").strip() or None
+    db_css.css_variables = form.get("variables", None)
+    db_css.css_var_bool = form.get("variables_enabled", False) in [
         "true",
         True,
     ]
@@ -271,7 +274,7 @@ def edit_custom_css_post(css_id):
 
 @user_bp.route("/custom_css/edit/<css_id>", methods=["DELETE"])
 @discord_users_only()
-def edit_custom_css_delete(css_id):
+async def edit_custom_css_delete(css_id):
     cosmetics = (
         db.session.query(Cosmetics)
         .filter(Cosmetics.user_id == session["user_id"])
@@ -293,7 +296,7 @@ def edit_custom_css_delete(css_id):
 
 @user_bp.route("/administrate_guild/<guild_id>", methods=["GET"])
 @discord_users_only()
-def administrate_guild(guild_id):
+async def administrate_guild(guild_id):
     if not check_user_can_administrate_guild(guild_id):
         return redirect(url_for("user.dashboard"))
 
@@ -371,7 +374,7 @@ def administrate_guild(guild_id):
         "send_rich_embed": db_guild.send_rich_embed,
     }
 
-    return render_template(
+    return await render_template(
         "administrate_guild.html.j2",
         guild=dbguild_dict,
         members=users,
@@ -383,7 +386,7 @@ def administrate_guild(guild_id):
 
 @user_bp.route("/administrate_guild/<guild_id>", methods=["POST"])
 @discord_users_only()
-def update_administrate_guild(guild_id):
+async def update_administrate_guild(guild_id):
     if guild_id in list_disabled_guilds():
         return "", 423
     if not check_user_can_administrate_guild(guild_id):
@@ -397,72 +400,64 @@ def update_administrate_guild(guild_id):
         abort(403)
 
     true = ["true", True]
+    form = await request.form
     db_guild.unauth_users = (
-        request.form.get("unauth_users", db_guild.unauth_users) in true
+        form.get("unauth_users", db_guild.unauth_users) in true
     )
     db_guild.visitor_view = (
-        request.form.get("visitor_view", db_guild.visitor_view) in true
+        form.get("visitor_view", db_guild.visitor_view) in true
     )
     db_guild.webhook_messages = (
-        request.form.get("webhook_messages", db_guild.webhook_messages) in true
+        form.get("webhook_messages", db_guild.webhook_messages) in true
     )
-    db_guild.chat_links = (
-        request.form.get("chat_links", db_guild.chat_links) in true
-    )
+    db_guild.chat_links = form.get("chat_links", db_guild.chat_links) in true
     db_guild.bracket_links = (
-        request.form.get("bracket_links", db_guild.bracket_links) in true
+        form.get("bracket_links", db_guild.bracket_links) in true
     )
-    db_guild.mentions_limit = request.form.get(
+    db_guild.mentions_limit = form.get(
         "mentions_limit", db_guild.mentions_limit
     )
     db_guild.unauth_captcha = (
-        request.form.get("unauth_captcha", db_guild.unauth_captcha) in true
+        form.get("unauth_captcha", db_guild.unauth_captcha) in true
     )
-    db_guild.post_timeout = request.form.get(
-        "post_timeout", db_guild.post_timeout
-    )
-    db_guild.max_message_length = request.form.get(
+    db_guild.post_timeout = form.get("post_timeout", db_guild.post_timeout)
+    db_guild.max_message_length = form.get(
         "max_message_length", db_guild.max_message_length
     )
     db_guild.banned_words_enabled = (
-        request.form.get("banned_words_enabled", db_guild.banned_words_enabled)
-        in true
+        form.get("banned_words_enabled", db_guild.banned_words_enabled) in true
     )
     db_guild.banned_words_global_included = (
-        request.form.get(
+        form.get(
             "banned_words_global_included",
             db_guild.banned_words_global_included,
         )
         in true
     )
-    db_guild.autorole_unauth = request.form.get(
+    db_guild.autorole_unauth = form.get(
         "autorole_unauth", db_guild.autorole_unauth, type=int
     )
-    db_guild.autorole_discord = request.form.get(
+    db_guild.autorole_discord = form.get(
         "autorole_discord", db_guild.autorole_discord, type=int
     )
-    db_guild.file_upload = (
-        request.form.get("file_upload", db_guild.file_upload) in true
-    )
+    db_guild.file_upload = form.get("file_upload", db_guild.file_upload) in true
     db_guild.send_rich_embed = (
-        request.form.get("send_rich_embed", db_guild.send_rich_embed) in true
+        form.get("send_rich_embed", db_guild.send_rich_embed) in true
     )
 
-    invite_link = request.form.get("invite_link", db_guild.invite_link)
+    invite_link = form.get("invite_link", db_guild.invite_link)
     if invite_link is not None and invite_link.strip() == "":
         invite_link = None
     db_guild.invite_link = invite_link
 
-    guest_icon = request.form.get("guest_icon", db_guild.guest_icon)
+    guest_icon = form.get("guest_icon", db_guild.guest_icon)
     if guest_icon is not None and guest_icon.strip() == "":
         guest_icon = None
     db_guild.guest_icon = guest_icon
 
-    banned_word = request.form.get("banned_word", None)
+    banned_word = form.get("banned_word", None)
     if banned_word:
-        delete_banned_word = (
-            request.form.get("delete_banned_word", False) in true
-        )
+        delete_banned_word = form.get("delete_banned_word", False) in true
         banned_words = set(json.loads(db_guild.banned_words))
         if delete_banned_word:
             banned_words.discard(banned_word)
@@ -507,9 +502,9 @@ def update_administrate_guild(guild_id):
 
 @user_bp.route("/add-bot/<guild_id>")
 @discord_users_only()
-def add_bot(guild_id):
+async def add_bot(guild_id):
     session["redirect"] = None
-    return render_template(
+    return await render_template(
         "add_bot.html.j2",
         guild_id=guild_id,
         guild_invite_url=generate_bot_invite_url(guild_id),
@@ -560,10 +555,11 @@ def prepare_guild_members_list(members, bans):
 
 @user_bp.route("/ban", methods=["POST"])
 @discord_users_only(api=True)
-def ban_unauthenticated_user():
-    guild_id = request.form.get("guild_id", None)
-    user_id = request.form.get("user_id", None)
-    reason = request.form.get("reason", None)
+async def ban_unauthenticated_user():
+    form = await request.form
+    guild_id = form.get("guild_id", None)
+    user_id = form.get("user_id", None)
+    reason = form.get("reason", None)
 
     if guild_id in list_disabled_guilds():
         return "", 423
@@ -619,7 +615,7 @@ def ban_unauthenticated_user():
 
 @user_bp.route("/ban", methods=["DELETE"])
 @discord_users_only(api=True)
-def unban_unauthenticated_user():
+async def unban_unauthenticated_user():
     guild_id = request.args.get("guild_id", None)
     user_id = request.args.get("user_id", None)
 
@@ -663,9 +659,10 @@ def unban_unauthenticated_user():
 
 @user_bp.route("/revoke", methods=["POST"])
 @discord_users_only(api=True)
-def revoke_unauthenticated_user():
-    guild_id = request.form.get("guild_id", None)
-    user_id = request.form.get("user_id", None)
+async def revoke_unauthenticated_user():
+    form = await request.form
+    guild_id = form.get("guild_id", None)
+    user_id = form.get("user_id", None)
 
     if guild_id in list_disabled_guilds():
         return "", 423

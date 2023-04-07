@@ -2,8 +2,8 @@
 import logging
 
 from config import config
-from flask import session
 from itsdangerous import URLSafeSerializer
+from quart import session
 from sqlalchemy import and_
 from titanembeds import bot_http_client
 from titanembeds.cache_keys import get_client_ipaddr

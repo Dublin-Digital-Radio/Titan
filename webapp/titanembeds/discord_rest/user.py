@@ -1,9 +1,9 @@
 import json
 from pprint import pformat
 
-from flask import abort, request, session
 from flask_socketio import disconnect
 from oauthlib.oauth2 import InvalidGrantError
+from quart import abort, request, session
 from titanembeds import redis_cache
 from titanembeds.cache_keys import make_user_cache_key
 from titanembeds.discord_rest.oauth import (

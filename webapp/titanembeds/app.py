@@ -1,45 +1,33 @@
+# isort: off
+import quart.flask_patch
+
+# isort: on
+
 import time
 import random
 import logging
 from datetime import date, datetime, timedelta
 from urllib.parse import urlparse
 
+import titanembeds.constants as constants
 from config import config
 from flask_babel import Babel
 from flask_socketio import SocketIO, disconnect
-from werkzeug.middleware.proxy_fix import ProxyFix
-
-from .constants import LANGUAGE_CODE_LIST
-
-try:
-    import uwsgi
-    from gevent import monkey
-
-    monkey.patch_all()
-except:
-    if config.get("websockets-mode", None) == "eventlet":
-        import eventlet
-
-        eventlet.monkey_patch()
-    elif config.get("websockets-mode", None) == "gevent":
-        from gevent import monkey
-
-        monkey.patch_all()
-
-import titanembeds.constants as constants
-from flask import Flask, render_template, request
 from flask_sslify import SSLify
+from quart import Quart, render_template, request
 from titanembeds.database import (
     get_administrators_list,
     get_application_settings,
     init_application_settings,
 )
+from werkzeug.middleware.proxy_fix import ProxyFix
 
-from . import rate_limiter
 from .blueprints import admin, api, embed, gateway, user
+from .constants import LANGUAGE_CODE_LIST
 from .database import db
 from .discord_rest import discord_api
 from .flask_cdn import CDN
+from .rate_limiter import rate_limiter
 from .redis_cache import init_redis
 
 
@@ -53,7 +41,7 @@ class ConfigError(Error):
 
 app_start_stamp = time.time()
 
-app = Flask(__name__.split(".")[0], static_folder="static")
+app = Quart(__name__.split(".")[0], static_folder="static")
 
 if __name__ != "__main__":
     gunicorn_logger = logging.getLogger("gunicorn.error")
@@ -93,6 +81,7 @@ def strip_scheme(url):
     return parsed.geturl().replace(scheme, "", 1)
 
 
+app.config["CDN_HTTPS"] = True
 if config["cdn-domain"]:
     app.config["CDN_DOMAIN"] = strip_scheme(config["cdn-domain"])
     app.config["CDN_TIMESTAMP"] = False
@@ -108,7 +97,7 @@ if config["enable-ssl"] and config["https-proxy"]:
 if config["enable-ssl"]:
     sslify = SSLify(app, permanent=True)
 if config["https-proxy"]:
-    app.wsgi_app = ProxyFix(app.wsgi_app)
+    app.wsgi_app = ProxyFix(app.asgi_app)
 
 socketio = SocketIO(logger=log, engineio_logger=log)
 socketio.init_app(
@@ -131,9 +120,13 @@ babel = Babel()
 babel.init_app(app)
 
 init_redis(config["redis-uri"])
-with app.app_context():
-    init_application_settings()
-    discord_api.init_discordrest()
+
+
+@app.before_first_request
+async def init_stuff():
+    async with app.app_context():
+        init_application_settings()
+        discord_api.init_discordrest()
 
 app.register_blueprint(api.api, url_prefix="/api", template_folder="/templates")
 app.register_blueprint(
@@ -156,41 +149,41 @@ def get_locale():
 
 
 @app.route("/")
-def index():
-    return render_template("index.html.j2")
+async def index():
+    return await render_template("index.html.j2")
 
 
 @app.route("/about")
-def about():
-    return render_template("about.html.j2")
+async def about():
+    return await render_template("about.html.j2")
 
 
 @app.route("/terms")
-def terms():
-    return render_template("terms_and_conditions.html.j2")
+async def terms():
+    return await render_template("terms_and_conditions.html.j2")
 
 
 @app.route("/privacy")
-def privacy():
-    return render_template("privacy_policy.html.j2")
+async def privacy():
+    return await render_template("privacy_policy.html.j2")
 
 
 @app.route("/vote")
-def vote():
-    return render_template(
+async def vote():
+    return await render_template(
         "discordbotsorg_vote.html.j2",
         referrer=request.args.get("referrer", None),
     )
 
 
 @app.route("/global_banned_words")
-def global_banned_words():
-    return render_template("global_banned_words.html.j2")
+async def global_banned_words():
+    return await render_template("global_banned_words.html.j2")
 
 
 @app.route("/licence")
-def licence():
-    return render_template("LICENCE")
+async def licence():
+    return await render_template("LICENCE")
 
 
 @app.context_processor
@@ -209,7 +202,7 @@ def context_processor():
 
 # @app.errorhandler(500)
 # def internal_server_error(error):
-#     return render_template('500.html.j2',
+#     return await render_template('500.html.j2',
 #         event_id=g.sentry_event_id,
 #         public_dsn=sentry.client.get_public_dsn('https')
 #     ), 500

@@ -2,8 +2,8 @@ import os
 import time
 import logging
 
-from flask import session
 from flask_socketio import Namespace, disconnect, emit, join_room, leave_room
+from quart import session
 from titanembeds import bot_http_client, redis_cache
 from titanembeds.cache_keys import get_client_ipaddr
 from titanembeds.database import db

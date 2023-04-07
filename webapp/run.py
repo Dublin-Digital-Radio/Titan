@@ -7,7 +7,7 @@ from titanembeds.app import app, socketio
 def init_debug():
     import os
 
-    from flask import jsonify, request
+    from quart import jsonify, request
 
     os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"  # Testing oauthlib
 
@@ -18,8 +18,8 @@ def init_debug():
     def decode_flask_cookie(secret_key, cookie_str):
         import hashlib
 
-        from flask.sessions import TaggedJSONSerializer
         from itsdangerous import URLSafeTimedSerializer
+        from quart.sessions import TaggedJSONSerializer
 
         salt = "cookie-session"
         serializer = TaggedJSONSerializer()
@@ -36,7 +36,7 @@ def init_debug():
         return s.loads(cookie_str)
 
     @app.route("/session")
-    def session():
+    async def session():
         cookie = request.cookies.get("session")
         if cookie:
             decoded = decode_flask_cookie(
@@ -47,14 +47,14 @@ def init_debug():
         return jsonify(session_cookie=decoded)
 
     @app.route("/github-update", methods=["POST"])
-    def github_update():
+    async def github_update():
         try:
             subprocess.Popen("git pull", shell=True).wait()
         except OSError:
             return "ERROR"
 
     @app.route("/error")
-    def make_error():
+    async def make_error():
         _var = 1 / 0
         return "OK"
 

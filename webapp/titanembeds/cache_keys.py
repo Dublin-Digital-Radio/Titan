@@ -3,7 +3,7 @@ import string
 import hashlib
 
 from config import config
-from flask import request, session
+from quart import request, session
 
 
 def get_client_ipaddr():
@@ -48,20 +48,23 @@ def make_guilds_cache_key():
     return sess + ip + "user_guilds"
 
 
-def make_guildchannels_cache_key():
-    guild_id = request.values.get("guild_id", "0")
+async def make_guildchannels_cache_key():
+    values = await request.values
+    guild_id = values.get("guild_id", "0")
     sess = generate_session_key()
     ip = get_client_ipaddr()
     return sess + ip + guild_id + "user_guild_channels"
 
 
-def channel_ratelimit_key():  # Generate a bucket with given channel & unique session key
+async def channel_ratelimit_key():  # Generate a bucket with given channel & unique session key
     sess = generate_session_key()
-    channel_id = request.values.get("channel_id", "0")
+    values = await request.values
+    channel_id = values.get("channel_id", "0")
     return sess + channel_id
 
 
-def guild_ratelimit_key():
+async def guild_ratelimit_key():
     ip = get_client_ipaddr()
-    guild_id = request.values.get("guild_id", "0")
+    values = await request.values
+    guild_id = values.get("guild_id", "0")
     return ip + guild_id

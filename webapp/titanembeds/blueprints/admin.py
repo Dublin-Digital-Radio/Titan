@@ -3,7 +3,8 @@ import datetime
 import operator
 from functools import wraps
 
-from flask import (
+from flask_socketio import emit
+from quart import (
     Blueprint,
     abort,
     jsonify,
@@ -13,7 +14,6 @@ from flask import (
     session,
     url_for,
 )
-from flask_socketio import emit
 from titanembeds import bot_http_client
 from titanembeds.database import (
     ApplicationSettings,
@@ -62,31 +62,32 @@ def get_online_users_count():
 
 @admin.route("/")
 @is_admin
-def index():
-    return render_template(
+async def index():
+    return await render_template(
         "admin_index.html.j2", count=get_online_users_count()
     )
 
 
 @admin.route("/cosmetics", methods=["GET"])
 @is_admin
-def cosmetics():
+async def cosmetics():
     entries = db.session.query(Cosmetics).all()
-    return render_template("admin_cosmetics.html.j2", cosmetics=entries)
+    return await render_template("admin_cosmetics.html.j2", cosmetics=entries)
 
 
 @admin.route("/cosmetics", methods=["POST"])
 @is_admin
-def cosmetics_post():
-    user_id = request.form.get("user_id", None)
+async def cosmetics_post():
+    form = await request.form
+    user_id = form.get("user_id", None)
     if not user_id:
         abort(400)
 
-    css = request.form.get("css", None)
-    css_limit = int(request.form.get("css_limit", 0))
-    guest_icon = request.form.get("guest_icon", None)
-    send_rich_embed = request.form.get("send_rich_embed", None)
-    badges = request.form.get("badges", None)
+    css = form.get("css", None)
+    css_limit = int(form.get("css_limit", 0))
+    guest_icon = form.get("guest_icon", None)
+    send_rich_embed = form.get("send_rich_embed", None)
+    badges = form.get("badges", None)
     entry = (
         db.session.query(Cosmetics).filter(Cosmetics.user_id == user_id).first()
     )
@@ -120,8 +121,9 @@ def cosmetics_post():
 
 @admin.route("/cosmetics", methods=["DELETE"])
 @is_admin
-def cosmetics_delete():
-    user_id = request.form.get("user_id", None)
+async def cosmetics_delete():
+    form = await request.form
+    user_id = form.get("user_id", None)
     if not user_id:
         abort(400)
 
@@ -139,16 +141,17 @@ def cosmetics_delete():
 
 @admin.route("/cosmetics", methods=["PATCH"])
 @is_admin
-def cosmetics_patch():
-    user_id = request.form.get("user_id", None)
+async def cosmetics_patch():
+    form = await request.form
+    user_id = form.get("user_id", None)
     if not user_id:
         abort(400)
 
-    css = request.form.get("css", None)
-    css_limit = request.form.get("css_limit", None)
-    guest_icon = request.form.get("guest_icon", None)
-    send_rich_embed = request.form.get("send_rich_embed", None)
-    badges = request.form.get("badges", None)
+    css = form.get("css", None)
+    css_limit = form.get("css_limit", None)
+    guest_icon = form.get("guest_icon", None)
+    send_rich_embed = form.get("send_rich_embed", None)
+    badges = form.get("badges", None)
 
     entry = (
         db.session.query(Cosmetics).filter(Cosmetics.user_id == user_id).first()
@@ -223,7 +226,7 @@ def prepare_guild_members_list(members, bans):
 
 @admin.route("/administrate_guild/<guild_id>", methods=["GET"])
 @is_admin
-def administrate_guild(guild_id):
+async def administrate_guild(guild_id):
     guild = bot_http_client.get_guild(guild_id)
     if not guild:
         abort(404)
@@ -290,7 +293,7 @@ def administrate_guild(guild_id):
         "send_rich_embed": db_guild.send_rich_embed,
     }
 
-    return render_template(
+    return await render_template(
         "administrate_guild.html.j2",
         guild=dbguild_dict,
         members=users,
@@ -301,72 +304,60 @@ def administrate_guild(guild_id):
 
 @admin.route("/administrate_guild/<guild_id>", methods=["POST"])
 @is_admin
-def update_administrate_guild(guild_id):
+async def update_administrate_guild(guild_id):
     true = ["true", True]
 
+    form = await request.form
     guild = db.session.query(Guilds).filter(Guilds.guild_id == guild_id).first()
-    guild.unauth_users = (
-        request.form.get("unauth_users", guild.unauth_users) in true
-    )
-    guild.visitor_view = (
-        request.form.get("visitor_view", guild.visitor_view) in true
-    )
+    guild.unauth_users = form.get("unauth_users", guild.unauth_users) in true
+    guild.visitor_view = form.get("visitor_view", guild.visitor_view) in true
     guild.webhook_messages = (
-        request.form.get("webhook_messages", guild.webhook_messages) in true
+        form.get("webhook_messages", guild.webhook_messages) in true
     )
 
-    guild.chat_links = request.form.get("chat_links", guild.chat_links) in true
-    guild.bracket_links = (
-        request.form.get("bracket_links", guild.bracket_links) in true
-    )
-    guild.mentions_limit = request.form.get(
-        "mentions_limit", guild.mentions_limit
-    )
+    guild.chat_links = form.get("chat_links", guild.chat_links) in true
+    guild.bracket_links = form.get("bracket_links", guild.bracket_links) in true
+    guild.mentions_limit = form.get("mentions_limit", guild.mentions_limit)
     guild.unauth_captcha = (
-        request.form.get("unauth_captcha", guild.unauth_captcha) in true
+        form.get("unauth_captcha", guild.unauth_captcha) in true
     )
-    guild.post_timeout = request.form.get("post_timeout", guild.post_timeout)
-    guild.max_message_length = request.form.get(
+    guild.post_timeout = form.get("post_timeout", guild.post_timeout)
+    guild.max_message_length = form.get(
         "max_message_length", guild.max_message_length
     )
     guild.banned_words_enabled = (
-        request.form.get("banned_words_enabled", guild.banned_words_enabled)
-        in true
+        form.get("banned_words_enabled", guild.banned_words_enabled) in true
     )
     guild.banned_words_global_included = (
-        request.form.get(
+        form.get(
             "banned_words_global_included", guild.banned_words_global_included
         )
         in true
     )
-    guild.autorole_unauth = request.form.get(
+    guild.autorole_unauth = form.get(
         "autorole_unauth", guild.autorole_unauth, type=int
     )
-    guild.autorole_discord = request.form.get(
+    guild.autorole_discord = form.get(
         "autorole_discord", guild.autorole_discord, type=int
     )
-    guild.file_upload = (
-        request.form.get("file_upload", guild.file_upload) in true
-    )
+    guild.file_upload = form.get("file_upload", guild.file_upload) in true
     guild.send_rich_embed = (
-        request.form.get("send_rich_embed", guild.send_rich_embed) in true
+        form.get("send_rich_embed", guild.send_rich_embed) in true
     )
-    invite_link = request.form.get("invite_link", guild.invite_link)
+    invite_link = form.get("invite_link", guild.invite_link)
 
     if invite_link is not None and invite_link.strip() == "":
         invite_link = None
 
     guild.invite_link = invite_link
-    guest_icon = request.form.get("guest_icon", guild.guest_icon)
+    guest_icon = form.get("guest_icon", guild.guest_icon)
     if guest_icon is not None and guest_icon.strip() == "":
         guest_icon = None
     guild.guest_icon = guest_icon
 
-    banned_word = request.form.get("banned_word", None)
+    banned_word = form.get("banned_word", None)
     if banned_word:
-        delete_banned_word = (
-            request.form.get("delete_banned_word", False) in true
-        )
+        delete_banned_word = form.get("delete_banned_word", False) in true
         banned_words = set(json.loads(guild.banned_words))
         if delete_banned_word:
             banned_words.discard(banned_word)
@@ -412,7 +403,7 @@ def update_administrate_guild(guild_id):
 
 @admin.route("/guilds")
 @is_admin
-def guilds():
+async def guilds():
     guilds = []
     for guild in db.session.query(Guilds).all():
         if not (rguild := bot_http_client.get_guild(guild.guild_id)):
@@ -425,7 +416,7 @@ def guilds():
             }
         )
 
-    return render_template(
+    return await render_template(
         "admin_guilds.html.j2",
         servers=guilds,
         icon_generate=generate_guild_icon_url,
@@ -434,7 +425,7 @@ def guilds():
 
 @admin.route("/tokens", methods=["GET"])
 @is_admin
-def manage_titan_tokens():
+async def manage_titan_tokens():
     donators = []
     for usr in db.session.query(TitanTokens).all():
         row = {"user_id": usr.user_id, "tokens": usr.tokens, "transactions": []}
@@ -458,17 +449,18 @@ def manage_titan_tokens():
             )
         donators.append(row)
 
-    return render_template(
+    return await render_template(
         "admin_token_transactions.html.j2", donators=donators
     )
 
 
 @admin.route("/tokens", methods=["POST"])
 @is_admin
-def post_titan_tokens():
-    user_id = request.form.get("user_id", None)
-    amount = request.form.get("amount", None, type=int)
-    reason = request.form.get("reason", None)
+async def post_titan_tokens():
+    form = await request.form
+    user_id = form.get("user_id", None)
+    amount = form.get("amount", None, type=int)
+    reason = form.get("reason", None)
 
     if not user_id or not amount:
         abort(400)
@@ -483,10 +475,11 @@ def post_titan_tokens():
 
 @admin.route("/tokens", methods=["PATCH"])
 @is_admin
-def patch_titan_tokens():
-    user_id = request.form.get("user_id", None)
-    amount = request.form.get("amount", None, type=int)
-    reason = request.form.get("reason", None)
+async def patch_titan_tokens():
+    form = await request.form
+    user_id = form.get("user_id", None)
+    amount = form.get("amount", None, type=int)
+    reason = form.get("reason", None)
 
     if not user_id or not amount:
         abort(400)
@@ -501,16 +494,17 @@ def patch_titan_tokens():
 
 @admin.route("/disabled_guilds", methods=["GET"])
 @is_admin
-def get_disabled_guilds():
-    return render_template(
+async def get_disabled_guilds():
+    return await render_template(
         "admin_disabled_guilds.html.j2", guilds=list_disabled_guilds()
     )
 
 
 @admin.route("/disabled_guilds", methods=["POST"])
 @is_admin
-def post_disabled_guilds():
-    guild_id = request.form.get("guild_id", None)
+async def post_disabled_guilds():
+    form = await request.form
+    guild_id = form.get("guild_id", None)
     if guild_id in list_disabled_guilds():
         abort(409)
 
@@ -523,8 +517,9 @@ def post_disabled_guilds():
 
 @admin.route("/disabled_guilds", methods=["DELETE"])
 @is_admin
-def delete_disabled_guilds():
-    guild_id = request.form.get("guild_id", None)
+async def delete_disabled_guilds():
+    form = await request.form
+    guild_id = form.get("guild_id", None)
     if guild_id not in list_disabled_guilds():
         abort(409)
 
@@ -541,41 +536,42 @@ def delete_disabled_guilds():
 
 @admin.route("/custom_css", methods=["GET"])
 @is_admin
-def list_custom_css_get():
+async def list_custom_css_get():
     css = db.session.query(UserCSS).order_by(UserCSS.id).all()
-    return render_template("admin_usercss.html.j2", css=css)
+    return await render_template("admin_usercss.html.j2", css=css)
 
 
 @admin.route("/custom_css/edit/<css_id>", methods=["GET"])
 @is_admin
-def edit_custom_css_get(css_id):
+async def edit_custom_css_get(css_id):
     css = db.session.query(UserCSS).filter(UserCSS.id == css_id).first()
     if not css:
         abort(404)
 
     variables = json.loads(css.css_variables) if css.css_variables else None
 
-    return render_template(
+    return await render_template(
         "usercss.html.j2", new=False, css=css, variables=variables, admin=True
     )
 
 
 @admin.route("/custom_css/edit/<css_id>", methods=["POST"])
 @is_admin
-def edit_custom_css_post(css_id):
+async def edit_custom_css_post(css_id):
     dbcss = db.session.query(UserCSS).filter(UserCSS.id == css_id).first()
     if not dbcss:
         abort(404)
 
-    name = request.form.get("name", "").strip() or None
+    form = await request.form
+    name = form.get("name", "").strip() or None
     if not name:
         abort(400)
 
     dbcss.name = name
-    dbcss.user_id = request.form.get("user_id", None) or dbcss.user_id
-    dbcss.css = request.form.get("css", "").strip() or None
-    dbcss.css_variables = request.form.get("variables", None)
-    dbcss.css_var_bool = request.form.get("variables_enabled", False) in [
+    dbcss.user_id = form.get("user_id", None) or dbcss.user_id
+    dbcss.css = form.get("css", "").strip() or None
+    dbcss.css_variables = form.get("variables", None)
+    dbcss.css_var_bool = form.get("variables_enabled", False) in [
         "true",
         True,
     ]
@@ -586,7 +582,7 @@ def edit_custom_css_post(css_id):
 
 @admin.route("/custom_css/edit/<css_id>", methods=["DELETE"])
 @is_admin
-def edit_custom_css_delete(css_id):
+async def edit_custom_css_delete(css_id):
     dbcss = db.session.query(UserCSS).filter(UserCSS.id == css_id).first()
     if not dbcss:
         abort(404)
@@ -599,24 +595,25 @@ def edit_custom_css_delete(css_id):
 
 @admin.route("/custom_css/new", methods=["GET"])
 @is_admin
-def new_custom_css_get():
-    return render_template("usercss.html.j2", new=True, admin=True)
+async def new_custom_css_get():
+    return await render_template("usercss.html.j2", new=True, admin=True)
 
 
 @admin.route("/custom_css/new", methods=["POST"])
 @is_admin
-def new_custom_css_post():
-    name = request.form.get("name", None).strip()
-    user_id = request.form.get("user_id", None)
+async def new_custom_css_post():
+    form = await request.form
+    name = form.get("name", None).strip()
+    user_id = form.get("user_id", None)
     if not name or not user_id:
         abort(400)
 
     db_css = UserCSS(
         name,
         user_id,
-        request.form.get("variables_enabled", False) in ["true", True],
-        request.form.get("variables", None),
-        request.form.get("css", "").strip() or None,
+        form.get("variables_enabled", False) in ["true", True],
+        form.get("variables", None),
+        form.get("css", "").strip() or None,
     )
     db.session.add(db_css)
     db.session.commit()
@@ -626,14 +623,14 @@ def new_custom_css_post():
 
 @admin.route("/voting", methods=["GET"])
 @is_admin
-def voting_get():
+async def voting_get():
     datestart = request.args.get("datestart")
     timestart = request.args.get("timestart")
     dateend = request.args.get("dateend")
     timeend = request.args.get("timeend")
 
     if not datestart or not timestart or not dateend or not timeend:
-        return render_template("admin_voting.html.j2")
+        return await render_template("admin_voting.html.j2")
 
     start = datetime.datetime.strptime(
         datestart + " " + timestart, "%d %B, %Y %I:%M%p"
@@ -714,7 +711,7 @@ def voting_get():
             )
         referrals.append(u)
 
-    return render_template(
+    return await render_template(
         "admin_voting.html.j2",
         overall=overall,
         referrals=referrals,
@@ -727,8 +724,8 @@ def voting_get():
 
 @admin.route("/app_settings", methods=["GET"])
 @is_admin
-def application_settings_get():
-    return render_template(
+async def application_settings_get():
+    return await render_template(
         "admin_application_settings.html.j2",
         settings=(db.session.query(ApplicationSettings).first()),
     )
@@ -736,20 +733,21 @@ def application_settings_get():
 
 @admin.route("/app_settings", methods=["POST"])
 @is_admin
-def application_settings_post():
+async def application_settings_post():
     settings = db.session.query(ApplicationSettings).first()
 
-    if "donation_goal_progress" in request.form:
-        donation_goal_progress = request.form.get("donation_goal_progress")
+    form = await request.form
+    if "donation_goal_progress" in form:
+        donation_goal_progress = form.get("donation_goal_progress")
         settings.donation_goal_progress = int(donation_goal_progress)
 
-    if "donation_goal_total" in request.form:
-        donation_goal_total = request.form.get("donation_goal_total")
+    if "donation_goal_total" in form:
+        donation_goal_total = form.get("donation_goal_total")
         settings.donation_goal_total = int(donation_goal_total)
 
-    if "donation_goal_end" in request.form:
+    if "donation_goal_end" in form:
         res = None
-        donation_goal_end = request.form.get("donation_goal_end")
+        donation_goal_end = form.get("donation_goal_end")
         if donation_goal_end:
             donation_goal_end = donation_goal_end.split("/")
             month = int(donation_goal_end[0])

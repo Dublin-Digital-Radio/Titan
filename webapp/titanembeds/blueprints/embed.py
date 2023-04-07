@@ -7,7 +7,8 @@ from urllib.parse import urlparse
 
 import sqlalchemy.exc
 from config import config
-from flask import (
+from flask_babel import gettext
+from quart import (
     Blueprint,
     abort,
     make_response,
@@ -17,7 +18,6 @@ from flask import (
     session,
     url_for,
 )
-from flask_babel import gettext
 from titanembeds import bot_http_client
 from titanembeds.database import Guilds, UserCSS, db, list_disabled_guilds
 from titanembeds.redis_cache import get_online_embed_user_keys
@@ -95,7 +95,7 @@ def is_peak(guild_id):
 
 
 @embed.route("/<int:guild_id>")
-def guild_embed(guild_id):
+async def guild_embed(guild_id):
     if not (guild := bot_http_client.get_guild(guild_id)):
         log.warning("could not get guild '%s' from redis", guild_id)
         abort(404)
@@ -135,7 +135,7 @@ def guild_embed(guild_id):
 
     customcss = get_custom_css()
 
-    return render_template(
+    return await render_template(
         "embed.html.j2",
         disabled=str(guild_id) in list_disabled_guilds(),
         login_greeting=get_logingreeting(),
@@ -164,15 +164,15 @@ def guild_embed(guild_id):
 
 
 @embed.route("/signin_complete")
-def signin_complete():
-    return render_template(
+async def signin_complete():
+    return await render_template(
         "signin_complete.html.j2",
         session=(serializer.dumps(copy.deepcopy(dict(session)))),
     )
 
 
 @embed.route("/login_discord")
-def login_discord():
+async def login_discord():
     return redirect(
         url_for(
             "user.login_authenticated",
@@ -184,12 +184,12 @@ def login_discord():
 
 
 @embed.route("/noscript")
-def noscript():
-    return render_template("noscript.html.j2")
+async def noscript():
+    return await render_template("noscript.html.j2")
 
 
 @embed.route("/cookietest1")
-def cookietest1():
+async def cookietest1():
     js = "window._3rd_party_test_step1_loaded();"
     response = make_response(
         js, 200, {"Content-Type": "application/javascript"}
@@ -206,7 +206,7 @@ def cookietest1():
 
 
 @embed.route("/cookietest2")
-def cookietest2():
+async def cookietest2():
     if (
         "third_party_c_t" in request.cookies
         and request.cookies["third_party_c_t"] == "works"

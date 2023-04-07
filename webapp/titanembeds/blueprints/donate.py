@@ -1,9 +1,9 @@
 import patreon
 import paypalrestsdk
 from config import config
-from flask import abort
-from flask import current_app as app
-from flask import redirect, render_template, request, session, url_for
+from quart import abort
+from quart import current_app as app
+from quart import redirect, render_template, request, session, url_for
 from titanembeds.blueprints.user import user_bp
 from titanembeds.database import (
     Cosmetics,
@@ -18,13 +18,13 @@ from titanembeds.decorators import discord_users_only
 
 @user_bp.route("/donate", methods=["GET"])
 @discord_users_only()
-def donate_get():
+async def donate_get():
     cosmetics = (
         db.session.query(Cosmetics)
         .filter(Cosmetics.user_id == session["user_id"])
         .first()
     )
-    return render_template("donate.html.j2", cosmetics=cosmetics)
+    return await render_template("donate.html.j2", cosmetics=cosmetics)
 
 
 def get_paypal_api():
@@ -39,8 +39,9 @@ def get_paypal_api():
 
 @user_bp.route("/donate", methods=["POST"])
 @discord_users_only()
-def donate_post():
-    donation_amount = request.form.get("amount")
+async def donate_post():
+    form = await request.form
+    donation_amount = form.get("amount")
     if not donation_amount:
         abort(402)
 
@@ -95,7 +96,7 @@ def donate_post():
 
 @user_bp.route("/donate/confirm")
 @discord_users_only()
-def donate_confirm():
+async def donate_confirm():
     if not request.args.get("success"):
         return redirect(url_for("index"))
 
@@ -120,20 +121,21 @@ def donate_confirm():
 
 @user_bp.route("/donate/thanks")
 @discord_users_only()
-def donate_thanks():
+async def donate_thanks():
     tokens = get_titan_token(session["user_id"])
     transaction = request.args.get("transaction")
-    return render_template(
+    return await render_template(
         "donate_thanks.html.j2", tokens=tokens, transaction=transaction
     )
 
 
 @user_bp.route("/donate", methods=["PATCH"])
 @discord_users_only()
-def donate_patch():
-    item = request.form.get("item")
+async def donate_patch():
+    form = await request.form
+    item = form.get("item")
 
-    amount = int(request.form.get("amount"))
+    amount = int(form.get("amount"))
     if amount <= 0:
         abort(400)
 
@@ -184,8 +186,8 @@ def donate_patch():
 
 @user_bp.route("/patreon")
 @discord_users_only()
-def patreon_landing():
-    return render_template(
+async def patreon_landing():
+    return await render_template(
         "patreon.html.j2",
         pclient_id=config["patreon-client-id"],
         state="initial",
@@ -194,7 +196,7 @@ def patreon_landing():
 
 @user_bp.route("/patreon/callback")
 @discord_users_only()
-def patreon_callback():
+async def patreon_callback():
     patreon_oauth_client = patreon.OAuth(
         config["patreon-client-id"], config["patreon-client-secret"]
     )
@@ -254,7 +256,7 @@ def format_patreon_user(user):
 
 @user_bp.route("/patreon/sync", methods=["GET"])
 @discord_users_only()
-def patreon_sync_get():
+async def patreon_sync_get():
     if "patreon" not in session:
         return redirect(url_for("user.patreon_landing"))
 
@@ -280,14 +282,14 @@ def patreon_sync_get():
         del session["patreon"]
         return redirect(url_for("user.patreon_landing"))
 
-    return render_template(
+    return await render_template(
         "patreon.html.j2", state="prepare", user=format_patreon_user(user)
     )
 
 
 @user_bp.route("/patreon/sync", methods=["POST"])
 @discord_users_only()
-def patreon_sync_post():
+async def patreon_sync_post():
     if "patreon" not in session:
         abort(401)
 
@@ -337,5 +339,5 @@ def patreon_sync_post():
 
 @user_bp.route("/patreon/thanks")
 @discord_users_only()
-def patreon_thanks():
-    return render_template("patreon.html.j2", state="thanks")
+async def patreon_thanks():
+    return await render_template("patreon.html.j2", state="thanks")
