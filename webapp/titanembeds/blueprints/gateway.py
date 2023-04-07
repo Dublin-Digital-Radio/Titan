@@ -1,6 +1,7 @@
 import os
 import time
 import logging
+from functools import wraps
 
 from flask_socketio import Namespace, disconnect, emit, join_room, leave_room
 from quart import session
@@ -17,7 +18,6 @@ from titanembeds.utils import (
     serializer,
     update_user_status,
 )
-from functools import wraps
 
 DISCORDAPP_AVATARS_URL = "https://cdn.discordapp.com/avatars/"
 
@@ -100,7 +100,7 @@ class Gateway(Namespace):
                     "discriminator": session["user_id"],
                 }
             else:
-                nickname = bot_http_client.get_guild_member(
+                nickname = await bot_http_client.get_guild_member(
                     guild_id, session["user_id"]
                 ).get("nickname")
                 data = {
@@ -133,7 +133,9 @@ class Gateway(Namespace):
         emit("embed_user_disconnect", msg, room="GUILD_" + guild_id)
 
         if guild_webhooks_enabled(guild_id):  # Delete webhooks
-            guild_webhooks = bot_http_client.get_guild(guild_id)["webhooks"]
+            guild_webhooks = await bot_http_client.get_guild(guild_id)[
+                "webhooks"
+            ]
 
             d = (
                 session["user_id"]
@@ -207,7 +209,7 @@ class Gateway(Namespace):
     def on_current_user_info(self, data):
         guild_id = data["guild_id"]
         if "user_keys" in session and not session["unauthenticated"]:
-            db_member = bot_http_client.get_guild_member(
+            db_member = await bot_http_client.get_guild_member(
                 guild_id, session["user_id"]
             )
             usr = {
@@ -220,11 +222,13 @@ class Gateway(Namespace):
             emit("current_user_info", usr)
 
     def get_user_color(self, guild_id, user_id):
-        if not (member := bot_http_client.get_guild_member(guild_id, user_id)):
+        if not (
+            member := await bot_http_client.get_guild_member(guild_id, user_id)
+        ):
             return None
 
         # get the role objects from id's in member["roles"]
-        guild_roles = bot_http_client.get_guild(guild_id)["roles"]
+        guild_roles = await bot_http_client.get_guild(guild_id)["roles"]
         roles_map = {str(role["id"]): role for role in guild_roles}
         roles = [
             r for r_id in member["roles"] if (r := roles_map.get(str(r_id)))
@@ -260,7 +264,7 @@ class Gateway(Namespace):
             "discordbotsorgvoted": False,
         }
 
-        member = bot_http_client.get_guild_member_named(
+        member = await bot_http_client.get_guild_member_named(
             guild_id, f"{name}#{discriminator}"
         )
         if member:
@@ -280,7 +284,9 @@ class Gateway(Namespace):
                 )
             )
         else:
-            member = bot_http_client.get_guild_member_named(guild_id, name)
+            member = await bot_http_client.get_guild_member_named(
+                guild_id, name
+            )
             if member:
                 usr["id"] = str(member["id"])
                 usr["username"] = member["username"]

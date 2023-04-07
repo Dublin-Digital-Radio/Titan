@@ -197,9 +197,9 @@ def filter_guild_channel(guild_id, channel_id, force_everyone=False):
     return None
 
 
-def get_online_discord_users(guild_id, embed):
+async def get_online_discord_users(guild_id, embed):
     apimembers_filtered = {
-        int(m["id"]): m for m in bot_http_client.list_guild_members(guild_id)
+        int(m["id"]): m for m in await bot_http_client.list_guild_members(guild_id)
     }
 
     for member in embed["members"]:
@@ -382,9 +382,9 @@ async def delete_webhook_if_too_much(guild_id):
                 pass  # not my problem now
 
 
-def get_all_users(guild_id):
+async def get_all_users(guild_id):
     mem = []
-    for u in bot_http_client.list_guild_members(guild_id):
+    for u in await bot_http_client.list_guild_members(guild_id):
         mem.append(
             {
                 "id": str(u["id"]),
@@ -429,7 +429,7 @@ async def fetch():
         if not chan.get("read") or chan["channel"]["type"] != "text":
             status_code = 401
         else:
-            messages = bot_http_client.get_channel_messages(
+            messages = await bot_http_client.get_channel_messages(
                 guild_id, channel_id, after_snowflake
             )
             status_code = 200
@@ -457,7 +457,7 @@ async def fetch_visitor():
         messages = {}
         status_code = 401
     else:
-        messages = bot_http_client.get_channel_messages(
+        messages = await bot_http_client.get_channel_messages(
             guild_id, channel_id, after_snowflake
         )
         status_code = 200
@@ -805,7 +805,7 @@ async def server_members_visitor():
 async def query_server_members(guild_id):
     widget = discord_api.get_widget(guild_id)
     if widget.get("success", True):
-        discordmembers = get_online_discord_users(guild_id, widget)
+        discordmembers = await get_online_discord_users(guild_id, widget)
         widgetenabled = True
     else:
         discordmembers = [
@@ -915,7 +915,7 @@ async def user_info(guild_id, user_id):
 @abort_if_guild_disabled()
 @valid_session_required(api=True)
 async def list_users(guild_id):
-    return jsonify(get_all_users(guild_id))
+    return jsonify(await get_all_users(guild_id))
 
 
 @api.route("/webhook/discordbotsorg/vote", methods=["POST"])

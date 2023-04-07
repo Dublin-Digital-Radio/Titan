@@ -1,3 +1,4 @@
+aiohttp==3.8.4
 Flask-Babel==1.0.0
 Flask-SSLify==0.1.5
 Flask-SocketIO==5.3.3

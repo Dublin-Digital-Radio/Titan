@@ -1,6 +1,7 @@
 import socket
 import logging
 
+import aiohttp
 import requests
 from config import config
 from requests.exceptions import ConnectionError
@@ -21,10 +22,10 @@ log = logging.getLogger(__name__)
 # socket.getaddrinfo = new_getaddrinfo
 
 
-def get_url():
+async def get_url(getaddrinfo):
     if config["bot-http-over-ipv6"]:
         ipv6_addr = get_ipv6_addr(
-            config["bot-http-url"], config["bot-http-port"]
+            config["bot-http-url"], config["bot-http-port"], getaddrinfo
         )
         if not ipv6_addr:
             return None
@@ -33,9 +34,9 @@ def get_url():
         return f'http://{config["bot-http-url"]}:{config["bot-http-port"]}'
 
 
-def get_ipv6_addr(host, port):
+async def get_ipv6_addr(host, port, getaddrinfo):
     log.info("looking up %s:%s", host, port)
-    addrs = socket.getaddrinfo(host, port)
+    addrs = await getaddrinfo(host, port)
     # ipv4_addrs = [addr[4][0] for addr in addrs if addr[0] == socket.AF_INET]
     ipv6_addrs = [addr[4][0] for addr in addrs if addr[0] == socket.AF_INET6]
 
@@ -44,29 +45,29 @@ def get_ipv6_addr(host, port):
     return ret
 
 
-def http_get(path):
-    url = f"{get_url()}/{path}"
-    log.info("GET %s", url)
+async def http_get(path):
+    async with aiohttp.ClientSession() as session:
+        url = f"{await get_url(session._loop.getaddrinfo)}/{path}"
+        log.info("GET %s", url)
 
-    try:
-        response = requests.get(url)
-    except ConnectionError:
-        log.error("Could not connect to %s", url)
-        return None
-
-    try:
-        json = response.json()
-    except requests.exceptions.JSONDecodeError:
-        log.error("No valid json in response")
-        return None
+        try:
+            async with session.get(url) as resp:
+                try:
+                    json = await resp.json()
+                except requests.exceptions.JSONDecodeError:
+                    log.error("No valid json in response")
+                    return None
+        except ConnectionError:
+            log.error("Could not connect to %s", url)
+            return None
 
     log.info("response:\n%s", json)
     return json
 
 
-def get_channel_messages(guild_id, channel_id, after_snowflake=0):
+async def get_channel_messages(guild_id, channel_id, after_snowflake=0):
     log.info("get_channel_messages")
-    response = http_get(f"channel_messages/{channel_id}")
+    response = await http_get(f"channel_messages/{channel_id}")
     channel_messages = response if response else []
 
     if not channel_messages:
@@ -101,7 +102,7 @@ def get_channel_messages(guild_id, channel_id, after_snowflake=0):
         }
 
         if message["author"]["id"] not in guild_members:
-            member = get_guild_member(guild_id, message["author"]["id"])
+            member = await get_guild_member(guild_id, message["author"]["id"])
             guild_members[message["author"]["id"]] = member
         else:
             member = guild_members[message["author"]["id"]]
@@ -116,7 +117,7 @@ def get_channel_messages(guild_id, channel_id, after_snowflake=0):
 
         for mention in message["mentions"]:
             if mention["id"] not in guild_members:
-                author = get_guild_member(guild_id, mention["id"])
+                author = await get_guild_member(guild_id, mention["id"])
                 guild_members[mention["id"]] = author
             else:
                 author = guild_members[mention["id"]]
@@ -136,39 +137,38 @@ def get_channel_messages(guild_id, channel_id, after_snowflake=0):
     return sorted_msgs[:50]  # only return last 50 messages in cache please
 
 
-def get_guild_member(guild_id, user_id):
-    return http_get(f"guild/{guild_id}/member/{user_id}")
+async def get_guild_member(guild_id, user_id):
+    return await http_get(f"guild/{guild_id}/member/{user_id}")
 
 
-def get_guild_member_named(guild_id, query):
-    guild_member_id = http_get(f"guild/{guild_id}/member-name/{query}")
+async def get_guild_member_named(guild_id, query):
+    guild_member_id = await http_get(f"guild/{guild_id}/member-name/{query}")
 
     if guild_member_id:
-        return get_guild_member(guild_id, guild_member_id["user_id"])
+        return await get_guild_member(guild_id, guild_member_id["user_id"])
 
     return None
 
 
-def list_guild_members(guild_id):
-    member_ids = http_get(f"guild/{guild_id}/members")
-    if not member_ids:
+async def list_guild_members(guild_id):
+    if not (member_ids := await http_get(f"guild/{guild_id}/members")):
         return []
 
     return [
         m
         for m_id in member_ids
-        if (m := get_guild_member(guild_id, m_id["user_id"]))
+        if (m := await get_guild_member(guild_id, m_id["user_id"]))
     ]
 
 
-def get_guild(guild_id):
+async def get_guild(guild_id):
     try:
         guild_id = int(guild_id)
     except (TypeError, ValueError):
         return None
 
-    return http_get(f"guild/{guild_id}")
+    return await http_get(f"guild/{guild_id}")
 
 
-def get_user(user_id):
-    return http_get(f"user/{user_id}")
+async def get_user(user_id):
+    return await http_get(f"user/{user_id}")

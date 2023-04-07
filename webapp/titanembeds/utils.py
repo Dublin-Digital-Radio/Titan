@@ -55,7 +55,7 @@ def user_unauthenticated():
     return session.get("unauthenticated", True)
 
 
-def checkUserRevoke(guild_id, user_key=None):
+async def checkUserRevoke(guild_id, user_key=None):
     revoked = True  # guilty until proven not revoked
     if user_unauthenticated():
         dbUser = (
@@ -74,7 +74,7 @@ def checkUserRevoke(guild_id, user_key=None):
         banned = checkUserBanned(guild_id)
         if banned:
             return revoked
-        dbUser = bot_http_client.get_guild_member(guild_id, session["user_id"])
+        dbUser = await bot_http_client.get_guild_member(guild_id, session["user_id"])
         return not dbUser
 
 
@@ -96,7 +96,7 @@ def checkUserBanned(guild_id, ip_address=None):
                     banned = False
     else:
         banned = False
-        # dbUser = bot_http_client.get_guild_member(guild_id, session["user_id"])
+        # dbUser = await bot_http_client.get_guild_member(guild_id, session["user_id"])
         # if not dbUser:
         #    banned = True # TODO: Figure out ban logic with guild member
     return banned
@@ -154,7 +154,7 @@ async def update_user_status(guild_id, username, user_key=None):
         if status["banned"] or status["revoked"]:
             return status
 
-        if dbMember := bot_http_client.get_guild_member(
+        if dbMember := await bot_http_client.get_guild_member(
             guild_id, status["user_id"]
         ):
             status["nickname"] = dbMember["nick"]
@@ -166,7 +166,7 @@ async def update_user_status(guild_id, username, user_key=None):
     return status
 
 
-def check_user_in_guild(guild_id):
+async def check_user_in_guild(guild_id):
     if user_unauthenticated():
         log.info("checking if unauthenticated user in guild")
         return guild_id in session.get("user_keys", {})
@@ -184,13 +184,13 @@ def check_user_in_guild(guild_id):
 
     log.info("checking if authenticated user in guild")
     log.info(db_user)
-    user_revoked = checkUserRevoke(guild_id)
+    user_revoked = await checkUserRevoke(guild_id)
     log.info("revoked: %s", user_revoked)
     return db_user is not None and not user_revoked
 
 
 def get_member_roles(guild_id, user_id):
-    q = bot_http_client.get_guild_member(guild_id, user_id)
+    q = await bot_http_client.get_guild_member(guild_id, user_id)
     return [str(role) for role in (q["roles"])] if q else []
 
 
