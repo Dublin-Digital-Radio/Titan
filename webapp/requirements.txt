@@ -4,7 +4,7 @@ Flask-SocketIO==5.3.3
 Flask==2.2.3
 SQLAlchemy==1.4.46
 Werkzeug==2.2.3
-alembic==1.10.2
+alembic==1.10.3
 eventlet==0.33.3
 flask-sqlalchemy==3.0.3
 flask_limiter==3.3.0
