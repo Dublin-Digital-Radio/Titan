@@ -3,6 +3,8 @@ import argparse
 
 import requests
 from config import config
+from hypercorn import Config
+from hypercorn.asyncio import serve
 from web_app import web_app, web_init
 
 from discordbot.bot import Titan
@@ -55,8 +57,7 @@ async def main():
     web_init(bot)
 
     async with bot:
-        listen = config["bot-http-listen-interfaces"]
-        if not listen:
+        if not (listen := config["bot-http-listen-interfaces"]):
             bot.log.info("Not Starting HTTP service")
         else:
             bot.log.info(
@@ -64,12 +65,12 @@ async def main():
                 listen,
                 config["bot-http-port"],
             )
-            bot.loop.create_task(
-                web_app.run_task(
-                    host=config["bot-http-listen-interfaces"],
-                    port=config["bot-http-port"],
-                )
-            )
+
+            web_config = Config()
+            web_config.bind = [f'{listen}:{config["bot-http-port"]}']
+
+            bot.loop.create_task(serve(web_app, web_config))
+
         await bot.start(config["bot-token"])
 
 
