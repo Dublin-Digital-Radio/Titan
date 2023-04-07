@@ -87,8 +87,8 @@ def parse_url_domain(url):
     return parsed.netloc if parsed.netloc != "" else url
 
 
-def is_peak(guild_id):
-    usrs = get_online_embed_user_keys(guild_id)
+async def is_peak(guild_id):
+    usrs = await get_online_embed_user_keys(guild_id)
     return (
         len(usrs["AuthenticatedUsers"]) + len(usrs["UnauthenticatedUsers"])
     ) > 10
@@ -157,7 +157,7 @@ async def guild_embed(guild_id):
         .lower()
         .startswith("t"),
         is_peak=request.args.get("forcepeak", False) == "1"
-        or is_peak(guild_id),
+        or await is_peak(guild_id),
         enable_code_highlighting=config["enable-code-highlighting"],
         cdn_domain=config["cdn-domain"],
     )

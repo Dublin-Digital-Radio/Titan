@@ -103,7 +103,7 @@ class Gateway(Namespace):
         emit("identified")
 
     @teardown_db_session
-    def on_disconnect(self):
+    async def on_disconnect(self):
         if "user_keys" not in session or "socket_guild_id" not in session:
             return
 
@@ -130,12 +130,12 @@ class Gateway(Namespace):
             name = f"[Titan] {session['username'][:19]}#{d}"
 
             for webhook in [w for w in guild_webhooks if w["name"] == name]:
-                discord_api.delete_webhook(
+                await discord_api.delete_webhook(
                     webhook["id"], webhook["token"], guild_id
                 )
 
     @teardown_db_session
-    def on_heartbeat(self, data):
+    async def on_heartbeat(self, data):
         if "socket_guild_id" not in session:
             log.info("disconnect because socket_guild_id not in session:")
             disconnect()
@@ -155,7 +155,9 @@ class Gateway(Namespace):
             if session["unauthenticated"]:
                 key = session["user_keys"][guild_id]
 
-            status = update_user_status(guild_id, session["username"], key)
+            status = await update_user_status(
+                guild_id, session["username"], key
+            )
             if status["revoked"] or status["banned"]:
                 emit("revoke")
                 time.sleep(1)

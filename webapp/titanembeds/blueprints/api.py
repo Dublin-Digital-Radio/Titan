@@ -214,8 +214,8 @@ def get_online_discord_users(guild_id, embed):
     return embed["members"]
 
 
-def get_online_embed_users(guild_id):
-    usrs = redis_cache.get_online_embed_user_keys(guild_id)
+async def get_online_embed_users(guild_id):
+    usrs = await redis_cache.get_online_embed_user_keys(guild_id)
 
     unauths = (
         db.session.query(UnauthenticatedUsers)
@@ -272,7 +272,7 @@ def get_guild_roles(guild_id):
 
 
 # Returns webhook url if exists and can post w/webhooks, otherwise None
-def get_channel_webhook(guild_id, channel_id):
+async def get_channel_webhook(guild_id, channel_id):
     if not guild_webhooks_enabled(guild_id):
         return None
 
@@ -303,7 +303,7 @@ def get_channel_webhook(guild_id, channel_id):
                 "channel_id": webhook.get("channel_id"),
             }
 
-    webhook = discord_api.create_webhook(guild_id, channel_id, name)
+    webhook = await discord_api.create_webhook(guild_id, channel_id, name)
     log.info("Created guild webhook : %s", webhook)
     # "Maximum number of webhooks reached (10)"
     if webhook["code"] == 30007 or not webhook:
@@ -312,7 +312,7 @@ def get_channel_webhook(guild_id, channel_id):
     return webhook.get("content") if webhook else None
 
 
-def send_webhook(content, db_user, file, guild_id, rich_embed, webhook):
+async def send_webhook(content, db_user, file, guild_id, rich_embed, webhook):
     if session["unauthenticated"]:
         username = f"{session['username'][:25]}#{session['user_id']}"
 
@@ -351,11 +351,11 @@ def send_webhook(content, db_user, file, guild_id, rich_embed, webhook):
         log.error("Unknown webhook: %s", message)
         return None
 
-    delete_webhook_if_too_much(guild_id)
+    await delete_webhook_if_too_much(guild_id)
     return message
 
 
-def delete_webhook_if_too_much(guild_id):
+async def delete_webhook_if_too_much(guild_id):
     if not guild_webhooks_enabled(guild_id):
         return
 
@@ -373,7 +373,7 @@ def delete_webhook_if_too_much(guild_id):
         for wh in titan_webhooks:
             log.info("Deleting excess webhook %s", wh)
             try:
-                res = discord_api.delete_webhook(
+                res = await discord_api.delete_webhook(
                     wh["id"], wh["token"], guild_id
                 )
                 log.info("delete_webhook result:  %s", pformat(res))
@@ -413,7 +413,7 @@ async def fetch():
     channel_id = request.args.get("channel_id")
     after_snowflake = request.args.get("after", 0, type=int)
     key = session["user_keys"][guild_id] if user_unauthenticated() else None
-    status = update_user_status(guild_id, session["username"], key)
+    status = await update_user_status(guild_id, session["username"], key)
 
     messages = {}
 
@@ -531,7 +531,7 @@ async def post():
     content = format_everyone_mention(chan, content)
     log.info("post: message is now %s", pformat(content))
 
-    status = update_user_status(guild_id, session["username"], key)
+    status = await update_user_status(guild_id, session["username"], key)
 
     if not content:
         return return_response(204, {}, status)
@@ -548,12 +548,12 @@ async def post():
 
     # if userid in get_administrators_list():
     #     content = "(Titan Dev) " + content
-    webhook = get_channel_webhook(guild_id, channel_id)
+    webhook = await get_channel_webhook(guild_id, channel_id)
     if webhook:
         log.info("sending message by webhook '%s'", webhook)
         # https://discord.com/api/webhooks/1051803851684073502/-bMS3xabIBd7Bz6qdJ3psGVDSHJYqRvtSPp1dMntR1iiHFNYx5EDh9r2WaseDsdxeoLu
         # https://discord.com/api/webhooks/1051804042302599198/E3bq8_tm1eKV1B_STL5IykczUkVHAb5RtvZ53TarQRj-3thsc9Bk7mV9lTGxeGCzkce6
-        message = send_webhook(
+        message = await send_webhook(
             content, db_user, file, guild_id, rich_embed, webhook
         )
         if not message:
@@ -637,7 +637,7 @@ async def create_unauthenticated_user():
 
         session.permanent = False
 
-        status = update_user_status(guild_id, username, key)
+        status = await update_user_status(guild_id, username, key)
         final_response = jsonify(status=status)
     else:
         status = {"banned": True}
@@ -691,7 +691,7 @@ async def change_unauthenticated_username():
         db.session.add(user)
         key = user.user_key
         session["user_keys"][guild_id] = key
-        status = update_user_status(guild_id, username, key)
+        status = await update_user_status(guild_id, username, key)
 
         emit(
             "embed_user_disconnect",
@@ -785,7 +785,7 @@ async def server_members():
     if not check_user_in_guild(guild_id):
         abort(403)
 
-    return jsonify(query_server_members(guild_id))
+    return jsonify(await query_server_members(guild_id))
 
 
 @api.route("/server_members_visitor", methods=["GET"])
@@ -799,10 +799,10 @@ async def server_members_visitor():
     if not guild_accepts_visitors(guild_id):
         abort(403)
 
-    return jsonify(query_server_members(guild_id))
+    return jsonify(await query_server_members(guild_id))
 
 
-def query_server_members(guild_id):
+async def query_server_members(guild_id):
     widget = discord_api.get_widget(guild_id)
     if widget.get("success", True):
         discordmembers = get_online_discord_users(guild_id, widget)
@@ -820,7 +820,7 @@ def query_server_members(guild_id):
 
     return {
         "discordmembers": discordmembers,
-        "embedmembers": get_online_embed_users(guild_id),
+        "embedmembers": await get_online_embed_users(guild_id),
         "widgetenabled": widgetenabled,
     }
 
@@ -869,7 +869,7 @@ async def create_authenticated_user():
         db.session.add(db_user)
         db.session.commit()
 
-    status = update_user_status(guild_id, session["username"])
+    status = await update_user_status(guild_id, session["username"])
     return jsonify(status=status)
 
 
@@ -1085,7 +1085,7 @@ async def bot_members():
     if request.headers.get("Authorization", "") != config.get("app-secret", ""):
         return jsonify(error="Authorization header does not match."), 403
 
-    return jsonify(get_online_embed_users(request.args.get("guild_id")))
+    return jsonify(await get_online_embed_users(request.args.get("guild_id")))
 
 
 @api.route("/af/direct_message", methods=["POST"])

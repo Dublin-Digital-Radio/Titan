@@ -119,14 +119,14 @@ socketio.on_namespace(gateway.Gateway("/gateway"))
 babel = Babel()
 babel.init_app(app)
 
-init_redis(config["redis-uri"])
-
 
 @app.before_first_request
 async def init_stuff():
+    await init_redis(config["redis-uri"])
     async with app.app_context():
         init_application_settings()
         discord_api.init_discordrest()
+
 
 app.register_blueprint(api.api, url_prefix="/api", template_folder="/templates")
 app.register_blueprint(

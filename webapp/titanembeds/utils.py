@@ -102,7 +102,7 @@ def checkUserBanned(guild_id, ip_address=None):
     return banned
 
 
-def update_user_status(guild_id, username, user_key=None):
+async def update_user_status(guild_id, username, user_key=None):
     if user_unauthenticated():
         ip_address = get_client_ipaddr()
         status = {
@@ -130,7 +130,9 @@ def update_user_status(guild_id, username, user_key=None):
             )
         ).first()
 
-        bump_user_presence_timestamp(guild_id, "UnauthenticatedUsers", user_key)
+        await bump_user_presence_timestamp(
+            guild_id, "UnauthenticatedUsers", user_key
+        )
         if db_user.username != username or db_user.ip_address != ip_address:
             db_user.username = username
             db_user.ip_address = ip_address
@@ -157,7 +159,7 @@ def update_user_status(guild_id, username, user_key=None):
         ):
             status["nickname"] = dbMember["nick"]
 
-        bump_user_presence_timestamp(
+        await bump_user_presence_timestamp(
             guild_id, "AuthenticatedUsers", status["user_id"]
         )
 

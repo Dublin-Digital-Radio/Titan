@@ -53,8 +53,8 @@ def is_admin(f):
     return decorator(f)
 
 
-def get_online_users_count():
-    users = get_online_embed_user_keys()
+async def get_online_users_count():
+    users = await get_online_embed_user_keys()
     auths = len(users["AuthenticatedUsers"])
     unauths = len(users["UnauthenticatedUsers"])
     return {"authenticated": auths, "guest": unauths, "total": auths + unauths}
@@ -64,7 +64,7 @@ def get_online_users_count():
 @is_admin
 async def index():
     return await render_template(
-        "admin_index.html.j2", count=get_online_users_count()
+        "admin_index.html.j2", count=await get_online_users_count()
     )
 
 
