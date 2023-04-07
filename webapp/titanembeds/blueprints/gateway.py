@@ -17,21 +17,29 @@ from titanembeds.utils import (
     serializer,
     update_user_status,
 )
+from functools import wraps
 
 DISCORDAPP_AVATARS_URL = "https://cdn.discordapp.com/avatars/"
 
 log = logging.getLogger(__name__)
 
 
-class Gateway(Namespace):
-    def teardown_db_session(self):
+def teardown_db_session(func):
+    @wraps(func)
+    def wrapped(*args, **kwargs):
+        func(*args, **kwargs)
         db.session.commit()
         db.session.remove()
 
+    return wrapped
+
+
+class Gateway(Namespace):
     def on_connect(self):
         gateway_identifier = os.environ.get("TITAN_GATEWAY_ID", None)
         emit("hello", {"gateway_identifier": gateway_identifier})
 
+    @teardown_db_session
     def on_identify(self, data):
         if authorization := data.get("session", None):
             try:
@@ -45,7 +53,6 @@ class Gateway(Namespace):
             guild_id
         ):
             log.info("not guild_accepts_visitors and not check_user_in_guild")
-            self.teardown_db_session()
             return
 
         session["socket_guild_id"] = guild_id
@@ -94,11 +101,10 @@ class Gateway(Namespace):
             emit("embed_user_connect", data, room="GUILD_" + guild_id)
 
         emit("identified")
-        self.teardown_db_session()
 
+    @teardown_db_session
     def on_disconnect(self):
         if "user_keys" not in session or "socket_guild_id" not in session:
-            self.teardown_db_session()
             return
 
         guild_id = session["socket_guild_id"]
@@ -128,8 +134,7 @@ class Gateway(Namespace):
                     webhook["id"], webhook["token"], guild_id
                 )
 
-        self.teardown_db_session()
-
+    @teardown_db_session
     def on_heartbeat(self, data):
         if "socket_guild_id" not in session:
             log.info("disconnect because socket_guild_id not in session:")
@@ -141,7 +146,6 @@ class Gateway(Namespace):
         if not visitor_mode:
             key = None
             if "unauthenticated" not in session:
-                self.teardown_db_session()
                 log.info(
                     "disconnect because unauthenticated not in session and not visitor_mode"
                 )
@@ -154,7 +158,6 @@ class Gateway(Namespace):
             status = update_user_status(guild_id, session["username"], key)
             if status["revoked"] or status["banned"]:
                 emit("revoke")
-                self.teardown_db_session()
                 time.sleep(1)
 
                 log.info("disconnect because status revoked or banned")
@@ -164,13 +167,11 @@ class Gateway(Namespace):
                 emit("ack")
         else:
             if not guild_accepts_visitors(guild_id):
-                self.teardown_db_session()
                 log.info("disconnect because guild does no accept visitors")
                 disconnect()
                 return
 
-        self.teardown_db_session()
-
+    @teardown_db_session
     def on_channel_list(self, data):
         if "socket_guild_id" not in session:
             log.info("disconnect because socket_guild_id not in session")
@@ -193,8 +194,8 @@ class Gateway(Namespace):
                 leave_room("CHANNEL_" + chan["channel"]["id"])
 
         emit("channel_list", channels)
-        self.teardown_db_session()
 
+    @teardown_db_session
     def on_current_user_info(self, data):
         if "socket_guild_id" not in session:
             log.info("disconnect because socket_guild_id not in session")
@@ -214,8 +215,6 @@ class Gateway(Namespace):
                 "user_id": str(session["user_id"]),
             }
             emit("current_user_info", usr)
-
-        self.teardown_db_session()
 
     def get_user_color(self, guild_id, user_id):
         if not (member := bot_http_client.get_guild_member(guild_id, user_id)):
@@ -240,6 +239,7 @@ class Gateway(Namespace):
 
         return color
 
+    @teardown_db_session
     def on_lookup_user_info(self, data):
         if "socket_guild_id" not in session:
             log.info("disconnect because socket_guild_id not in session")
@@ -300,4 +300,3 @@ class Gateway(Namespace):
                 )
 
         emit("lookup_user_info", usr)
-        self.teardown_db_session()
